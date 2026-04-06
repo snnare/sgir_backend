@@ -1,7 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-# Aqui importar routeas
+from app.routes import (
+    health_router
+)
+
+
+
 # Aqui import scheduler de metricas
 
 
@@ -16,7 +21,7 @@ async def lifespan(app: FastAPI):
 
 
 # agregar la funcion anterior lifespan
-app = FastAPI(title="FasltAPI SGIR Backend")
+app = FastAPI(title="FastAPI SGIR Backend")
 
 
 app.add_middleware(
@@ -29,7 +34,7 @@ app.add_middleware(
 
 
 # Seccion para incluir rutas
-
+app.include_router(router=health_router)
 
 @app.get("/")
 def read_root():
