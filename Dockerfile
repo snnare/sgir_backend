@@ -22,6 +22,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # --- Stage 2: Runtime limpio ---
 FROM python:3.14-slim-bookworm
 
+# Crear un usuario de sistema sin shell y sin home para seguridad
+RUN addgroup --system sgir_group && \
+  adduser --system --group --no-create-home --shell /bin/false sgir_user
+
 WORKDIR /app
 
 # Variable de entorno para que Python no bufferée logs y no genere .pyc innecesarios
@@ -29,10 +33,10 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Copiar el entorno virtual (.venv) desde el stage de build
-COPY --from=build /app/.venv /app/.venv
+COPY --from=build --chown=sgir_user:sgir_group /app/.venv /app/.venv
 
-# Copiar el código de la aplicación
-COPY app ./app
+# Copiar el código de la aplicación y cambiar el dueño a sgir_user
+COPY --chown=sgir_user:sgir_group app ./app
 
 # Asegurar que el binario de uvicorn en el .venv sea accesible
 ENV PATH="/app/.venv/bin:$PATH"
@@ -40,5 +44,9 @@ ENV PATH="/app/.venv/bin:$PATH"
 # Exponer el puerto por defecto de FastAPI
 EXPOSE 8000
 
+# Cambiar al usuario no privilegiado para ejecutar la app
+USER sgir_user
+
 # Comando de inicio: Usar uvicorn directamente desde el .venv
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
