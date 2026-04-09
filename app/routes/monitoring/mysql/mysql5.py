@@ -1,17 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from app.db.mysql.mysql5 import get_mysql5_db
-from app.schemas.monitoring.mysql5 import (
-    MySQL5Connection, 
-    MySQL5FullMetrics, 
-    MySQL5Availability, 
-    MySQL5Saturation, 
-    MySQL5Performance, 
-    MySQL5Capacity
-)
-from app.crud.monitoring.mysql.mysql5 import get_mysql5_metrics
-from typing import List
+from app.db.postgres.connection import get_db as get_pg_db
+from app.core.dynamic_db import get_dynamic_session
 from app.core.dependencies import get_current_user
 
 router = APIRouter(
@@ -20,12 +11,21 @@ router = APIRouter(
     dependencies=[Depends(get_current_user)]
 )
 
-@router.get("/metrics", response_model=MySQL5FullMetrics)
-def get_full_metrics(db: Session = Depends(get_mysql5_db)):
+@router.get("/metrics/{id_instancia}", response_model=MySQL5FullMetrics)
+def get_full_metrics(id_instancia: int, pg_db: Session = Depends(get_pg_db)):
+    """
+    Obtiene las 4 Golden Signals de una instancia específica de MySQL 5 usando la CMDB.
+    """
+    # 1. Obtener la sesión dinámica para el servidor MySQL solicitado
+    mysql_db = get_dynamic_session(pg_db, id_instancia)
+    
     try:
-        return get_mysql5_metrics(db)
+        # 2. Extraer métricas usando la sesión del servidor remoto
+        return get_mysql5_metrics(mysql_db)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Error al monitorear instancia {id_instancia}: {str(e)}")
+    finally:
+        mysql_db.close()
 
 @router.get("/metrics/availability", response_model=MySQL5Availability)
 def get_availability(db: Session = Depends(get_mysql5_db)):
@@ -82,3 +82,4 @@ def get_mysql5_connections(db: Session = Depends(get_mysql5_db)):
         return connections
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
