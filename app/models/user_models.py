@@ -1,6 +1,6 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeingKey, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.sql import func
-from app.db.postgres.connection import Base
+from app.db.postgres.postgres_connection import Base
 
 
 class Role(Base):
@@ -24,6 +24,5 @@ class User(Base):
     email = Column(String(150), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
-    id_rol = Column(Integer, ForeingKey("rol_usuario.id_rol"), nullable=False)
-    id_estado_usuario = Column(Integer, ForeingKey(
-        "estado_general.id_estado", nullable=False))
+    id_rol = Column(Integer, ForeignKey("rol_usuario.id_rol"), nullable=False)
+    id_estado_usuario = Column(Integer, ForeignKey("estado_general.id_estado"), nullable=False)

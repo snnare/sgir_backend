@@ -1,7 +1,7 @@
 from typing import Any
 from sqlalchemy.orm import Session
-from app.models.infrastructure import Servidor, CredencialAcceso, InstanciaDBMS, BaseDeDatos
-from app.schemas.infrastructure import ServidorCreate, CredencialCreate, InstanciaCreate, BaseDatosCreate
+from app.models.infrastructure_models import Servidor, CredencialAcceso, InstanciaDBMS, BaseDeDatos
+from app.schemas.infrastructure_schemas  import ServidorCreate, CredencialCreate, InstanciaCreate, BaseDatosCreate
 from app.core.security_core import encrypt_password
 
 # --- CRUD Servidor ---

@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from app.models.monitoring_persistence import Monitoreo, Metrica, Alerta
-from app.schemas.monitoring_persistence import MonitoreoCreate, MetricaCreate, AlertaCreate
+from app.models.monitoring_persistence_models import Monitoreo, Metrica, Alerta
+from app.schemas.monitoring_persistence_schemas import MonitoreoCreate, MetricaCreate, AlertaCreate
 from datetime import datetime
 
 # --- CRUD Monitoreo (Sesiones) ---

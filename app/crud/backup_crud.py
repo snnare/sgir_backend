@@ -1,10 +1,10 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from app.models.backup import (
+from app.models.backup_models import (
     RutaRespaldo, PoliticaRespaldo, AsignacionPoliticaBD, Respaldo,
     TipoRespaldo, TipoAlmacenamiento
 )
-from app.schemas.backup import (
+from app.schemas.backup_schemas import (
     RutaRespaldoCreate, PoliticaRespaldoCreate, RespaldoCreate,
     AsignacionPoliticaBDCreate
 )

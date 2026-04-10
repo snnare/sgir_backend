@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.models.audit import Bitacora
+from app.models.audit_model import Bitacora
 
 def log_event(
     db: Session, 
