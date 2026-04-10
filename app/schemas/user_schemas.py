@@ -3,6 +3,19 @@ from datetime import datetime
 from typing import Optional
 
 
+# Schemas para Rol de Usuario
+class RoleBase(BaseModel):
+    nombre_rol: str
+
+class RoleCreate(RoleBase):
+    pass
+
+class RoleResponse(RoleBase):
+    id_rol: int
+
+    class Config:
+        from_attributes = True
+
 class UserBase(BaseModel):
     email: EmailStr
     nombres: str

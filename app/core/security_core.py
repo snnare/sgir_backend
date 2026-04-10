@@ -45,7 +45,7 @@ def decrypt_password(token: str) -> str:
 
 
 def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:
-    to_encode = dict[str, Any] = data.copy()
+    to_encode: dict[str, Any] = data.copy()
     if expires_delta:
         expire: datetime = datetime.now(timezone.utc) + expires_delta
     else:

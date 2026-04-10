@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, BigInteger
 from sqlalchemy.sql import func
-from app.db.postgres.connection import Base
+from app.db.postgres.postgres_connection import Base
 
 class TipoEventoAuditoria(Base):
     __tablename__ = "tipo_evento_auditoria"

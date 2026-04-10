@@ -1,8 +1,30 @@
 from sqlalchemy.orm import Session
-from app.models.user_models import User
-from app.schemas.user_schemas import UserCreate
+from app.models.user_models import User, Role
+from app.schemas.user_schemas import UserCreate, RoleCreate
 from app.core.security_core import get_password_hash
 
+
+# CRUD para Roles
+def get_roles(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(Role).offset(skip).limit(limit).all()
+
+def get_role_by_id(db: Session, role_id: int):
+    return db.query(Role).filter(Role.id_rol == role_id).first()
+
+def create_role(db: Session, role: RoleCreate):
+    db_role = Role(nombre_rol=role.nombre_rol)
+    db.add(db_role)
+    db.commit()
+    db.refresh(db_role)
+    return db_role
+
+def delete_role(db: Session, role_id: int):
+    db_role = get_role_by_id(db, role_id)
+    if db_role:
+        db.delete(db_role)
+        db.commit()
+        return True
+    return False
 
 def get_user_by_email(db: Session, email: str) -> User | None:
     return db.query(User).filter(User.email == email).first()
