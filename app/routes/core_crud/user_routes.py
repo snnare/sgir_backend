@@ -43,7 +43,7 @@ def read_user_me(current_user: User = Depends(get_current_user)):
 
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register_user(user: UserCreate, db: Session = Depends(get_pg_db)):
-    """Registra un nuevo usuario."""
+    """Registra un nuevo usuario (Público)."""
     db_user = user_crud.get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(
@@ -52,26 +52,26 @@ def register_user(user: UserCreate, db: Session = Depends(get_pg_db)):
         )
     new_user = user_crud.create_user(db=db, user=user)
     
-    # Auditoría: Registro
+    # Auditoría: Registro (ID de usuario es el mismo recién creado por ser público)
     audit_crud.log_event(
         db=db,
         user_id=new_user.id_usuario,
         entidad="Usuario",
         entidad_id=new_user.id_usuario,
-        descripcion=f"Registro de nuevo usuario: {new_user.email}",
+        descripcion=f"Registro de nuevo usuario público: {new_user.email}",
         tipo_evento_id=2  # Creación
     )
     
     return new_user
 
 @router.get("/", response_model=List[UserResponse])
-def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_pg_db)):
+def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
     """Obtiene la lista de todos los usuarios."""
     users = user_crud.get_users(db, skip=skip, limit=limit)
     return users
 
 @router.get("/{user_id}", response_model=UserResponse)
-def read_user(user_id: int, db: Session = Depends(get_pg_db)):
+def read_user(user_id: int, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
     """Obtiene un usuario por su ID."""
     db_user = user_crud.get_user(db, user_id=user_id)
     if db_user is None:
@@ -80,7 +80,7 @@ def read_user(user_id: int, db: Session = Depends(get_pg_db)):
 
 
 @router.get("/email/{email}", response_model=UserResponse)
-def read_user_by_email(email: str, db: Session = Depends(get_pg_db)):
+def read_user_by_email(email: str, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
     """Obtiene un usuario por su correo electrónico."""
     db_user = user_crud.get_user_by_email(db, email=email)
     if db_user is None:

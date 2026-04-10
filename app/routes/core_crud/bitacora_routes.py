@@ -5,7 +5,9 @@ from app.db.postgres.postgres_connection import get_db as get_pg_db
 from app.schemas.audit_schemas import BitacoraResponse
 from app.crud import audit_crud
 
-router = APIRouter()
+from app.core.dependencies import get_current_user
+
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 @router.get("/", response_model=List[BitacoraResponse])
 def read_bitacoras(skip: int = 0, limit: int = 100, db: Session = Depends(get_pg_db)):

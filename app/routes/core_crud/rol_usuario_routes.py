@@ -5,7 +5,9 @@ from app.db.postgres.postgres_connection import get_db as get_pg_db
 from app.schemas.user_schemas import RoleCreate, RoleResponse
 from app.crud import user_crud
 
-router = APIRouter()
+from app.core.dependencies import get_current_user
+
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 @router.post("/", response_model=RoleResponse, status_code=status.HTTP_201_CREATED)
 def create_role(role: RoleCreate, db: Session = Depends(get_pg_db)):

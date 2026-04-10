@@ -5,7 +5,9 @@ from app.db.postgres.postgres_connection import get_db as get_pg_db
 from app.schemas.audit_schemas import TipoEventoCreate, TipoEventoResponse
 from app.crud import audit_crud
 
-router = APIRouter()
+from app.core.dependencies import get_current_user
+
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 @router.post("/", response_model=TipoEventoResponse, status_code=status.HTTP_201_CREATED)
 def create_tipo_evento(tipo_evento: TipoEventoCreate, db: Session = Depends(get_pg_db)):
