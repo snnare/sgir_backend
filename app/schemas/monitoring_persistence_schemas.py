@@ -3,15 +3,30 @@ from typing import Optional, List
 from datetime import datetime
 from decimal import Decimal
 
-# --- Métricas Históricas ---
+# --- Catálogos ---
 
 class TipoMetricaBase(BaseModel):
     nombre_tipo: str
     unidad_medida: str
 
-class TipoMetrica(TipoMetricaBase):
+class TipoMetricaCreate(TipoMetricaBase):
+    pass
+
+class TipoMetricaResponse(TipoMetricaBase):
     id_tipo_metrica: int
     model_config = ConfigDict(from_attributes=True)
+
+class NivelAlertaBase(BaseModel):
+    nombre_nivel: str
+
+class NivelAlertaCreate(NivelAlertaBase):
+    pass
+
+class NivelAlertaResponse(NivelAlertaBase):
+    id_nivel_alerta: int
+    model_config = ConfigDict(from_attributes=True)
+
+# --- Métricas Históricas ---
 
 class MetricaBase(BaseModel):
     valor: Decimal
@@ -21,7 +36,7 @@ class MetricaBase(BaseModel):
 class MetricaCreate(MetricaBase):
     pass
 
-class Metrica(MetricaBase):
+class MetricaResponse(MetricaBase):
     id_metrica: int
     fecha_registro: datetime
     model_config = ConfigDict(from_attributes=True)
@@ -36,11 +51,11 @@ class MonitoreoBase(BaseModel):
 class MonitoreoCreate(MonitoreoBase):
     pass
 
-class Monitoreo(MonitoreoBase):
+class MonitoreoResponse(MonitoreoBase):
     id_monitoreo: int
     fecha_inicio: datetime
     fecha_fin: Optional[datetime] = None
-    metricas: List[Metrica] = []
+    metricas: List[MetricaResponse] = []
     model_config = ConfigDict(from_attributes=True)
 
 # --- Alertas ---
@@ -55,7 +70,7 @@ class AlertaBase(BaseModel):
 class AlertaCreate(AlertaBase):
     pass
 
-class Alerta(AlertaBase):
+class AlertaResponse(AlertaBase):
     id_alerta: int
     fecha_alerta: datetime
     model_config = ConfigDict(from_attributes=True)

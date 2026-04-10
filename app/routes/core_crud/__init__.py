@@ -16,6 +16,11 @@ from .ruta_respaldo_routes import router as ruta_respaldo_router
 from .politica_respaldo_routes import router as politica_respaldo_router
 from .asignacion_politica_routes import router as asignacion_politica_router
 from .respaldo_routes import router as respaldo_router
+from .tipo_metrica_routes import router as tipo_metrica_router
+from .metrica_routes import router as metrica_router
+from .monitoreo_routes import router as monitoreo_router
+from .nivel_alerta_routes import router as nivel_alerta_router
+from .alerta_routes import router as alerta_router
 
 router = APIRouter()
 
@@ -36,3 +41,8 @@ router.include_router(ruta_respaldo_router, prefix="/rutas-respaldo", tags=["Bac
 router.include_router(politica_respaldo_router, prefix="/politicas-respaldo", tags=["Backups - Políticas de Respaldo"])
 router.include_router(asignacion_politica_router, prefix="/asignacion-politica", tags=["Backups - Asignación de Políticas"])
 router.include_router(respaldo_router, prefix="/respaldos", tags=["Backups - Ejecuciones de Respaldo"])
+router.include_router(tipo_metrica_router, prefix="/tipo-metrica", tags=["Monitoring - Tipos de Métrica"])
+router.include_router(metrica_router, prefix="/metricas", tags=["Monitoring - Métricas"])
+router.include_router(monitoreo_router, prefix="/monitoreo", tags=["Monitoring - Sesiones"])
+router.include_router(nivel_alerta_router, prefix="/nivel-alerta", tags=["Monitoring - Niveles de Alerta"])
+router.include_router(alerta_router, prefix="/alertas", tags=["Monitoring - Alertas"])

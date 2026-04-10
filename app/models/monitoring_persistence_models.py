@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Numeric, Text, BigInteger
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from app.db.postgres.connection import Base
+from app.db.postgres.postgres_connection import Base
 
 # --- Catálogos de Monitoreo ---
 
@@ -33,7 +33,7 @@ class Monitoreo(Base):
     alertas = relationship("Alerta", back_populates="monitoreo")
 
 class Metrica(Base):
-    __tablename__ = "metrica"
+    __tablename__ = "métrica"
     id_metrica = Column(BigInteger, primary_key=True, index=True)
     valor = Column(Numeric(10, 2), nullable=False)
     fecha_registro = Column(DateTime(timezone=True), server_default=func.now())

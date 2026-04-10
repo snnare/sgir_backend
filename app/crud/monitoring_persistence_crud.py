@@ -1,13 +1,53 @@
 from sqlalchemy.orm import Session
-from app.models.monitoring_persistence_models import Monitoreo, Metrica, Alerta
-from app.schemas.monitoring_persistence_schemas import MonitoreoCreate, MetricaCreate, AlertaCreate
-from datetime import datetime
-
-# --- CRUD Monitoreo (Sesiones) ---
-
+from app.models.monitoring_persistence_models import Monitoreo, Metrica, Alerta, TipoMetrica, NivelAlerta
+from app.schemas.monitoring_persistence_schemas import (
+    MonitoreoCreate, MetricaCreate, AlertaCreate,
+    TipoMetricaCreate, NivelAlertaCreate
+)
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import delete
-from app.models.monitoring_persistence import Metrica, Monitoreo
+
+# --- CRUD Tipo Metrica ---
+
+def create_tipo_metrica(db: Session, tipo: TipoMetricaCreate) -> TipoMetrica:
+    db_tipo = TipoMetrica(**tipo.model_dump())
+    db.add(db_tipo)
+    db.commit()
+    db.refresh(db_tipo)
+    return db_tipo
+
+def get_tipos_metrica(db: Session) -> list[TipoMetrica]:
+    return db.query(TipoMetrica).all()
+
+def delete_tipo_metrica(db: Session, id_tipo: int) -> bool:
+    db_tipo = db.query(TipoMetrica).filter(TipoMetrica.id_tipo_metrica == id_tipo).first()
+    if db_tipo:
+        db.delete(db_tipo)
+        db.commit()
+        return True
+    return False
+
+# --- CRUD Nivel Alerta ---
+
+def create_nivel_alerta(db: Session, nivel: NivelAlertaCreate) -> NivelAlerta:
+    db_nivel = NivelAlerta(**nivel.model_dump())
+    db.add(db_nivel)
+    db.commit()
+    db.refresh(db_nivel)
+    return db_nivel
+
+def get_niveles_alerta(db: Session) -> list[NivelAlerta]:
+    return db.query(NivelAlerta).all()
+
+def delete_nivel_alerta(db: Session, id_nivel: int) -> bool:
+    db_nivel = db.query(NivelAlerta).filter(NivelAlerta.id_nivel_alerta == id_nivel).first()
+    if db_nivel:
+        db.delete(db_nivel)
+        db.commit()
+        return True
+    return False
+
+# --- CRUD Monitoreo (Sesiones) ---
 
 def purge_old_metrics(db: Session, days: int) -> int:
     """
@@ -15,26 +55,25 @@ def purge_old_metrics(db: Session, days: int) -> int:
     Retorna la cantidad de registros eliminados.
     """
     threshold_date = datetime.now(timezone.utc) - timedelta(days=days)
-
-    # Ejecutar el borrado masivo
     stmt = delete(Metrica).where(Metrica.fecha_registro < threshold_date)
     result = db.execute(stmt)
     db.commit()
-
     return result.rowcount
 
 def create_monitoreo_session(db: Session, session: MonitoreoCreate) -> Monitoreo:
-
-    db_monitoreo: Monitoreo = Monitoreo(**monitoreo.model_dump())
+    db_monitoreo: Monitoreo = Monitoreo(**session.model_dump())
     db.add(db_monitoreo)
     db.commit()
     db.refresh(db_monitoreo)
     return db_monitoreo
 
+def get_monitoreo_session(db: Session, monitoreo_id: int) -> Monitoreo | None:
+    return db.query(Monitoreo).filter(Monitoreo.id_monitoreo == monitoreo_id).first()
+
 def close_monitoreo_session(db: Session, monitoreo_id: int) -> Monitoreo | None:
-    db_monitoreo: Monitoreo | None = db.query(Monitoreo).filter(Monitoreo.id_monitoreo == monitoreo_id).first()
+    db_monitoreo = get_monitoreo_session(db, monitoreo_id)
     if db_monitoreo:
-        db_monitoreo.fecha_fin = datetime.now()
+        db_monitoreo.fecha_fin = datetime.now(timezone.utc)
         db.commit()
         db.refresh(db_monitoreo)
     return db_monitoreo
