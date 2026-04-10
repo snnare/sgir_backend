@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from app.core.security import decrypt_password
+from app.core.security_core import decrypt_password
 from app.models.infrastructure import InstanciaDBMS, CredencialAcceso, DBMS, Servidor
 from fastapi import HTTPException
 from typing import Dict, Any

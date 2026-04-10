@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.db.postgres.connection import get_db as get_pg_db
-from app.core.dynamic_db import get_dynamic_session
+from app.core.dynamic_db_core import get_dynamic_session
 from app.core.dependencies import get_current_user
 
 router = APIRouter(

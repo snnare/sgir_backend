@@ -6,7 +6,7 @@ from jose import jwt
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from app.core.config import settings
+from app.core.config_core import settings
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

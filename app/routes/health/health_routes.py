@@ -1,9 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from app.db.postgres.connection import get_db as get_pg_db
-
-
+from app.db.postgres.postgres_connection import get_db as get_pg_db
 
 router = APIRouter(prefix="/health", tags=["Health Checks"])
 
