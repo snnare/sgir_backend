@@ -8,6 +8,9 @@ from decimal import Decimal
 class TipoRespaldoBase(BaseModel):
     nombre_tipo: str
 
+class TipoRespaldoCreate(TipoRespaldoBase):
+    pass
+
 class TipoRespaldoResponse(TipoRespaldoBase):
     id_tipo_respaldo: int
     class Config:
@@ -15,6 +18,9 @@ class TipoRespaldoResponse(TipoRespaldoBase):
 
 class TipoAlmacenamientoBase(BaseModel):
     nombre_tipo: str
+
+class TipoAlmacenamientoCreate(TipoAlmacenamientoBase):
+    pass
 
 class TipoAlmacenamientoResponse(TipoAlmacenamientoBase):
     id_tipo_almacenamiento: int
@@ -31,6 +37,12 @@ class RutaRespaldoBase(BaseModel):
 
 class RutaRespaldoCreate(RutaRespaldoBase):
     pass
+
+class RutaRespaldoUpdate(BaseModel):
+    descripcion_ruta: Optional[str] = None
+    path: Optional[str] = None
+    id_tipo_almacenamiento: Optional[int] = None
+    id_estado_ruta: Optional[int] = None
 
 class RutaRespaldoResponse(RutaRespaldoBase):
     id_ruta: int
@@ -49,6 +61,14 @@ class PoliticaRespaldoBase(BaseModel):
 
 class PoliticaRespaldoCreate(PoliticaRespaldoBase):
     pass
+
+class PoliticaRespaldoUpdate(BaseModel):
+    nombre_politica: Optional[str] = None
+    descripcion: Optional[str] = None
+    frecuencia_horas: Optional[int] = None
+    retencion_dias: Optional[int] = None
+    id_tipo_respaldo: Optional[int] = None
+    id_estado_politica: Optional[int] = None
 
 class PoliticaRespaldoResponse(PoliticaRespaldoBase):
     id_politica: int

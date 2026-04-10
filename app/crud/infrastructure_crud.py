@@ -97,6 +97,49 @@ def delete_servidor(db: Session, servidor_id: int) -> bool:
         return True
     return False
 
+# --- CRUD Instancia ---
+
+def get_instancia(db: Session, id_instancia: int) -> InstanciaDBMS | None:
+    return db.query(InstanciaDBMS).filter(InstanciaDBMS.id_instancia == id_instancia).first()
+
+def get_instancias_by_servidor(db: Session, servidor_id: int) -> list[InstanciaDBMS]:
+    return db.query(InstanciaDBMS).filter(InstanciaDBMS.id_servidor == servidor_id).all()
+
+def create_instancia(db: Session, instancia: InstanciaCreate) -> InstanciaDBMS:
+    db_instancia: InstanciaDBMS = InstanciaDBMS(**instancia.model_dump())
+    db.add(db_instancia)
+    db.commit()
+    db.refresh(db_instancia)
+    return db_instancia
+
+def delete_instancia(db: Session, id_instancia: int) -> bool:
+    db_inst = get_instancia(db, id_instancia)
+    if db_inst:
+        db.delete(db_inst)
+        db.commit()
+        return True
+    return False
+
+# --- CRUD Base de Datos ---
+
+def get_base_datos(db: Session, id_base_datos: int) -> BaseDeDatos | None:
+    return db.query(BaseDeDatos).filter(BaseDeDatos.id_base_datos == id_base_datos).first()
+
+def create_base_datos(db: Session, base_datos: BaseDatosCreate) -> BaseDeDatos:
+    db_bd: BaseDeDatos = BaseDeDatos(**base_datos.model_dump())
+    db.add(db_bd)
+    db.commit()
+    db.refresh(db_bd)
+    return db_bd
+
+def delete_base_datos(db: Session, id_base_datos: int) -> bool:
+    db_bd = get_base_datos(db, id_base_datos)
+    if db_bd:
+        db.delete(db_bd)
+        db.commit()
+        return True
+    return False
+
 # --- CRUD Credencial ---
 
 def get_credencial(db: Session, id_credencial: int) -> CredencialAcceso | None:

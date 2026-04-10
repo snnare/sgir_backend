@@ -7,6 +7,15 @@ from .nivel_criticidad_routes import router as nivel_criticidad_router
 from .tipo_acceso_routes import router as tipo_acceso_router
 from .servidor_routes import router as servidor_router
 from .credencial_acceso_routes import router as credencial_router
+from .dbms_routes import router as dbms_router
+from .instancia_routes import router as instancia_router
+from .base_de_datos_routes import router as base_de_datos_router
+from .tipo_respaldo_routes import router as tipo_respaldo_router
+from .tipo_almacenamiento_routes import router as tipo_almacenamiento_router
+from .ruta_respaldo_routes import router as ruta_respaldo_router
+from .politica_respaldo_routes import router as politica_respaldo_router
+from .asignacion_politica_routes import router as asignacion_politica_router
+from .respaldo_routes import router as respaldo_router
 
 router = APIRouter()
 
@@ -18,3 +27,12 @@ router.include_router(nivel_criticidad_router, prefix="/criticidad", tags=["Infr
 router.include_router(tipo_acceso_router, prefix="/tipo-acceso", tags=["Infrastructure - Tipo Acceso"])
 router.include_router(servidor_router, prefix="/servidores", tags=["Infrastructure - Servidores"])
 router.include_router(credencial_router, prefix="/credenciales", tags=["Infrastructure - Credenciales"])
+router.include_router(dbms_router, prefix="/dbms", tags=["Infrastructure - DBMS"])
+router.include_router(instancia_router, prefix="/instancias", tags=["Infrastructure - Instancias"])
+router.include_router(base_de_datos_router, prefix="/bases-de-datos", tags=["Infrastructure - Bases de Datos"])
+router.include_router(tipo_respaldo_router, prefix="/tipo-respaldo", tags=["Backups - Tipos de Respaldo"])
+router.include_router(tipo_almacenamiento_router, prefix="/tipo-almacenamiento", tags=["Backups - Tipos de Almacenamiento"])
+router.include_router(ruta_respaldo_router, prefix="/rutas-respaldo", tags=["Backups - Rutas de Respaldo"])
+router.include_router(politica_respaldo_router, prefix="/politicas-respaldo", tags=["Backups - Políticas de Respaldo"])
+router.include_router(asignacion_politica_router, prefix="/asignacion-politica", tags=["Backups - Asignación de Políticas"])
+router.include_router(respaldo_router, prefix="/respaldos", tags=["Backups - Ejecuciones de Respaldo"])
