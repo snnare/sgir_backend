@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Numeric, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from app.db.postgres.connection import Base
+from app.db.postgres.postgres_connection import Base
 
 # --- Catálogos de Infraestructura ---
 

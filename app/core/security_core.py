@@ -26,10 +26,11 @@ def _get_fernet() -> Fernet:
         salt=b"sgir_fixed_salt",
         iterations=1000000,
     )
-    key: bytes = base64.urlsafe_b64decode(
-        kdf.derive(settings.SECRET_KEY.encode())
-    )
-    return Fernet(key)
+    # kdf.derive devuelve 32 bytes binarios.
+    # Fernet requiere una clave de 32 bytes en base64 url-safe.
+    key_bytes = kdf.derive(settings.SECRET_KEY.encode())
+    key_base64 = base64.urlsafe_b64encode(key_bytes)
+    return Fernet(key_base64)
 
 
 def encrypt_password(password: str) -> str:
