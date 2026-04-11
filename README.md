@@ -9,9 +9,10 @@ SGIR es una plataforma de backend robusta desarrollada con **FastAPI** y **Postg
 *   **Arquitectura de Seguridad:** Lógica desacoplada en módulos de `hashing` (Bcrypt), `tokens` (JWT) y `encryption` (Fernet).
 *   **Cifrado Reversible:** Las credenciales de servidores remotos se almacenan cifradas con AES, permitiendo al sistema recuperarlas para conexiones automáticas sin exponerlas.
 
-### 🏗️ CMDB e Infraestructura
+### 🏗️ CMDB e Inventario Inteligente
 *   **Inventario Dinámico:** Registro de servidores, instancias DBMS y bases de datos.
-*   **Conexiones Dinámicas:** Capacidad de generar sesiones de base de datos "al vuelo" para servidores remotos, soportando mapeos de puertos personalizados (ideal para entornos Docker).
+*   **Descubrimiento de Activos (Discovery):** Funcionalidad para escanear servidores remotos y detectar automáticamente bases de datos y su tamaño real.
+*   **Persistencia Local:** Sincronización de la realidad remota con la base de datos local para permitir búsquedas y resúmenes de almacenamiento instantáneos.
 
 ### 💾 Gestión de Respaldos
 *   **Políticas y Rutas:** Configuración granular de frecuencias de respaldo y destinos de almacenamiento (Local, Nube, NAS).
@@ -23,7 +24,7 @@ SGIR es una plataforma de backend robusta desarrollada con **FastAPI** y **Postg
 *   **Alertas:** Sistema integrado para notificar anomalías basadas en niveles de criticidad.
 
 ### 📋 Auditoría Total
-*   **Bitácora Automática:** Todas las operaciones (CRUD, logins, inicios de monitoreo) se registran en una bitácora inmutable que vincula al usuario responsable con la entidad afectada.
+*   **Bitácora Automática:** Todas las operaciones (CRUD, logins, inicios de monitoreo, sincronizaciones) se registran en una bitácora inmutable que vincula al usuario responsable con la entidad afectada.
 
 ## 🛠️ Stack Tecnológico
 
@@ -35,7 +36,7 @@ SGIR es una plataforma de backend robusta desarrollada con **FastAPI** y **Postg
 
 ## 📁 Estructura del Proyecto
 
-*   `app/services/`: Lógica de negocio y proveedores de monitoreo.
+*   `app/services/`: Lógica de negocio, sincronización de inventario y proveedores de monitoreo.
 *   `app/core/security/`: Utilidades modulares de cifrado y autenticación.
 *   `app/routes/`: Endpoints organizados por `core_crud` y `monitoring`.
 *   `app/models/` & `app/schemas/`: Definiciones de datos y validaciones Pydantic.
