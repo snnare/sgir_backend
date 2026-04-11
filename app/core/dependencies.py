@@ -4,7 +4,7 @@ from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 from app.core.config_core import settings
 from app.db.postgres.postgres_connection import get_db
-from app.crud import user_crud
+from app.services import user_crud
 from app.schemas.user_schemas import TokenData
 from app.models.user_models import User
 

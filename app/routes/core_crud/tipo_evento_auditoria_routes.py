@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.db.postgres.postgres_connection import get_db as get_pg_db
 from app.schemas.audit_schemas import TipoEventoCreate, TipoEventoResponse
-from app.crud import audit_crud
+from app.services import audit_crud
 
 from app.core.dependencies import get_current_user
 

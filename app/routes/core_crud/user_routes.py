@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.db.postgres.postgres_connection import get_db as get_pg_db
 from app.schemas.user_schemas import UserCreate, UserResponse, UserLogin, Token
-from app.crud import user_crud, audit_crud
+from app.services import user_crud, audit_crud
 from app.core.security.hashing import verify_password
 from app.core.security.tokens import create_access_token
 from app.core.dependencies import get_current_user
