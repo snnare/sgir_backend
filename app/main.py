@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.routes import core_crud_router
 from app.routes.healths import health_router
+from app.routes.monitoring import router as monitoring_router
 
 
 
@@ -37,6 +38,7 @@ app.add_middleware(
 # Seccion para incluir rutas
 app.include_router(health_router)
 app.include_router(core_crud_router)
+app.include_router(monitoring_router, prefix="/monitoring")
 
 @app.get("/")
 def read_root():

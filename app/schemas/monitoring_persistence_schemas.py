@@ -58,6 +58,21 @@ class MonitoreoResponse(MonitoreoBase):
     metricas: List[MetricaResponse] = []
     model_config = ConfigDict(from_attributes=True)
 
+# --- Métricas Específicas por Motor ---
+
+class MySQL5Metrics(BaseModel):
+    status: str
+    uptime: int
+    threads_connected: int
+    threads_running: int
+    max_connections: int
+    questions: int
+    queries_per_second: float
+    slow_queries: int
+    table_locks_waited: int
+    innodb_row_lock_waits: int
+    connection_usage_percent: float
+
 # --- Alertas ---
 
 class AlertaBase(BaseModel):
