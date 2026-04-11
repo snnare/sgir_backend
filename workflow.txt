@@ -1,0 +1,91 @@
+==============================================================================
+SGIR - FLUJOS DE TRABAJO (WORKFLOWS) DEL BACKEND
+==============================================================================
+
+Este documento describe la interacción lógica entre los endpoints del sistema SGIR,
+asumiendo que los catálogos base (Estados, Roles, Tipos de Auditoría, etc.) 
+ya han sido poblados previamente.
+
+------------------------------------------------------------------------------
+1. FLUJO DE AUTENTICACIÓN Y ACCESO (ONBOARDING)
+------------------------------------------------------------------------------
+Propósito: Permitir que un nuevo usuario ingrese al sistema de forma segura.
+
+Pasos:
+1. Registro: El usuario envía sus datos (nombres, apellidos, email, password) 
+   al endpoint POST /users/. El sistema hashea la contraseña y la guarda.
+   - Auditoría: Se genera un evento de "Creación".
+2. Login: El usuario envía sus credenciales al endpoint POST /users/login. 
+   El sistema valida y devuelve un token JWT.
+   - Auditoría: Se genera un evento de "Ejecución" (Inicio de sesión).
+3. Verificación: El frontend usa el token para consultar GET /users/me y 
+   recuperar los datos del perfil actual.
+
+------------------------------------------------------------------------------
+2. FLUJO DE GESTIÓN DE INFRAESTRUCTURA (INVENTARIO)
+------------------------------------------------------------------------------
+Propósito: Registrar un nuevo activo físico o virtual para ser administrado.
+
+Pasos:
+1. Catálogos: El frontend consulta GET /criticidad/ y GET /tipo-acceso/ para 
+   mostrar opciones en el formulario.
+2. Servidor: El usuario registra el servidor (IP, nombre, criticidad) en 
+   POST /servidores/.
+   - Auditoría: Se registra la creación del servidor vinculado al usuario.
+3. Credenciales: Se añade una credencial de acceso para dicho servidor en 
+   POST /credenciales/. El sistema encripta la contraseña usando AES reversible.
+   - Auditoría: Se registra que el usuario creó una credencial.
+
+------------------------------------------------------------------------------
+3. FLUJO DE MAPEo DE BASES DE DATOS (CMDB)
+------------------------------------------------------------------------------
+Propósito: Identificar qué instancias y bases de datos corren en cada servidor.
+
+Pasos:
+1. DBMS: El usuario elige un motor de base de datos desde GET /dbms/.
+2. Instancia: Se registra una instancia específica (puerto, nombre) vinculada 
+   al servidor en POST /instancias/.
+3. Bases de Datos: Dentro de esa instancia, se registran las bases de datos 
+   reales (nombre, tamaño) en POST /bases-de-datos/.
+   - Auditoría: Cada paso genera registros automáticos en la bitácora.
+
+------------------------------------------------------------------------------
+4. FLUJO DE ESTRATEGIA DE RESPALDOS
+------------------------------------------------------------------------------
+Propósito: Configurar el plan de protección de datos para una base de datos.
+
+Pasos:
+1. Ruta: El usuario define dónde se guardará el archivo en POST /rutas-respaldo/ 
+   (especificando si es local, nube o NAS).
+2. Política: Se crea una regla de frecuencia y retención (ej: cada 24h, 
+   guardar 7 días) en POST /politicas-respaldo/.
+3. Asignación: Se vincula la política con la base de datos específica en 
+   POST /asignacion-politica/.
+   - Auditoría: Registro de configuración de protección de datos.
+4. Ejecución: El sistema (o un script externo) informa el resultado de un 
+   backup en POST /respaldos/.
+
+------------------------------------------------------------------------------
+5. FLUJO DE MONITOREO Y ALERTAS (SRE)
+------------------------------------------------------------------------------
+Propósito: Detectar anomalías y persistir métricas de rendimiento.
+
+Pasos:
+1. Sesión: Al iniciar un proceso de monitoreo, se abre una sesión en 
+   POST /monitoreo/.
+2. Métricas: Se envían puntos de datos (CPU, Memoria, Latencia) a POST /metricas/ 
+   vinculados a la sesión activa.
+3. Alerta: Si una métrica excede un umbral, el sistema registra una alerta en 
+   POST /alertas/ con un nivel de severidad (URGENTE, ADVERTENCIA, etc.).
+   - Auditoría: Se registra la generación de la alerta para seguimiento.
+
+------------------------------------------------------------------------------
+6. FLUJO DE AUDITORÍA Y CUMPLIMIENTO (COMPLIANCE)
+------------------------------------------------------------------------------
+Propósito: Revisar quién hizo qué y cuándo.
+
+Pasos:
+1. Consulta: Un usuario con rol de Auditor accede a GET /audit-logs/.
+2. Filtrado: El auditor visualiza una lista cronológica de todos los cambios 
+   sensibles realizados en la infraestructura, identificando al responsable 
+   mediante el id_usuario.
