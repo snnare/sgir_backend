@@ -7,7 +7,7 @@ from app.schemas.infrastructure_schemas  import (
     InstanciaCreate, BaseDatosCreate,
     NivelCriticidadCreate, TipoAccesoCreate, DBMSCreate
 )
-from app.core.security_core import encrypt_password
+from app.core.security.encryption import encrypt_password
 
 # --- CRUD Nivel Criticidad ---
 

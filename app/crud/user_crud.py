@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.user_models import User, Role
 from app.schemas.user_schemas import UserCreate, RoleCreate
-from app.core.security_core import get_password_hash
+from app.core.security.hashing import get_password_hash
 
 
 # CRUD para Roles
