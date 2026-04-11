@@ -73,6 +73,24 @@ class MySQL5Metrics(BaseModel):
     innodb_row_lock_waits: int
     connection_usage_percent: float
 
+class MySQL8Metrics(MySQL5Metrics):
+    # MySQL 8 hereda la base de MySQL 5 pero podemos extenderla si es necesario
+    pass
+
+class MongoDBMetrics(BaseModel):
+    status: str
+    uptime: int
+    connections_current: int
+    connections_available: int
+    connections_total_created: int
+    op_inserts: int
+    op_queries: int
+    op_updates: int
+    op_deletes: int
+    mem_resident_mb: int
+    mem_virtual_mb: int
+    ok: float
+
 # --- Alertas ---
 
 class AlertaBase(BaseModel):
