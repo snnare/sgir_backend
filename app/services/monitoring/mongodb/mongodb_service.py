@@ -29,3 +29,18 @@ def get_mongodb_metrics(client: MongoClient) -> MongoDBMetrics:
             connections_total_created=0, op_inserts=0, op_queries=0, op_updates=0,
             op_deletes=0, mem_resident_mb=0, mem_virtual_mb=0, ok=0.0
         )
+
+def list_databases_discovery(client: MongoClient) -> list[dict]:
+    """
+    Lista todas las bases de datos en MongoDB y su tamaño en disco.
+    """
+    db_info = client.admin.command("listDatabases")
+    databases = db_info.get("databases", [])
+    
+    return [
+        {
+            "nombre": db["name"], 
+            "tamano_mb": round(float(db["sizeOnDisk"] / 1024 / 1024), 2)
+        } 
+        for db in databases if db["name"] not in ["admin", "config", "local"]
+    ]

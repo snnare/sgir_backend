@@ -55,3 +55,19 @@ def get_mysql5_metrics(db: Session) -> MySQL5Metrics:
         innodb_row_lock_waits=int(stats.get('Innodb_row_lock_waits', 0)),
         connection_usage_percent=conn_usage
     )
+
+def list_databases_discovery(db: Session) -> list[dict]:
+    """
+    Lista todas las bases de datos reales y su tamaño en MB.
+    Excluye esquemas de sistema.
+    """
+    query = text("""
+        SELECT 
+            table_schema as name,
+            SUM(data_length + index_length) / 1024 / 1024 as size_mb
+        FROM information_schema.tables
+        WHERE table_schema NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')
+        GROUP BY table_schema
+    """)
+    result = db.execute(query).fetchall()
+    return [{"nombre": row[0], "tamano_mb": float(row[1] or 0)} for row in result]
