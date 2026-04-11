@@ -1,81 +1,50 @@
 # SGIR - Sistema de Gestión de Infraestructura y Respaldos
 
-SGIR es una plataforma de backend robusta desarrollada con **FastAPI** y **PostgreSQL**, diseñada para centralizar el control de infraestructura crítica, la gestión de políticas de respaldo y el monitoreo de Golden Signals en entornos de bases de datos heterogéneos (PostgreSQL, MySQL, Oracle, MongoDB).
+SGIR es una plataforma de backend robusta desarrollada con **FastAPI** y **PostgreSQL**, diseñada para la observabilidad y control de infraestructura crítica, gestión de respaldos y monitoreo de bases de datos.
 
 ## 🚀 Características Principales
 
-### 🔐 Seguridad y Acceso
-*   **Autenticación JWT:** Flujo completo de registro e inicio de sesión con tokens de acceso de corta duración.
-*   **Gestión de Roles:** Control de acceso basado en roles (Administrador, Operador, Auditor).
-*   **Cifrado de Credenciales:** Uso de **Bcrypt** para contraseñas de usuario y **Fernet (AES reversible)** para credenciales de servidores remotos, permitiendo la automatización de tareas sin exponer secretos.
+### 🔐 Seguridad Modular
+*   **Autenticación JWT:** Gestión de sesiones seguras con tokens de acceso.
+*   **Arquitectura de Seguridad:** Lógica desacoplada en módulos de `hashing` (Bcrypt), `tokens` (JWT) y `encryption` (Fernet).
+*   **Cifrado Reversible:** Las credenciales de servidores remotos se almacenan cifradas con AES, permitiendo al sistema recuperarlas para conexiones automáticas sin exponerlas.
 
-### 🏗️ Gestión de Infraestructura
-*   **Inventario de Servidores:** Registro detallado de activos físicos/virtuales con niveles de criticidad.
-*   **CMDB Dinámica:** Gestión de instancias DBMS, bases de datos específicas y sus configuraciones de red.
-*   **Tipos de Acceso:** Soporte para múltiples protocolos de conexión (SSH, Native DB, API).
+### 🏗️ CMDB e Infraestructura
+*   **Inventario Dinámico:** Registro de servidores, instancias DBMS y bases de datos.
+*   **Conexiones Dinámicas:** Capacidad de generar sesiones de base de datos "al vuelo" para servidores remotos, soportando mapeos de puertos personalizados (ideal para entornos Docker).
 
-### 💾 Estrategia de Respaldos
-*   **Políticas Flexibles:** Definición de frecuencia de respaldo, retención de días y tipos de backup (Full, Incremental).
-*   **Gestión de Rutas:** Configuración de paths de almacenamiento segmentados por tipo (Local, Cloud, NAS).
-*   **Historial de Ejecución:** Registro transaccional de cada backup con tamaños y hashes de integridad.
+### 💾 Gestión de Respaldos
+*   **Políticas y Rutas:** Configuración granular de frecuencias de respaldo y destinos de almacenamiento (Local, Nube, NAS).
+*   **Auditoría de Ejecución:** Seguimiento detallado de cada tarea de respaldo, incluyendo tamaños y verificación de integridad.
 
-### 📊 Monitoreo y Alertas
-*   **Métricas Históricas:** Persistencia de puntos de datos para análisis de rendimiento.
-*   **Sesiones de Monitoreo:** Registro de estados de salud y disponibilidad.
-*   **Sistema de Alertas:** Generación de notificaciones basadas en niveles de severidad configurables.
+### 📊 Monitoreo Multi-Motor (SRE)
+*   **MySQL 5 y 8:** Extracción de métricas de hilos, locks, QPS y uso de conexiones.
+*   **MongoDB:** Monitoreo NoSQL usando comandos administrativos para estado de conexiones, contadores de operaciones y memoria.
+*   **Alertas:** Sistema integrado para notificar anomalías basadas en niveles de criticidad.
 
-### 📋 Auditoría Centralizada
-*   **Bitácora de Eventos:** Cada operación sensible (creación, edición, eliminación, login) se registra automáticamente vinculando al usuario responsable, la entidad afectada y la descripción exacta del cambio.
+### 📋 Auditoría Total
+*   **Bitácora Automática:** Todas las operaciones (CRUD, logins, inicios de monitoreo) se registran en una bitácora inmutable que vincula al usuario responsable con la entidad afectada.
 
 ## 🛠️ Stack Tecnológico
 
-*   **Lenguaje:** Python 3.12+
-*   **Framework:** [FastAPI](https://fastapi.tiangolo.com/)
-*   **ORM:** [SQLAlchemy 2.0](https://www.sqlalchemy.org/)
-*   **Base de Datos:** [PostgreSQL 16](https://www.postgresql.org/)
-*   **Gestión de Dependencias:** [uv](https://github.com/astral-sh/uv)
-*   **Seguridad:** Passlib (Bcrypt), Python-Jose (JWT), Cryptography (Fernet)
+*   **Framework:** FastAPI
+*   **ORM:** SQLAlchemy 2.0 (PostgreSQL)
+*   **NoSQL Driver:** PyMongo
+*   **Seguridad:** Bcrypt, Python-Jose, Cryptography (Fernet)
+*   **Gestión:** `uv` (Fastest Python package manager)
 
-## 📋 Requisitos Previos
+## 📁 Estructura del Proyecto
 
-*   Python instalado.
-*   Instancia de PostgreSQL 16 activa.
-*   Herramienta `uv` instalada para una gestión eficiente del entorno.
+*   `app/services/`: Lógica de negocio y proveedores de monitoreo.
+*   `app/core/security/`: Utilidades modulares de cifrado y autenticación.
+*   `app/routes/`: Endpoints organizados por `core_crud` y `monitoring`.
+*   `app/models/` & `app/schemas/`: Definiciones de datos y validaciones Pydantic.
 
-## ⚙️ Configuración
+## ⚙️ Configuración Rápida
 
-1.  Clona el repositorio:
-    ```bash
-    git clone https://github.com/snnare/sgir_backend.git
-    cd sgir_backend
-    ```
+1.  **Entorno:** `uv sync`
+2.  **Variables:** Configurar `.env` basado en la sección de seguridad (Secret Key de 32 bytes).
+3.  **Ejecución:** `uv run uvicorn app.main:app --reload`
 
-2.  Configura las variables de entorno en un archivo `.env`:
-    ```env
-    # PostgreSQL
-    POSTGRES_USER=tu_usuario
-    POSTGRES_PASSWORD=tu_password
-    POSTGRES_DB=sgir_db
-    POSTGRES_HOST=localhost
-    POSTGRES_PORT=5432
-
-    # Security
-    SECRET_KEY=tu_fernert_key_generada
-    ALGORITHM=HS256
-    ACCESS_TOKEN_EXPIRE_MINUTES=60
-    ```
-
-3.  Instala las dependencias e inicia el servidor:
-    ```bash
-    uv sync
-    uv run uvicorn app.main:app --reload
-    ```
-
-## 📖 Documentación API
-
-Una vez iniciado el servidor, puedes acceder a la documentación interactiva (Swagger UI) en:
-`http://localhost:8000/docs`
-
-## 🗄️ Modelo de Base de Datos
-
-El diseño físico de la base de datos se encuentra documentado en el archivo `modelo-fisico.sql`. Incluye catálogos base, tablas principales de nivel 1 a 3 y tablas transaccionales de alto volumen.
+## 📖 Documentación
+Accede a `/docs` para interactuar con la API mediante Swagger UI.

@@ -1,91 +1,53 @@
 ==============================================================================
-SGIR - FLUJOS DE TRABAJO (WORKFLOWS) DEL BACKEND
+SGIR - FLUJOS DE TRABAJO (WORKFLOWS) ACTUALIZADOS
 ==============================================================================
 
-Este documento describe la interacción lógica entre los endpoints del sistema SGIR,
-asumiendo que los catálogos base (Estados, Roles, Tipos de Auditoría, etc.) 
-ya han sido poblados previamente.
+Este documento describe la interacción lógica entre los servicios y endpoints,
+reflejando la arquitectura modular y el monitoreo dinámico implementado.
 
 ------------------------------------------------------------------------------
-1. FLUJO DE AUTENTICACIÓN Y ACCESO (ONBOARDING)
+1. FLUJO DE AUTENTICACIÓN Y SEGURIDAD
 ------------------------------------------------------------------------------
-Propósito: Permitir que un nuevo usuario ingrese al sistema de forma segura.
-
-Pasos:
-1. Registro: El usuario envía sus datos (nombres, apellidos, email, password) 
-   al endpoint POST /users/. El sistema hashea la contraseña y la guarda.
-   - Auditoría: Se genera un evento de "Creación".
-2. Login: El usuario envía sus credenciales al endpoint POST /users/login. 
-   El sistema valida y devuelve un token JWT.
-   - Auditoría: Se genera un evento de "Ejecución" (Inicio de sesión).
-3. Verificación: El frontend usa el token para consultar GET /users/me y 
-   recuperar los datos del perfil actual.
+1. Registro: POST /users/ -> Service (hashing.py) genera hash Bcrypt.
+2. Login: POST /users/login -> Service (hashing.py) verifica contra DB -> Service (tokens.py) emite JWT.
+3. Autorización: Dependencia get_current_user valida el token en cada petición protegida.
 
 ------------------------------------------------------------------------------
-2. FLUJO DE GESTIÓN DE INFRAESTRUCTURA (INVENTARIO)
+2. FLUJO DE GESTIÓN DE ACTIVOS (INVENTARIO)
 ------------------------------------------------------------------------------
-Propósito: Registrar un nuevo activo físico o virtual para ser administrado.
-
-Pasos:
-1. Catálogos: El frontend consulta GET /criticidad/ y GET /tipo-acceso/ para 
-   mostrar opciones en el formulario.
-2. Servidor: El usuario registra el servidor (IP, nombre, criticidad) en 
-   POST /servidores/.
-   - Auditoría: Se registra la creación del servidor vinculado al usuario.
-3. Credenciales: Se añade una credencial de acceso para dicho servidor en 
-   POST /credenciales/. El sistema encripta la contraseña usando AES reversible.
-   - Auditoría: Se registra que el usuario creó una credencial.
+1. Servidor: POST /servidores/ -> Registro de IP y criticidad.
+2. Credenciales: POST /credenciales/ -> Service (encryption.py) cifra la contraseña con Fernet.
+   *Nota: Esto permite que el backend use la contraseña para monitoreo pero no la exponga en texto plano en la DB.*
 
 ------------------------------------------------------------------------------
-3. FLUJO DE MAPEo DE BASES DE DATOS (CMDB)
+3. FLUJO DE MONITOREO DINÁMICO (AD-HOC)
 ------------------------------------------------------------------------------
-Propósito: Identificar qué instancias y bases de datos corren en cada servidor.
+Propósito: Obtener el estado actual de un motor sin configurar scrapers fijos.
 
-Pasos:
-1. DBMS: El usuario elige un motor de base de datos desde GET /dbms/.
-2. Instancia: Se registra una instancia específica (puerto, nombre) vinculada 
-   al servidor en POST /instancias/.
-3. Bases de Datos: Dentro de esa instancia, se registran las bases de datos 
-   reales (nombre, tamaño) en POST /bases-de-datos/.
-   - Auditoría: Cada paso genera registros automáticos en la bitácora.
-
-------------------------------------------------------------------------------
-4. FLUJO DE ESTRATEGIA DE RESPALDOS
-------------------------------------------------------------------------------
-Propósito: Configurar el plan de protección de datos para una base de datos.
-
-Pasos:
-1. Ruta: El usuario define dónde se guardará el archivo en POST /rutas-respaldo/ 
-   (especificando si es local, nube o NAS).
-2. Política: Se crea una regla de frecuencia y retención (ej: cada 24h, 
-   guardar 7 días) en POST /politicas-respaldo/.
-3. Asignación: Se vincula la política con la base de datos específica en 
-   POST /asignacion-politica/.
-   - Auditoría: Registro de configuración de protección de datos.
-4. Ejecución: El sistema (o un script externo) informa el resultado de un 
-   backup en POST /respaldos/.
+1. Petición: GET /monitoring/{engine}/{server_id}/{cred_id}
+2. Backend:
+   a. Recupera servidor y credencial desde app/services/infrastructure_crud.py.
+   b. Desencripta contraseña (encryption.py).
+   c. Dynamic Core genera conexión temporal (Engine SQL o MongoClient).
+3. Service:
+   - MySQL (5/8): Ejecuta SHOW GLOBAL STATUS.
+   - MongoDB: Ejecuta db.serverStatus().
+4. Resultado: Devuelve métricas estandarizadas (Uptime, Conexiones, QPS, Memoria).
 
 ------------------------------------------------------------------------------
-5. FLUJO DE MONITOREO Y ALERTAS (SRE)
+4. FLUJO DE AUDITORÍA INTEGRADA (COMPLIANCE)
 ------------------------------------------------------------------------------
-Propósito: Detectar anomalías y persistir métricas de rendimiento.
+Cada acción exitosa en los módulos de 'core_crud' o 'monitoring' dispara una
+llamada al servicio audit_crud.log_event().
 
-Pasos:
-1. Sesión: Al iniciar un proceso de monitoreo, se abre una sesión en 
-   POST /monitoreo/.
-2. Métricas: Se envían puntos de datos (CPU, Memoria, Latencia) a POST /metricas/ 
-   vinculados a la sesión activa.
-3. Alerta: Si una métrica excede un umbral, el sistema registra una alerta en 
-   POST /alertas/ con un nivel de severidad (URGENTE, ADVERTENCIA, etc.).
-   - Auditoría: Se registra la generación de la alerta para seguimiento.
+Registro automático:
+- Quién: id_usuario extraído del token JWT.
+- Qué: Entidad afectada (Servidor, Usuario, Política, etc.).
+- Resultado: Eventos de Creación, Modificación, Eliminación o Ejecución.
 
 ------------------------------------------------------------------------------
-6. FLUJO DE AUDITORÍA Y CUMPLIMIENTO (COMPLIANCE)
+5. FLUJO DE PROTECCIÓN DE DATOS (BACKUPS)
 ------------------------------------------------------------------------------
-Propósito: Revisar quién hizo qué y cuándo.
-
-Pasos:
-1. Consulta: Un usuario con rol de Auditor accede a GET /audit-logs/.
-2. Filtrado: El auditor visualiza una lista cronológica de todos los cambios 
-   sensibles realizados en la infraestructura, identificando al responsable 
-   mediante el id_usuario.
+1. Configuración: Definir Rutas y Políticas de Respaldo.
+2. Vinculación: Asignar política a una Base de Datos específica.
+3. Trazabilidad: Registrar ejecuciones manuales o automáticas en el historial de respaldos.
