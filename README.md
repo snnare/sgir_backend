@@ -1,51 +1,45 @@
 # SGIR - Sistema de Gestión de Infraestructura y Respaldos
 
-SGIR es una plataforma de backend robusta desarrollada con **FastAPI** y **PostgreSQL**, diseñada para la observabilidad y control de infraestructura crítica, gestión de respaldos y monitoreo de bases de datos.
+SGIR es una plataforma de backend robusta desarrollada con **FastAPI** y **PostgreSQL**, diseñada para la observabilidad de infraestructura crítica, gestión de respaldos y monitoreo de bases de datos.
 
 ## 🚀 Características Principales
 
-### 🔐 Seguridad Modular
-*   **Autenticación JWT:** Gestión de sesiones seguras con tokens de acceso.
-*   **Arquitectura de Seguridad:** Lógica desacoplada en módulos de `hashing` (Bcrypt), `tokens` (JWT) y `encryption` (Fernet).
-*   **Cifrado Reversible:** Las credenciales de servidores remotos se almacenan cifradas con AES, permitiendo al sistema recuperarlas para conexiones automáticas sin exponerlas.
+### 🔐 Seguridad y Compliance
+*   **JWT & Bcrypt:** Gestión de sesiones seguras.
+*   **Cifrado Reversible (Fernet/AES):** Almacenamiento seguro de credenciales para acceso remoto automatizado.
+*   **Auditoría Total:** Registro inmutable de operaciones (Logins, CRUD, Monitoreo).
 
-### 🏗️ CMDB e Inventario Inteligente
-*   **Inventario Dinámico:** Registro de servidores, instancias DBMS y bases de datos.
-*   **Descubrimiento de Activos (Discovery):** Funcionalidad para escanear servidores remotos y detectar automáticamente bases de datos y su tamaño real.
-*   **Persistencia Local:** Sincronización de la realidad remota con la base de datos local para permitir búsquedas y resúmenes de almacenamiento instantáneos.
-
-### 💾 Gestión de Respaldos
-*   **Políticas y Rutas:** Configuración granular de frecuencias de respaldo y destinos de almacenamiento (Local, Nube, NAS).
-*   **Auditoría de Ejecución:** Seguimiento detallado de cada tarea de respaldo, incluyendo tamaños y verificación de integridad.
+### 🏗️ CMDB e Inventario
+*   **Discovery Service:** Escaneo remoto para descubrir bases de datos y tamaños.
+*   **Inventario Dinámico:** Gestión de servidores, DBMS, instancias y BDs.
 
 ### 📊 Monitoreo Multi-Motor (SRE)
-*   **MySQL 5 y 8:** Extracción de métricas de hilos, locks, QPS y uso de conexiones.
-*   **MongoDB:** Monitoreo NoSQL usando comandos administrativos para estado de conexiones, contadores de operaciones y memoria.
-*   **Alertas:** Sistema integrado para notificar anomalías basadas en niveles de criticidad.
-
-### 📋 Auditoría Total
-*   **Bitácora Automática:** Todas las operaciones (CRUD, logins, inicios de monitoreo, sincronizaciones) se registran en una bitácora inmutable que vincula al usuario responsable con la entidad afectada.
+*   **Motores Soportados:** MySQL 5, MySQL 8, MongoDB.
+*   **Host Monitoring:** Monitoreo vía SSH de CPU, RAM, Disco y Uptime (con soporte para sistemas Legacy RHEL 4+).
 
 ## 🛠️ Stack Tecnológico
 
-*   **Framework:** FastAPI
+*   **Framework:** FastAPI (Python 3.14)
 *   **ORM:** SQLAlchemy 2.0 (PostgreSQL)
-*   **NoSQL Driver:** PyMongo
-*   **Seguridad:** Bcrypt, Python-Jose, Cryptography (Fernet)
 *   **Gestión:** `uv` (Fastest Python package manager)
+*   **Contenerización:** Docker (Multi-stage build)
 
-## 📁 Estructura del Proyecto
+## 📁 Estructura y Documentación
 
-*   `app/services/`: Lógica de negocio, sincronización de inventario y proveedores de monitoreo.
-*   `app/core/security/`: Utilidades modulares de cifrado y autenticación.
-*   `app/routes/`: Endpoints organizados por `core_crud` y `monitoring`.
-*   `app/models/` & `app/schemas/`: Definiciones de datos y validaciones Pydantic.
+*   `/docs`: Swagger UI interactivo (con el servidor corriendo).
+*   `workflow.txt`: Guía completa de endpoints con ejemplos `curl` para pruebas.
+*   `app/services/`: Lógica de negocio y proveedores de métricas.
 
 ## ⚙️ Configuración Rápida
 
-1.  **Entorno:** `uv sync`
-2.  **Variables:** Configurar `.env` basado en la sección de seguridad (Secret Key de 32 bytes).
-3.  **Ejecución:** `uv run uvicorn app.main:app --reload`
+### Usando UV (Local)
+1. `uv sync`
+2. Configurar `.env` (Basado en `SECRET_KEY` de 32 bytes).
+3. `uv run uvicorn app.main:app --reload`
 
-## 📖 Documentación
-Accede a `/docs` para interactuar con la API mediante Swagger UI.
+### Usando Docker
+1. `docker build -t sgir-backend .`
+2. `docker run -p 8000:8000 --env-file .env sgir-backend`
+
+## 🧪 Pruebas Rápidas
+Consulta `workflow.txt` para encontrar los comandos `curl` de registro y monitoreo listos para copiar y pegar.

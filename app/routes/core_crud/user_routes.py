@@ -37,6 +37,19 @@ def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = D
     
     return {"access_token": access_token, "token_type": "bearer"}
 
+@router.post("/logout")
+def logout_user(current_user: User = Depends(get_current_user), db: Session = Depends(get_pg_db)):
+    """Cierra la sesión del usuario actual (Registro en auditoría)."""
+    audit_crud.log_event(
+        db=db,
+        user_id=current_user.id_usuario,
+        entidad="Usuario",
+        entidad_id=current_user.id_usuario,
+        descripcion=f"Cierre de sesión exitoso: {current_user.email}",
+        tipo_evento_id=5  # Ejecución/Sesión
+    )
+    return {"message": "Sesión cerrada exitosamente"}
+
 @router.get("/me", response_model=UserResponse)
 def read_user_me(current_user: User = Depends(get_current_user)):
     """Obtiene la información del usuario actual autenticado."""

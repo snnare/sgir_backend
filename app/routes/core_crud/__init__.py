@@ -21,11 +21,13 @@ from .metrica_routes import router as metrica_router
 from .monitoreo_routes import router as monitoreo_router
 from .nivel_alerta_routes import router as nivel_alerta_router
 from .alerta_routes import router as alerta_router
+from .estado_general_routes import router as estado_general_router
 
 router = APIRouter()
 
 router.include_router(user_router, prefix="/users", tags=["Users"])
 router.include_router(role_router, prefix="/roles", tags=["Roles"])
+router.include_router(estado_general_router, prefix="/estados", tags=["Core - Estados Generales"])
 router.include_router(tipo_evento_router, prefix="/audit-types", tags=["Audit Event Types"])
 router.include_router(bitacora_router, prefix="/audit-logs", tags=["Audit Logs"])
 router.include_router(nivel_criticidad_router, prefix="/criticidad", tags=["Infrastructure - Criticidad"])

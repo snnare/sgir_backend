@@ -1,53 +1,79 @@
 ==============================================================================
-SGIR - FLUJOS DE TRABAJO (WORKFLOWS) ACTUALIZADOS
+SGIR - CATÁLOGO DE ENDPOINTS Y FLUJOS DE TRABAJO (API WORKFLOW)
 ==============================================================================
 
-Este documento describe la interacción lógica entre los servicios y endpoints,
-reflejando la arquitectura modular y el monitoreo dinámico implementado.
+Este documento detalla cada endpoint disponible, su propósito y un comando de 
+ejemplo (curl) para realizar pruebas.
+
+Nota: Para los endpoints protegidos, se debe incluir el header:
+-H "Authorization: Bearer <TU_TOKEN_JWT>"
 
 ------------------------------------------------------------------------------
-1. FLUJO DE AUTENTICACIÓN Y SEGURIDAD
+1. SEGURIDAD Y USUARIOS (PÚBLICOS Y PROTEGIDOS)
 ------------------------------------------------------------------------------
-1. Registro: POST /users/ -> Service (hashing.py) genera hash Bcrypt.
-2. Login: POST /users/login -> Service (hashing.py) verifica contra DB -> Service (tokens.py) emite JWT.
-3. Autorización: Dependencia get_current_user valida el token en cada petición protegida.
+
+* POST /users/ : Registra un nuevo usuario en el sistema.
+curl -X POST "http://localhost:8000/users/" -H "Content-Type: application/json" -d '{"email": "admin@sgir.com", "nombres": "Admin", "apellidos": "Sistema", "password": "password123", "id_rol": 1}'
+
+* POST /users/login : Autentica al usuario y devuelve el Token JWT.
+curl -X POST "http://localhost:8000/users/login" -H "Content-Type: application/json" -d '{"email": "admin@sgir.com", "password": "password123"}'
+
+* GET /users/me : Obtiene la información del usuario logueado.
+curl -X GET "http://localhost:8000/users/me" -H "Authorization: Bearer <TOKEN>"
 
 ------------------------------------------------------------------------------
-2. FLUJO DE GESTIÓN DE ACTIVOS (INVENTARIO)
+2. INFRAESTRUCTURA (CMDB)
 ------------------------------------------------------------------------------
-1. Servidor: POST /servidores/ -> Registro de IP y criticidad.
-2. Credenciales: POST /credenciales/ -> Service (encryption.py) cifra la contraseña con Fernet.
-   *Nota: Esto permite que el backend use la contraseña para monitoreo pero no la exponga en texto plano en la DB.*
+
+* POST /servidores/ : Registra un servidor físico o virtual.
+curl -X POST "http://localhost:8000/servidores/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_servidor": "SRV-PROD-01", "direccion_ip": "192.168.1.100", "es_legacy": false, "descripcion": "Servidor de Producción Principal", "id_nivel_criticidad": 1, "id_estado_servidor": 1}'
+
+* POST /credenciales/ : Registra una credencial (la contraseña se guarda cifrada).
+curl -X POST "http://localhost:8000/credenciales/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"usuario": "sgir_user", "password": "sgir_password", "id_tipo_acceso": 1, "id_estado_credencial": 1, "id_servidor": 1}'
+
+* POST /instancias/ : Registra una instancia de DBMS (MySQL, Oracle, etc).
+curl -X POST "http://localhost:8000/instancias/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_instancia": "MYSQL_PROD", "puerto": 3306, "id_servidor": 1, "id_dbms": 1, "id_estado_instancia": 1}'
+
+* POST /bases-de-datos/ : Registra una base de datos específica.
+curl -X POST "http://localhost:8000/bases-de-datos/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_base": "ventas_db", "id_instancia": 1, "id_estado_bd": 1}'
 
 ------------------------------------------------------------------------------
-3. FLUJO DE MONITOREO DINÁMICO (AD-HOC)
+3. MONITOREO DINÁMICO (AD-HOC)
 ------------------------------------------------------------------------------
-Propósito: Obtener el estado actual de un motor sin configurar scrapers fijos.
 
-1. Petición: GET /monitoring/{engine}/{server_id}/{cred_id}
-2. Backend:
-   a. Recupera servidor y credencial desde app/services/infrastructure_crud.py.
-   b. Desencripta contraseña (encryption.py).
-   c. Dynamic Core genera conexión temporal (Engine SQL o MongoClient).
-3. Service:
-   - MySQL (5/8): Ejecuta SHOW GLOBAL STATUS.
-   - MongoDB: Ejecuta db.serverStatus().
-4. Resultado: Devuelve métricas estandarizadas (Uptime, Conexiones, QPS, Memoria).
+* GET /monitoring/host/{server_id}/{cred_id} : Monitoreo SSH (CPU, RAM, Disco).
+curl -X GET "http://localhost:8000/monitoring/host/1/1" -H "Authorization: Bearer <TOKEN>"
 
-------------------------------------------------------------------------------
-4. FLUJO DE AUDITORÍA INTEGRADA (COMPLIANCE)
-------------------------------------------------------------------------------
-Cada acción exitosa en los módulos de 'core_crud' o 'monitoring' dispara una
-llamada al servicio audit_crud.log_event().
+* GET /monitoring/mysql8/{server_id}/{cred_id} : Monitoreo de MySQL 8.
+curl -X GET "http://localhost:8000/monitoring/mysql8/1/1" -H "Authorization: Bearer <TOKEN>"
 
-Registro automático:
-- Quién: id_usuario extraído del token JWT.
-- Qué: Entidad afectada (Servidor, Usuario, Política, etc.).
-- Resultado: Eventos de Creación, Modificación, Eliminación o Ejecución.
+* GET /monitoring/mongodb/{server_id}/{cred_id} : Monitoreo de MongoDB.
+curl -X GET "http://localhost:8000/monitoring/mongodb/1/1" -H "Authorization: Bearer <TOKEN>"
+
+* GET /monitoring/inventory/{server_id}/{cred_id} : Discovery Service (Escaneo de BDs).
+curl -X GET "http://localhost:8000/monitoring/inventory/1/1" -H "Authorization: Bearer <TOKEN>"
 
 ------------------------------------------------------------------------------
-5. FLUJO DE PROTECCIÓN DE DATOS (BACKUPS)
+4. GESTIÓN DE RESPALDOS
 ------------------------------------------------------------------------------
-1. Configuración: Definir Rutas y Políticas de Respaldo.
-2. Vinculación: Asignar política a una Base de Datos específica.
-3. Trazabilidad: Registrar ejecuciones manuales o automáticas en el historial de respaldos.
+
+* POST /politicas-respaldo/ : Define una frecuencia de respaldo.
+curl -X POST "http://localhost:8000/politicas-respaldo/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_politica": "Diario Nocturno", "frecuencia_horas": 24, "retencion_dias": 7, "id_tipo_respaldo": 1}'
+
+* POST /rutas-respaldo/ : Define un destino de almacenamiento.
+curl -X POST "http://localhost:8000/rutas-respaldo/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"descripcion_ruta": "NAS_BACKUP", "path": "/mnt/backups", "id_tipo_almacenamiento": 1}'
+
+* POST /asignacion-politica/ : Vincula una BD a una política.
+curl -X POST "http://localhost:8000/asignacion-politica/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"id_base_datos": 1, "id_politica": 1}'
+
+------------------------------------------------------------------------------
+5. AUDITORÍA Y SALUD
+------------------------------------------------------------------------------
+
+* GET /audit-logs/ : Consulta la bitácora de eventos.
+curl -X GET "http://localhost:8000/audit-logs/" -H "Authorization: Bearer <TOKEN>"
+
+* GET /health/postgres : Verifica estado de la conexión principal.
+curl -X GET "http://localhost:8000/health/postgres"
+
+==============================================================================
