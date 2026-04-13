@@ -3,77 +3,120 @@ SGIR - CATÁLOGO DE ENDPOINTS Y FLUJOS DE TRABAJO (API WORKFLOW)
 ==============================================================================
 
 Este documento detalla cada endpoint disponible, su propósito y un comando de 
-ejemplo (curl) para realizar pruebas.
+ejemplo (curl) para realizar pruebas, basado en las validaciones exitosas.
 
 Nota: Para los endpoints protegidos, se debe incluir el header:
 -H "Authorization: Bearer <TU_TOKEN_JWT>"
 
 ------------------------------------------------------------------------------
-1. SEGURIDAD Y USUARIOS (PÚBLICOS Y PROTEGIDOS)
+1. SEGURIDAD Y USUARIOS
 ------------------------------------------------------------------------------
 
-* POST /users/ : Registra un nuevo usuario en el sistema.
-curl -X POST "http://localhost:8000/users/" -H "Content-Type: application/json" -d '{"email": "admin@sgir.com", "nombres": "Admin", "apellidos": "Sistema", "password": "password123", "id_rol": 1}'
+* POST /users/ : Registra un nuevo usuario (Público).
+curl -X POST "http://localhost:8000/users/" -H "Content-Type: application/json" -d '{"nombres": "Angel", "apellidos": "Romero", "email": "angel@example.com", "password": "angel_pass", "id_rol": 1, "id_estado_usuario": 1}'
 
 * POST /users/login : Autentica al usuario y devuelve el Token JWT.
-curl -X POST "http://localhost:8000/users/login" -H "Content-Type: application/json" -d '{"email": "admin@sgir.com", "password": "password123"}'
+curl -X POST "http://localhost:8000/users/login" -d "username=angel@example.com&password=angel_pass"
 
-* GET /users/me : Obtiene la información del usuario logueado.
+* POST /users/logout : Cierra sesión y registra el evento en auditoría (Protegido).
+curl -X POST "http://localhost:8000/users/logout" -H "Authorization: Bearer <TOKEN>"
+
+* GET /users/me : Obtiene el perfil del usuario actual.
 curl -X GET "http://localhost:8000/users/me" -H "Authorization: Bearer <TOKEN>"
 
-------------------------------------------------------------------------------
-2. INFRAESTRUCTURA (CMDB)
-------------------------------------------------------------------------------
+* PUT /users/{id} : Actualiza datos básicos (Sin password ni rol).
+curl -X PUT "http://localhost:8000/users/3" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombres": "Angel", "apellidos": "Romero Rios", "email": "angel@example.com"}'
 
-* POST /servidores/ : Registra un servidor físico o virtual.
-curl -X POST "http://localhost:8000/servidores/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_servidor": "SRV-PROD-01", "direccion_ip": "192.168.1.100", "es_legacy": false, "descripcion": "Servidor de Producción Principal", "id_nivel_criticidad": 1, "id_estado_servidor": 1}'
-
-* POST /credenciales/ : Registra una credencial (la contraseña se guarda cifrada).
-curl -X POST "http://localhost:8000/credenciales/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"usuario": "sgir_user", "password": "sgir_password", "id_tipo_acceso": 1, "id_estado_credencial": 1, "id_servidor": 1}'
-
-* POST /instancias/ : Registra una instancia de DBMS (MySQL, Oracle, etc).
-curl -X POST "http://localhost:8000/instancias/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_instancia": "MYSQL_PROD", "puerto": 3306, "id_servidor": 1, "id_dbms": 1, "id_estado_instancia": 1}'
-
-* POST /bases-de-datos/ : Registra una base de datos específica.
-curl -X POST "http://localhost:8000/bases-de-datos/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_base": "ventas_db", "id_instancia": 1, "id_estado_bd": 1}'
+* PUT /users/{id}/password : Actualiza la contraseña validando la anterior.
+curl -X PUT "http://localhost:8000/users/3/password" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"old_password": "angel_pass", "new_password": "new_password_123"}'
 
 ------------------------------------------------------------------------------
-3. MONITOREO DINÁMICO (AD-HOC)
+2. CATÁLOGOS BASE (CONFIGURACIÓN INICIAL)
 ------------------------------------------------------------------------------
 
-* GET /monitoring/host/{server_id}/{cred_id} : Monitoreo SSH (CPU, RAM, Disco).
-curl -X GET "http://localhost:8000/monitoring/host/1/1" -H "Authorization: Bearer <TOKEN>"
+* POST /roles/ : Crea un nuevo rol de usuario.
+curl -X POST "http://localhost:8000/roles/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_rol": "Operador"}'
 
-* GET /monitoring/mysql8/{server_id}/{cred_id} : Monitoreo de MySQL 8.
-curl -X GET "http://localhost:8000/monitoring/mysql8/1/1" -H "Authorization: Bearer <TOKEN>"
+* POST /estados/ : Crea un estado general (para Servidores, Usuarios, etc).
+curl -X POST "http://localhost:8000/estados/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_estado": "activo_angel"}'
 
-* GET /monitoring/mongodb/{server_id}/{cred_id} : Monitoreo de MongoDB.
-curl -X GET "http://localhost:8000/monitoring/mongodb/1/1" -H "Authorization: Bearer <TOKEN>"
+* POST /audit-types/ : Registra un tipo de evento de auditoría.
+curl -X POST "http://localhost:8000/audit-types/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_evento": "Acceso al Sistema"}'
 
-* GET /monitoring/inventory/{server_id}/{cred_id} : Discovery Service (Escaneo de BDs).
-curl -X GET "http://localhost:8000/monitoring/inventory/1/1" -H "Authorization: Bearer <TOKEN>"
+* POST /criticidad/ : Registra un nivel de criticidad.
+curl -X POST "http://localhost:8000/criticidad/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_nivel": "Medio", "descripcion": "Interno"}'
+
+* POST /tipo-metrica/ : Registra un tipo de métrica de monitoreo.
+curl -X POST "http://localhost:8000/tipo-metrica/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_tipo": "Uso de CPU", "unidad_medida": "%"}'
+
+* POST /dbms/ : Registra un motor de base de datos.
+curl -X POST "http://localhost:8000/dbms/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_dbms": "MySQL", "version": "8.0", "descripcion": "Modern Infra"}'
+
+* POST /tipo-respaldo/ : Registra un modo de backup (Completo, Incremental).
+curl -X POST "http://localhost:8000/tipo-respaldo/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_tipo": "Completo"}'
+
+* POST /tipo-almacenamiento/ : Registra medio de storage (NFS, S3, Local).
+curl -X POST "http://localhost:8000/tipo-almacenamiento/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_tipo": "NFS"}'
+
+* POST /tipo-acceso/ : Registra método de conexión (SSH, API, Native).
+curl -X POST "http://localhost:8000/tipo-acceso/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_tipo": "SSH"}'
+
+* POST /nivel-alerta/ : Registra severidad de alertas (Info, Warning, Error).
+curl -X POST "http://localhost:8000/nivel-alerta/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_nivel": "Error"}'
+
+------------------------------------------------------------------------------
+3. INFRAESTRUCTURA (CMDB)
+------------------------------------------------------------------------------
+
+* POST /servidores/ : Registra un servidor (Valida IP duplicada en Backend).
+curl -X POST "http://localhost:8000/servidores/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_servidor": "SRV-RED-108", "direccion_ip": "148.215.4.108", "es_legacy": false, "id_nivel_criticidad": 2, "id_estado_servidor": 1}'
+
+* POST /credenciales/ : Registra credenciales (Password se guarda cifrado AES).
+curl -X POST "http://localhost:8000/credenciales/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"usuario": "root", "password": "root_pass_123", "id_tipo_acceso": 1, "id_estado_credencial": 1, "id_servidor": 4}'
+
+* POST /instancias/ : Registra una instancia activa en un servidor.
+curl -X POST "http://localhost:8000/instancias/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_instancia": "MYSQL_PROD_108", "puerto": 3306, "id_servidor": 4, "id_dbms": 3, "id_estado_instancia": 1}'
+
+* POST /bases-de-datos/ : Registra una base de datos lógica.
+curl -X POST "http://localhost:8000/bases-de-datos/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_base": "ventas_global_db", "tamano_mb": 500.0, "id_instancia": 1, "id_estado_bd": 1}'
 
 ------------------------------------------------------------------------------
 4. GESTIÓN DE RESPALDOS
 ------------------------------------------------------------------------------
 
-* POST /politicas-respaldo/ : Define una frecuencia de respaldo.
-curl -X POST "http://localhost:8000/politicas-respaldo/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_politica": "Diario Nocturno", "frecuencia_horas": 24, "retencion_dias": 7, "id_tipo_respaldo": 1}'
+* POST /rutas-respaldo/ : Define destino de almacenamiento.
+curl -X POST "http://localhost:8000/rutas-respaldo/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"descripcion_ruta": "Server en nube privada 148.215.4.4", "path": "/mnt/backup_cloud/148.215.4.108", "id_tipo_almacenamiento": 5, "id_estado_ruta": 1}'
 
-* POST /rutas-respaldo/ : Define un destino de almacenamiento.
-curl -X POST "http://localhost:8000/rutas-respaldo/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"descripcion_ruta": "NAS_BACKUP", "path": "/mnt/backups", "id_tipo_almacenamiento": 1}'
+* POST /politicas-respaldo/ : Define frecuencia y retención (Valida no negativos).
+curl -X POST "http://localhost:8000/politicas-respaldo/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre_politica": "Completo Mensual", "frecuencia_horas": 720, "retencion_dias": 30, "id_tipo_respaldo": 1, "id_estado_politica": 1}'
 
-* POST /asignacion-politica/ : Vincula una BD a una política.
+* POST /asignacion-politica/ : Vincula una BD a una Política.
 curl -X POST "http://localhost:8000/asignacion-politica/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"id_base_datos": 1, "id_politica": 1}'
 
+* POST /respaldos/ : Registra la ejecución histórica de un backup.
+curl -X POST "http://localhost:8000/respaldos/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"fecha_inicio": "2026-04-13T10:00:00Z", "fecha_fin": "2026-04-13T10:05:00Z", "tamano_mb": 485.5, "hash_integridad": "sha256:...", "id_base_datos": 1, "id_politica": 1, "id_credencial": 4, "id_ruta_respaldo": 1, "id_estado_ejecucion": 4}'
+
 ------------------------------------------------------------------------------
-5. AUDITORÍA Y SALUD
+5. MONITOREO Y MÉTRICAS
 ------------------------------------------------------------------------------
 
-* GET /audit-logs/ : Consulta la bitácora de eventos.
+* POST /monitoreo/ : Inicia una sesión de recolección.
+curl -X POST "http://localhost:8000/monitoreo/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"id_servidor": 4, "id_credencial": 4, "id_estado_monitoreo": 8}'
+
+* PUT /monitoreo/{id}/close : Finaliza la sesión y marca fecha_fin.
+curl -X PUT "http://localhost:8000/monitoreo/4/close" -H "Authorization: Bearer <TOKEN>"
+
+* POST /metricas/ : Registra un valor medido vinculado a una sesión.
+curl -X POST "http://localhost:8000/metricas/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"valor": 12.5, "id_monitoreo": 4, "id_tipo_metrica": 1}'
+
+------------------------------------------------------------------------------
+6. AUDITORÍA Y SALUD
+------------------------------------------------------------------------------
+
+* GET /audit-logs/ : Consulta la bitácora inmutable de eventos.
 curl -X GET "http://localhost:8000/audit-logs/" -H "Authorization: Bearer <TOKEN>"
 
-* GET /health/postgres : Verifica estado de la conexión principal.
+* GET /health/postgres : Verifica conectividad con la DB principal.
 curl -X GET "http://localhost:8000/health/postgres"
 
 ==============================================================================

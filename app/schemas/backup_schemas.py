@@ -54,8 +54,8 @@ class RutaRespaldoResponse(RutaRespaldoBase):
 class PoliticaRespaldoBase(BaseModel):
     nombre_politica: str
     descripcion: Optional[str] = None
-    frecuencia_horas: int
-    retencion_dias: int
+    frecuencia_horas: int = Field(..., ge=1, description="Frecuencia en horas (mínimo 1)")
+    retencion_dias: int = Field(..., ge=1, description="Días de retención (mínimo 1)")
     id_tipo_respaldo: int
     id_estado_politica: int = 1
 
