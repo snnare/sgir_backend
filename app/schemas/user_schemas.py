@@ -28,6 +28,15 @@ class UserCreate(UserBase):
     id_estado_usuario: int = 1
 
 
+class UserUpdate(UserBase):
+    id_estado_usuario: Optional[int] = None
+
+
+class UserPasswordUpdate(BaseModel):
+    old_password: str
+    new_password: str
+
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str

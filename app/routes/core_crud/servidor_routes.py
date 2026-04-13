@@ -13,6 +13,12 @@ router = APIRouter(dependencies=[Depends(get_current_user)])
 def create_server(servidor: ServidorCreate, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
     new_server = infrastructure_crud.create_servidor(db, servidor)
     
+    if not new_server:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Ya existe un servidor registrado con la IP: {servidor.direccion_ip}"
+        )
+    
     # Auditoría
     audit_crud.log_event(
         db=db,

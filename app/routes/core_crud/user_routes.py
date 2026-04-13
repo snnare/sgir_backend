@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import List
 from app.db.postgres.postgres_connection import get_db as get_pg_db
-from app.schemas.user_schemas import UserCreate, UserResponse, UserLogin, Token
+from app.schemas.user_schemas import UserCreate, UserResponse, UserLogin, Token, UserUpdate, UserPasswordUpdate
 from app.services import user_crud, audit_crud
 from app.core.security.hashing import verify_password
 from app.core.security.tokens import create_access_token
@@ -103,8 +103,8 @@ def read_user_by_email(email: str, db: Session = Depends(get_pg_db), current_use
 
 
 @router.put("/{user_id}", response_model=UserResponse)
-def update_user(user_id: int, user_update: UserCreate, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
-    """Actualiza la información de un usuario."""
+def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
+    """Actualiza la información de un usuario (Sin password ni rol)."""
     db_user = user_crud.update_user(db, user_id=user_id, user_update=user_update)
     if db_user is None:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
@@ -116,14 +116,35 @@ def update_user(user_id: int, user_update: UserCreate, db: Session = Depends(get
         entidad="Usuario",
         entidad_id=user_id,
         descripcion=f"Usuario actualizado: {db_user.email} por {current_user.email}",
-        tipo_evento_id=2  # Modificación
+        tipo_evento_id=3  # 3: Modificación
     )
     
     return db_user
 
+@router.put("/{user_id}/password")
+def update_password(user_id: int, password_update: UserPasswordUpdate, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
+    """Actualiza exclusivamente la contraseña del usuario validando la anterior."""
+    result = user_crud.update_user_password(db, user_id, password_update)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if result is False:
+        raise HTTPException(status_code=400, detail="La contraseña anterior es incorrecta")
+    
+    # Auditoría: Modificación de Password
+    audit_crud.log_event(
+        db=db,
+        user_id=current_user.id_usuario,
+        entidad="Usuario",
+        entidad_id=user_id,
+        descripcion=f"Contraseña actualizada para el usuario ID: {user_id}",
+        tipo_evento_id=3  # 3: Modificación
+    )
+    
+    return {"message": "Contraseña actualizada exitosamente"}
+
 
 @router.put("/email/{email}", response_model=UserResponse)
-def update_user_by_email(email: str, user_update: UserCreate, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
+def update_user_by_email(email: str, user_update: UserUpdate, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
     """Actualiza la información de un usuario por su correo electrónico."""
     db_user = user_crud.update_user_by_email(db, email=email, user_update=user_update)
     if db_user is None:
@@ -136,7 +157,7 @@ def update_user_by_email(email: str, user_update: UserCreate, db: Session = Depe
         entidad="Usuario",
         entidad_id=db_user.id_usuario,
         descripcion=f"Usuario actualizado por email: {email} por {current_user.email}",
-        tipo_evento_id=2  # Modificación
+        tipo_evento_id=3  # 3: Modificación
     )
     
     return db_user

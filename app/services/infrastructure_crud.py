@@ -66,10 +66,17 @@ def get_dbms_all(db: Session, skip: int = 0, limit: int = 100) -> list[DBMS]:
 def get_servidor(db: Session, servidor_id: int) -> Servidor | None:
     return db.query(Servidor).filter(Servidor.id_servidor == servidor_id).first()
 
+def get_servidor_by_ip(db: Session, ip: str) -> Servidor | None:
+    return db.query(Servidor).filter(Servidor.direccion_ip == ip).first()
+
 def get_servidores(db: Session, skip: int = 0, limit: int = 100) -> list[Servidor]:
     return db.query(Servidor).offset(skip).limit(limit).all()
 
-def create_servidor(db: Session, servidor: ServidorCreate) -> Servidor:
+def create_servidor(db: Session, servidor: ServidorCreate) -> Servidor | None:
+    # Validar si la IP ya existe
+    if get_servidor_by_ip(db, servidor.direccion_ip):
+        return None
+    
     db_servidor: Servidor = Servidor(**servidor.model_dump())
     db.add(db_servidor)
     db.commit()

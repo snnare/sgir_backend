@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.user_models import User, Role
-from app.schemas.user_schemas import UserCreate, RoleCreate
-from app.core.security.hashing import get_password_hash
+from app.schemas.user_schemas import UserCreate, RoleCreate, UserUpdate, UserPasswordUpdate
+from app.core.security.hashing import get_password_hash, verify_password
 
 
 # CRUD para Roles
@@ -53,14 +53,13 @@ def create_user(db: Session, user: UserCreate) -> User:
     db.refresh(instance=db_user)
     return db_user
 
-def update_user(db: Session, user_id: int, user_update: UserCreate) -> User | None:
+def update_user(db: Session, user_id: int, user_update: UserUpdate) -> User | None:
     db_user = get_user(db, user_id)
     if not db_user:
         return None
     
     update_data = user_update.model_dump(exclude_unset=True)
-    if "password" in update_data:
-        update_data["password_hash"] = get_password_hash(update_data.pop("password"))
+    # Ya no procesamos password aquí por seguridad y requerimiento
         
     for key, value in update_data.items():
         setattr(db_user, key, value)
@@ -69,15 +68,30 @@ def update_user(db: Session, user_id: int, user_update: UserCreate) -> User | No
     db.refresh(db_user)
     return db_user
 
+def update_user_password(db: Session, user_id: int, password_update: UserPasswordUpdate) -> bool | None:
+    """
+    Actualiza la contraseña validando la anterior.
+    Retorna: True si tuvo éxito, False si la contraseña vieja no coincide, None si el usuario no existe.
+    """
+    db_user = get_user(db, user_id)
+    if not db_user:
+        return None
+    
+    # Verificar contraseña anterior
+    if not verify_password(password_update.old_password, db_user.password_hash):
+        return False
+        
+    # Actualizar con nuevo hash
+    db_user.password_hash = get_password_hash(password_update.new_password)
+    db.commit()
+    return True
 
-def update_user_by_email(db: Session, email: str, user_update: UserCreate) -> User | None:
+def update_user_by_email(db: Session, email: str, user_update: UserUpdate) -> User | None:
     db_user = get_user_by_email(db, email)
     if not db_user:
         return None
     
     update_data = user_update.model_dump(exclude_unset=True)
-    if "password" in update_data:
-        update_data["password_hash"] = get_password_hash(update_data.pop("password"))
         
     for key, value in update_data.items():
         setattr(db_user, key, value)
