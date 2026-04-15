@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.monitoring_persistence_models import Monitoreo, Metrica, TipoMetrica
 from app.models.infrastructure_models import Servidor, CredencialAcceso
-from app.core.dynamic_ssh_core import get_ssh_client
+from app.core.ssh_orchestrator import get_ssh_connection
 from datetime import datetime
 from decimal import Decimal
 
@@ -83,10 +83,10 @@ def run_ssh_monitoring(db_local: Session, servidor_id: int, credencial_id: int):
 
     client = None
     try:
-        # 1. CONECTAR
-        client = get_ssh_client(servidor, credencial)
+        # 1. CONECTAR (Vía Orquestador con reintentos y perfiles)
+        client = get_ssh_connection(servidor, credencial)
         
-        # 2. EJECUTAR (con logica de legacy)
+        # 2. EJECUTAR (con logica de legacy para los comandos)
         raw_metrics = extract_host_metrics(client, servidor.es_legacy)
 
         # 3. PERSISTIR (Modelo Fisico)

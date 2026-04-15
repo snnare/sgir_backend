@@ -43,3 +43,7 @@ app.include_router(monitoring_router, prefix="/monitoring")
 @app.get("/")
 def read_root():
     return {"message": "Welcome"}
+
+@app.get("/ping")
+def ping():
+    return {"status": "ok", "message": "Backend is reachable"}

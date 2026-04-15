@@ -1,29 +1,32 @@
 # SGIR - Resumen del Estado Actual del Proyecto
 
-## 📅 Fecha: 13 de Abril, 2026 (Sesión de Reforzamiento de Integridad)
+## 📅 Fecha: 14 de Abril, 2026 (Sesión de Robustez SSH y Conectividad)
 
 ### ✅ Módulos Implementados y Mejorados
-1.  **Seguridad Avanzada**: 
-    *   Implementación de endpoint de **Logout** con registro en bitácora.
-    *   Separación de actualización de perfil y cambio de contraseña (con validación de `old_password`).
-2.  **Validación de Infraestructura**: 
-    *   Filtro en el backend para evitar el registro de **IPs duplicadas** en servidores.
-3.  **Gestión de Estados**: 
-    *   Nuevo módulo de **Estado_General** con CRUD completo, permitiendo definir estados personalizados (ej. `activo_angel`) aplicables a cualquier entidad.
-4.  **Robustez en Respaldos**: 
-    *   Validación de esquemas Pydantic para impedir valores negativos en frecuencia y retención de políticas.
-5.  **Core CRUD Extendido**: Gestión completa de Usuarios, Roles, Auditoría, Infraestructura (Servidores, DBMS, Instancias, BDs) y Catálogos.
-6.  **Monitoreo y SRE**: MySQL 5/8, MongoDB y Host SSH (CPU, RAM, Disco) funcionales con registro de sesiones y métricas históricas.
-7.  **Dockerización**: Imagen optimizada y validada con los últimos cambios de la API.
+1.  **Orquestador SSH Avanzado**: 
+    *   Refactorización completa de `dynamic_ssh_core` a `ssh_orchestrator`.
+    *   Implementación de perfiles `SSH_LEGACY` (RHEL 4/5) y `SSH_NO_LEGACY` (Modernos).
+    *   Sistema de **3 reintentos con espera de 5 segundos** ante fallos de red.
+    *   Garantía de **Responsabilidad Única**: El orquestador solo gestiona la conexión, no la ejecución.
+2.  **Seguridad y Usuarios**: 
+    *   Confirmación de endpoints de Login/Register con hashing Bcrypt y auditoría automática.
+    *   Validación de tipo de acceso SSH obligatoria para credenciales.
+3.  **Conectividad Front-Back**: 
+    *   Nuevo endpoint `/ping` público para facilitar pruebas de integración con el Frontend.
+    *   Configuración de red de host en Docker para acceso directo.
+4.  **SRE & Monitoreo**: 
+    *   Soporte funcional para extracción de métricas (CPU, RAM, Disco, Uptime) a través del nuevo orquestador.
+5.  **Dockerización**: 
+    *   Imagen optimizada basada en `Python 3.14` y `uv`, con usuario no privilegiado para mayor seguridad.
 
 ### 🔐 Documentación y Pruebas
-*   **Workflow Exhaustivo**: `workflow.txt` actualizado con comandos `curl` para el ciclo de vida completo: Catálogos -> Infraestructura -> Seguridad -> Monitoreo -> Backups.
-*   **Trazabilidad**: Sistema de auditoría total que persiste automáticamente cada acción relevante en la bitácora.
+*   **Pruebas de Stress SSH**: Verificación exitosa de reintentos mediante puertos cerrados y conexiones concurrentes a contenedores de prueba.
+*   **Trazabilidad**: Cada intento de conexión (exitoso o fallido) queda registrado en los logs del backend y en la bitácora de auditoría.
 
 ### ⚠️ Notas de Estabilidad
-*   Se ha garantizado que el sistema no permita estados inconsistentes (como retenciones negativas o duplicidad de activos críticos por IP).
+*   El sistema ahora es resiliente a micro-cortes de red gracias a la lógica de reintentos en el orquestador SSH.
 
 ### 🚀 Próximos Pasos Sugeridos
+*   Implementar el **Scheduler (APScheduler)** para automatizar la recolección periódica de métricas usando el nuevo orquestador.
 *   Desarrollar el soporte para **Oracle 19c/10g**.
-*   Implementar el **Scheduler** (APScheduler) para automatizar la recolección periódica de métricas.
-*   Diseñar el Frontend para la visualización de tableros de control y gráficas de métricas.
+*   Diseñar el Frontend para la visualización de los tableros de control.

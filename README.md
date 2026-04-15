@@ -16,9 +16,10 @@ SGIR es una plataforma de backend robusta desarrollada con **FastAPI** y **Postg
 *   **Inventario Dinámico:** Gestión de servidores, DBMS, instancias y BDs.
 *   **Estados Generales:** Sistema centralizado para definir estados (Activo, Inactivo, En Progreso, etc.) aplicables a todo el inventario.
 
-### 📊 Monitoreo Multi-Motor (SRE)
+### 📊 Monitoreo Multi-Motor y Conectividad (SRE)
+*   **Orquestador SSH Robusto:** Módulo especializado con perfiles diferenciados (`Legacy` vs `Modern`), lógica de **3 reintentos** y esperas de 5s para alta disponibilidad en el monitoreo.
 *   **Motores Soportados:** MySQL 5, MySQL 8, MongoDB.
-*   **Host Monitoring:** Monitoreo vía SSH de CPU, RAM, Disco y Uptime (con soporte para sistemas Legacy RHEL 4+).
+*   **Host Monitoring:** Monitoreo vía SSH de CPU, RAM, Disco y Uptime (compatible con RHEL 4+).
 *   **Validación de Políticas:** Protección contra valores inválidos (negativos) en frecuencias y periodos de retención.
 
 ## 🛠️ Stack Tecnológico
@@ -31,8 +32,9 @@ SGIR es una plataforma de backend robusta desarrollada con **FastAPI** y **Postg
 ## 📁 Estructura y Documentación
 
 *   `/docs`: Swagger UI interactivo (con el servidor corriendo).
+*   `/ping`: Endpoint de prueba de conectividad pública para el Frontend.
 *   `workflow.txt`: Catálogo exhaustivo de endpoints con ejemplos `curl` probados.
-*   `app/services/`: Lógica de negocio y proveedores de métricas.
+*   `app/core/ssh_orchestrator.py`: Núcleo de conectividad remota segura.
 
 ## 🧪 Pruebas Rápidas
 Consulta `workflow.txt` para encontrar los comandos `curl` de registro, seguridad y monitoreo listos para copiar y pegar.
