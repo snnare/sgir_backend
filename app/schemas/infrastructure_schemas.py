@@ -43,10 +43,11 @@ class DBMSResponse(DBMSBase):
 class ServidorBase(BaseModel):
     nombre_servidor: str
     direccion_ip: str
-    es_legacy: bool = False
+    es_legacy: bool
     descripcion: Optional[str] = None
     id_nivel_criticidad: int
     id_estado_servidor: int
+    model_config = ConfigDict(extra="forbid")
 
 class ServidorCreate(ServidorBase):
     pass

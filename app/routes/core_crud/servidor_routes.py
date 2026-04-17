@@ -34,12 +34,12 @@ def create_server(servidor: ServidorCreate, db: Session = Depends(get_pg_db), cu
 def read_servers(skip: int = 0, limit: int = 100, db: Session = Depends(get_pg_db)):
     return infrastructure_crud.get_servidores(db, skip, limit)
 
-@router.get("/{servidor_id}", response_model=ServidorResponse)
-def read_server(servidor_id: int, db: Session = Depends(get_pg_db)):
-    db_server = infrastructure_crud.get_servidor(db, servidor_id)
+@router.get("/{ip}")
+def read_server_by_ip(ip: str, db: Session = Depends(get_pg_db)):
+    db_server = infrastructure_crud.get_servidor_by_ip(db, ip)
     if not db_server:
         raise HTTPException(status_code=404, detail="Servidor no encontrado")
-    return db_server
+    return {"message": "Servidor registrado", "server": db_server}
 
 @router.put("/{servidor_id}", response_model=ServidorResponse)
 def update_server(servidor_id: int, servidor_update: ServidorUpdate, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
