@@ -1,5 +1,5 @@
 from typing import Any
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.models.infrastructure_models import Servidor, CredencialAcceso, InstanciaDBMS, BaseDeDatos, NivelCriticidad, TipoAcceso, DBMS
 from app.schemas.infrastructure_schemas  import (
     ServidorCreate, ServidorUpdate, 
@@ -152,8 +152,18 @@ def delete_base_datos(db: Session, id_base_datos: int) -> bool:
 def get_credencial(db: Session, id_credencial: int) -> CredencialAcceso | None:
     return db.query(CredencialAcceso).filter(CredencialAcceso.id_credencial == id_credencial).first()
 
+def get_credenciales_all(db: Session, skip: int = 0, limit: int = 100) -> list[CredencialAcceso]:
+    return db.query(CredencialAcceso).options(
+        joinedload(CredencialAcceso.tipo),
+        joinedload(CredencialAcceso.estado),
+        joinedload(CredencialAcceso.servidor)
+    ).offset(skip).limit(limit).all()
+
 def get_credenciales_by_servidor(db: Session, servidor_id: int) -> list[CredencialAcceso]:
-    return db.query(CredencialAcceso).filter(CredencialAcceso.id_servidor == servidor_id).all()
+    return db.query(CredencialAcceso).options(
+        joinedload(CredencialAcceso.tipo),
+        joinedload(CredencialAcceso.estado)
+    ).filter(CredencialAcceso.id_servidor == servidor_id).all()
 
 def create_credencial(db: Session, credencial: CredencialCreate) -> CredencialAcceso:
     encrypted_pass: str = encrypt_password(credencial.password)

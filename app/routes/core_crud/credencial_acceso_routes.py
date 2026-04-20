@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.db.postgres.postgres_connection import get_db as get_pg_db
-from app.schemas.infrastructure_schemas import CredencialCreate, CredencialResponse, CredencialUpdate
+from app.schemas.infrastructure_schemas import CredencialCreate, CredencialResponse, CredencialUpdate, CredencialFullResponse
 from app.services import infrastructure_crud, audit_crud
 from app.core.dependencies import get_current_user
 from app.models.user_models import User
@@ -12,7 +12,7 @@ router = APIRouter(dependencies=[Depends(get_current_user)])
 @router.post("/", response_model=CredencialResponse, status_code=status.HTTP_201_CREATED)
 def create_credential(credencial: CredencialCreate, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
     new_cred = infrastructure_crud.create_credencial(db, credencial)
-    
+
     # Auditoría
     audit_crud.log_event(
         db=db,
@@ -24,9 +24,22 @@ def create_credential(credencial: CredencialCreate, db: Session = Depends(get_pg
     )
     return new_cred
 
-@router.get("/servidor/{servidor_id}", response_model=List[CredencialResponse])
+@router.get("/", response_model=List[CredencialFullResponse])
+def read_credentials(skip: int = 0, limit: int = 100, db: Session = Depends(get_pg_db)):
+    """Obtiene todas las credenciales registradas con información enriquecida (Join)."""
+    creds = infrastructure_crud.get_credenciales_all(db, skip=skip, limit=limit)
+    # Mapear el nombre del servidor manualmente si es necesario o dejar que Pydantic lo haga si se añade al schema
+    for c in creds:
+        c.servidor_nombre = c.servidor.nombre_servidor
+    return creds
+
+@router.get("/servidor/{servidor_id}", response_model=List[CredencialFullResponse])
 def read_credentials_by_server(servidor_id: int, db: Session = Depends(get_pg_db)):
-    return infrastructure_crud.get_credenciales_by_servidor(db, servidor_id)
+    creds = infrastructure_crud.get_credenciales_by_servidor(db, servidor_id)
+    for c in creds:
+        c.servidor_nombre = c.servidor.nombre_servidor
+    return creds
+
 
 @router.put("/{credencial_id}", response_model=CredencialResponse)
 def update_credential(credencial_id: int, credencial_update: CredencialUpdate, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):

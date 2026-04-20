@@ -88,6 +88,28 @@ class CredencialResponse(CredencialBase):
     fecha_creacion: datetime
     model_config = ConfigDict(from_attributes=True)
 
+class CredencialEnriquecidaResponse(BaseModel):
+    id_credencial: int
+    usuario: str
+    fecha_creacion: datetime
+    id_servidor: int
+    servidor_nombre: Optional[str] = None
+    tipo: TipoAccesoResponse
+    estado: Optional[BaseModel] = None # Usaremos un esquema genérico para el estado
+    
+    class Config:
+        from_attributes = True
+
+# Para el estado, usaremos uno simple
+class EstadoSimpleResponse(BaseModel):
+    id_estado: int
+    nombre_estado: str
+    model_config = ConfigDict(from_attributes=True)
+
+class CredencialFullResponse(CredencialEnriquecidaResponse):
+    estado: EstadoSimpleResponse
+    model_config = ConfigDict(from_attributes=True)
+
 # --- Instancia DBMS ---
 
 class InstanciaBase(BaseModel):

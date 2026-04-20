@@ -52,7 +52,10 @@ class CredencialAcceso(Base):
     id_estado_credencial = Column(Integer, ForeignKey("estado_general.id_estado"), nullable=False)
     id_servidor = Column(Integer, ForeignKey("servidor.id_servidor", ondelete="CASCADE"), nullable=False)
 
+    # Relaciones
     servidor = relationship("Servidor", back_populates="credenciales")
+    tipo = relationship("TipoAcceso")
+    estado = relationship("app.models.user_models.UserStatus")
 
 class InstanciaDBMS(Base):
     __tablename__ = "instancia_dbms"
