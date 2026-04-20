@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import List
+from datetime import timedelta
 from app.db.postgres.postgres_connection import get_db as get_pg_db
 from app.schemas.user_schemas import UserCreate, UserResponse, UserLogin, Token, UserUpdate, UserPasswordUpdate
 from app.services import user_crud, audit_crud
@@ -9,11 +10,16 @@ from app.core.security.hashing import verify_password
 from app.core.security.tokens import create_access_token
 from app.core.dependencies import get_current_user
 from app.models.user_models import User
+from app.core.config_core import settings
 
 router = APIRouter()
 
 @router.post("/login", response_model=Token)
-def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_pg_db)):
+def login_user(
+    form_data: OAuth2PasswordRequestForm = Depends(), 
+    remember_me: bool = Query(False),
+    db: Session = Depends(get_pg_db)
+):
     """Inicia sesión para obtener un token de acceso."""
     user = user_crud.get_user_by_email(db, email=form_data.username)
     if not user or not verify_password(form_data.password, user.password_hash):
@@ -23,7 +29,16 @@ def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = D
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    access_token = create_access_token(data={"sub": user.email})
+    # Definir tiempo de expiración
+    if remember_me:
+        access_token_expires = timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS_REMEMBER)
+    else:
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    
+    access_token = create_access_token(
+        data={"sub": user.email}, 
+        expires_delta=access_token_expires
+    )
     
     # Auditoría: Login
     audit_crud.log_event(
