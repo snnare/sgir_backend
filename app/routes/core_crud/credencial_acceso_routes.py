@@ -6,8 +6,65 @@ from app.schemas.infrastructure_schemas import CredencialCreate, CredencialRespo
 from app.services import infrastructure_crud, audit_crud
 from app.core.dependencies import get_current_user
 from app.models.user_models import User
+from app.core.ssh_orchestrator import get_ssh_connection
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
+
+@router.post("/test-ssh/{id_servidor}/{id_credencial}")
+def test_ssh_connectivity(id_servidor: int, id_credencial: int, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
+    """
+    Prueba la conexión SSH de un servidor con una credencial específica.
+    Valida perfiles legacy, reintentos y credenciales.
+    """
+    servidor = infrastructure_crud.get_servidor(db, id_servidor)
+    credencial = infrastructure_crud.get_credencial(db, id_credencial)
+    
+    if not servidor or not credencial:
+        raise HTTPException(status_code=404, detail="Servidor o Credencial no encontrados")
+    
+    ssh_client = None
+    try:
+        # El orquestador ya maneja la lógica de legacy y reintentos internamente
+        ssh_client = get_ssh_connection(servidor, credencial)
+        
+        # Ejecutar un comando de prueba rápido
+        stdin, stdout, stderr = ssh_client.exec_command("whoami && uptime")
+        result = stdout.read().decode().strip().split("\n")
+        
+        # Auditoría del test exitoso
+        audit_crud.log_event(
+            db=db,
+            user_id=current_user.id_usuario,
+            entidad="CredencialAcceso",
+            entidad_id=id_credencial,
+            descripcion=f"Test SSH exitoso en {servidor.direccion_ip} con usuario {result[0]}",
+            tipo_evento_id=5 # Ejecución
+        )
+        
+        return {
+            "status": "success",
+            "message": f"Conexión exitosa a {servidor.direccion_ip}",
+            "details": {
+                "perfil_utilizado": "Legacy" if servidor.es_legacy else "Estándar",
+                "usuario_remoto": result[0],
+                "uptime_servidor": result[1] if len(result) > 1 else "N/A"
+            }
+        }
+        
+    except Exception as e:
+        # Auditoría del fallo
+        audit_crud.log_event(
+            db=db,
+            user_id=current_user.id_usuario,
+            entidad="CredencialAcceso",
+            entidad_id=id_credencial,
+            descripcion=f"Test SSH fallido en {servidor.direccion_ip}: {str(e)}",
+            tipo_evento_id=5
+        )
+        raise HTTPException(status_code=500, detail=f"Error de conexión: {str(e)}")
+    finally:
+        if ssh_client:
+            ssh_client.close()
 
 @router.post("/", response_model=CredencialResponse, status_code=status.HTTP_201_CREATED)
 def create_credential(credencial: CredencialCreate, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
