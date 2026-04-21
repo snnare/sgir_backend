@@ -24,17 +24,24 @@ def test_db_connectivity(id_instancia: int, id_credencial: int, db: Session = De
     if not instancia or not credencial or not servidor:
         raise HTTPException(status_code=404, detail="Instancia, Servidor o Credencial no encontrados")
     
-    # Validar que sea MySQL (2: MySQL 5, 3: MySQL 8)
-    if instancia.id_dbms not in [2, 3]:
-        raise HTTPException(status_code=400, detail="Este test solo soporta MySQL 5 y MySQL 8 actualmente")
+    # Validar que sea MySQL (2, 3) u Oracle (4)
+    if instancia.id_dbms not in [2, 3, 4]:
+        raise HTTPException(status_code=400, detail="Este test solo soporta MySQL (5/8) y Oracle (19c) actualmente")
 
     session = None
     try:
-        # Intentar obtener sesión dinámica (ya maneja descifrado y puertos)
-        session = get_dynamic_session(servidor, credencial, instancia.id_dbms)
+        # Intentar obtener sesión dinámica
+        # Para Oracle, podríamos necesitar pasar el nombre de la instancia como db_name
+        session = get_dynamic_session(servidor, credencial, instancia.id_dbms, db_name=instancia.nombre_instancia)
         
-        # Ejecutar consulta de validación ligera
-        query = text("SELECT VERSION()")
+        # Ejecutar consulta de validación adaptada al motor
+        if instancia.id_dbms == 4:
+            # Oracle: Consultar banner de versión
+            query = text("SELECT banner FROM v$version WHERE ROWNUM = 1")
+        else:
+            # MySQL: Función version()
+            query = text("SELECT VERSION()")
+            
         version = session.execute(query).scalar()
         
         # Auditoría del test exitoso

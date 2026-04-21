@@ -24,6 +24,16 @@ def get_dynamic_engine(servidor: Servidor, credencial: CredencialAcceso, dbms_id
         url = f"{driver}://{user}:{password}@{host}:{port}/{db_name if db_name else ''}?charset={charset}"
         return create_engine(url, connect_args={"connect_timeout": 5})
     
+    elif dbms_id == 4: # Oracle
+        # Oracle suele usar el puerto 1521. Para 10g/19c la URL de SQLAlchemy cambia ligeramente.
+        # Usaremos el driver 'oracledb' (sucesor de cx_Oracle)
+        port = 1521
+        # En Oracle, db_name suele referirse al Service Name o SID.
+        # URL format: oracle+oracledb://user:pass@host:port/?service_name=...
+        service_name = db_name if db_name else "ORCL" # Valor por defecto común
+        url = f"oracle+oracledb://{user}:{password}@{host}:{port}/?service_name={service_name}"
+        return create_engine(url, connect_args={"timeout": 5})
+
     elif dbms_id == 5: # MongoDB (NoSQL)
         port = 27017
         # Para MongoDB devolveremos el string de conexión ya que no usa SQLAlchemy Engine estándar de la misma forma
