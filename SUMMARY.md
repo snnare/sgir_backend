@@ -1,32 +1,26 @@
 # SGIR - Resumen del Estado Actual del Proyecto
 
-## 📅 Fecha: 14 de Abril, 2026 (Sesión de Robustez SSH y Conectividad)
+## 📅 Fecha: 21 de Abril, 2026 (Monitoreo Dinámico y Compatibilidad Legacy)
 
 ### ✅ Módulos Implementados y Mejorados
-1.  **Orquestador SSH Avanzado**: 
-    *   Refactorización completa de `dynamic_ssh_core` a `ssh_orchestrator`.
-    *   Implementación de perfiles `SSH_LEGACY` (RHEL 4/5) y `SSH_NO_LEGACY` (Modernos).
-    *   Sistema de **3 reintentos con espera de 5 segundos** ante fallos de red.
-    *   Garantía de **Responsabilidad Única**: El orquestador solo gestiona la conexión, no la ejecución.
-2.  **Seguridad y Usuarios**: 
-    *   Confirmación de endpoints de Login/Register con hashing Bcrypt y auditoría automática.
-    *   Validación de tipo de acceso SSH obligatoria para credenciales.
-3.  **Conectividad Front-Back**: 
-    *   Nuevo endpoint `/ping` público para facilitar pruebas de integración con el Frontend.
-    *   Configuración de red de host en Docker para acceso directo.
-4.  **SRE & Monitoreo**: 
-    *   Soporte funcional para extracción de métricas (CPU, RAM, Disco, Uptime) a través del nuevo orquestador.
-5.  **Dockerización**: 
-    *   Imagen optimizada basada en `Python 3.14` y `uv`, con usuario no privilegiado para mayor seguridad.
+1.  **Monitoreo Dinámico de MySQL 5**:
+    *   Refactorización completa del router `mysql5.py` para resolver la jerarquía de infraestructura (**Instancia -> Servidor -> Credencial**) en tiempo real.
+    *   Eliminación de dependencias de conexión estáticas, permitiendo el monitoreo de cualquier instancia registrada en la CMDB mediante su ID.
+2.  **Compatibilidad con Motores Legacy**:
+    *   **Fix de Charset**: Implementación de lógica en el núcleo dinámico (`dynamic_db_core.py`) para forzar `charset=utf8` en versiones antiguas de MySQL (ej. 5.1.52) que no soportan `utf8mb4`.
+    *   Soporte verificado para múltiples versiones de MySQL 5 (5.1.x y 5.7.x).
+3.  **Gestión de Infraestructura via API**:
+    *   Validación del flujo completo de registro y prueba de conectividad para nuevos servidores legacy.
+    *   Pruebas exitosas de actualización de credenciales y re-validación inmediata.
 
 ### 🔐 Documentación y Pruebas
-*   **Pruebas de Stress SSH**: Verificación exitosa de reintentos mediante puertos cerrados y conexiones concurrentes a contenedores de prueba.
-*   **Trazabilidad**: Cada intento de conexión (exitoso o fallido) queda registrado en los logs del backend y en la bitácora de auditoría.
+*   **Validación de Métricas**: Extracción exitosa de "Golden Signals" (Uptime, Threads, QPS, Latencia) desde servidores remotos legacy.
+*   **Robustez del Core**: El sistema ahora detecta y maneja errores de autenticación y protocolos de red específicos de motores antiguos.
 
 ### ⚠️ Notas de Estabilidad
-*   El sistema ahora es resiliente a micro-cortes de red gracias a la lógica de reintentos en el orquestador SSH.
+*   Se corrigieron colisiones de rutas en el módulo de monitoreo mediante el reordenamiento de prefijos y routers en FastAPI.
 
 ### 🚀 Próximos Pasos Sugeridos
-*   Implementar el **Scheduler (APScheduler)** para automatizar la recolección periódica de métricas usando el nuevo orquestador.
-*   Desarrollar el soporte para **Oracle 19c/10g**.
-*   Diseñar el Frontend para la visualización de los tableros de control.
+*   **Implementar el Scheduler (APScheduler)**: Automatizar la recolección de métricas en segundo plano.
+*   **Soporte Oracle**: Añadir drivers y lógica de conexión para Oracle.
+*   **MySQL 8**: Replicar la lógica de monitoreo dinámico para instancias de MySQL 8.

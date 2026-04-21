@@ -20,7 +20,8 @@ def get_dynamic_engine(servidor: Servidor, credencial: CredencialAcceso, dbms_id
         else:
             port = 3306
         driver = "mysql+pymysql"
-        url = f"{driver}://{user}:{password}@{host}:{port}/{db_name if db_name else ''}"
+        charset = "utf8" if dbms_id == 2 else "utf8mb4"
+        url = f"{driver}://{user}:{password}@{host}:{port}/{db_name if db_name else ''}?charset={charset}"
         return create_engine(url, connect_args={"connect_timeout": 5})
     
     elif dbms_id == 5: # MongoDB (NoSQL)

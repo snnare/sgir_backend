@@ -1,85 +1,73 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import text
-from app.db.postgres.connection import get_db as get_pg_db
+from typing import List
+
+# Conexión a Meta-DB (Postgres)
+from app.db.postgres.postgres_connection import get_db as get_pg_db
+# Modelos de Infraestructura
+from app.models.infrastructure_models import InstanciaDBMS, Servidor, CredencialAcceso
+# Core Dinámico y Seguridad
 from app.core.dynamic_db_core import get_dynamic_session
 from app.core.dependencies import get_current_user
+# Servicios de Monitoreo y Schemas
+from app.services.monitoring.mysql5.mysql5_service import get_mysql5_metrics
+from app.schemas.monitoring_persistence_schemas import (
+    MySQL5Metrics as MySQL5FullMetrics
+)
 
 router = APIRouter(
-    prefix="/mysql5", 
     tags=["Monitoring - MySQL 5"],
     dependencies=[Depends(get_current_user)]
 )
 
 @router.get("/metrics/{id_instancia}", response_model=MySQL5FullMetrics)
-def get_full_metrics(id_instancia: int, pg_db: Session = Depends(get_pg_db)):
+def get_full_metrics(id_instancia: int, db: Session = Depends(get_pg_db)):
     """
-    Obtiene las 4 Golden Signals de una instancia específica de MySQL 5 usando la CMDB.
+    Obtiene métricas en tiempo real consultando la jerarquía:
+    Instancia -> Servidor -> Credencial (Tipo DB Native)
     """
-    # 1. Obtener la sesión dinámica para el servidor MySQL solicitado
-    mysql_db = get_dynamic_session(pg_db, id_instancia)
     
-    try:
-        # 2. Extraer métricas usando la sesión del servidor remoto
-        return get_mysql5_metrics(mysql_db)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al monitorear instancia {id_instancia}: {str(e)}")
-    finally:
-        mysql_db.close()
+    # 1. Buscar la instancia y validar que sea MySQL 5 (id_dbms=2)
+    instancia = db.query(InstanciaDBMS).filter(
+        InstanciaDBMS.id_instancia == id_instancia,
+        InstanciaDBMS.id_dbms == 2
+    ).first()
+    
+    if not instancia:
+        raise HTTPException(status_code=404, detail="Instancia MySQL 5 no encontrada o ID incorrecto")
 
-@router.get("/metrics/availability", response_model=MySQL5Availability)
-def get_availability(db: Session = Depends(get_mysql5_db)):
-    try:
-        metrics = get_mysql5_metrics(db)
-        return metrics["availability"]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    # 2. Obtener el servidor asociado
+    servidor = instancia.servidor
+    if not servidor:
+        raise HTTPException(status_code=404, detail="Servidor no asociado a la instancia")
 
-@router.get("/metrics/saturation", response_model=MySQL5Saturation)
-def get_saturation(db: Session = Depends(get_mysql5_db)):
-    try:
-        metrics = get_mysql5_metrics(db)
-        return metrics["saturation"]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    # 3. Buscar una credencial activa de tipo "DB Native" (ID 2) para este servidor
+    credencial = db.query(CredencialAcceso).filter(
+        CredencialAcceso.id_servidor == servidor.id_servidor,
+        CredencialAcceso.id_tipo_acceso == 2,      # 2: DB Native
+        CredencialAcceso.id_estado_credencial == 1 # 1: Activo
+    ).first()
 
-@router.get("/metrics/performance", response_model=MySQL5Performance)
-def get_performance(db: Session = Depends(get_mysql5_db)):
-    try:
-        metrics = get_mysql5_metrics(db)
-        return metrics["performance"]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    if not credencial:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"No hay credenciales de Base de Datos activas para el servidor {servidor.direccion_ip}"
+        )
 
-@router.get("/metrics/capacity", response_model=MySQL5Capacity)
-def get_capacity(db: Session = Depends(get_mysql5_db)):
+    # 4. Conexión Dinámica y Extracción de Métricas
     try:
-        metrics = get_mysql5_metrics(db)
-        return metrics["capacity"]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/connections", response_model=List[MySQL5Connection])
-def get_mysql5_connections(db: Session = Depends(get_mysql5_db)):
-    try:
-        query = text("SHOW FULL PROCESSLIST")
-        result = db.execute(query).fetchall()
+        # Pasamos servidor, credencial e id_dbms (2) al core
+        remote_session = get_dynamic_session(servidor, credencial, instancia.id_dbms)
         
-        connections = []
-        for row in result:
-            connections.append(
-                MySQL5Connection(
-                    id=row[0],
-                    user=row[1],
-                    host=row[2],
-                    db=row[3],
-                    command=row[4],
-                    time=row[5],
-                    state=row[6],
-                    info=row[7]
-                )
-            )
-        return connections
+        # Extraer métricas usando la sesión del servidor remoto
+        metrics = get_mysql5_metrics(remote_session)
+        return metrics
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error de monitoreo en {servidor.direccion_ip}:{instancia.puerto} -> {str(e)}"
+        )
+    finally:
+        if 'remote_session' in locals():
+            remote_session.close()
