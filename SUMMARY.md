@@ -1,23 +1,23 @@
 # SGIR - Resumen del Estado Actual del Proyecto
 
-## 📅 Fecha: 21 de Abril, 2026 (Infraestructura Multi-Versión y Monitoreo Dinámico)
+## 📅 Fecha: 21 de Abril, 2026 (Refactorización SSH y Descubrimiento de Archivos)
 
 ### ✅ Módulos Implementados y Mejorados
-1.  **Validación Integral de MySQL (5.x y 8.x)**:
-    *   **MySQL 5 (Legacy)**: Soporte confirmado para versiones 5.1.52 y 5.7.21 con manejo automático de charsets antiguos (`utf8`).
-    *   **MySQL 8 (Moderno)**: Validación exitosa de conectividad y registro de infraestructura para la versión 8.0.38.
-    *   **Pruebas de Conectividad**: Todos los motores ahora utilizan el endpoint unificado `POST /instancias/test-db/` para validación previa al monitoreo.
-2.  **Monitoreo Dinámico y SRE**:
-    *   Refactorización del orquestador dinámico para resolver automáticamente la cadena de conexión basada en la jerarquía de la CMDB.
-    *   Extracción exitosa de métricas críticas (Golden Signals) en tiempo real para instancias legacy.
-3.  **Gestión de Inventario**:
-    *   Poblamiento verificado de la CMDB con servidores legacy (RHEL antiguos) y modernos, incluyendo la gestión de credenciales seguras.
+1.  **Refactorización Modular de SSH**:
+    *   **Arquitectura de Proveedores**: Separación de responsabilidades en `metrics_provider.py` (métricas de hardware) y `discovery_provider.py` (rastreo de archivos).
+    *   **Perfiles Especializados**: Implementación de lógica diferenciada para sistemas **Modernos** y **Legacy** (RHEL 4/5) en archivos independientes.
+    *   **Orquestación Limpia**: El servicio central `ssh_service.py` ahora actúa como un switchboard simplificado.
+2.  **Descubrimiento Remoto de Archivos**:
+    *   Nuevo motor de búsqueda basado en `find` compatible con múltiples extensiones (`.sql`, `.tar.gz`, `.log`).
+    *   Manejo de errores silenciosos (`2>/dev/null`) para evitar rupturas de flujo en escaneos de directorios protegidos.
+3.  **Soporte Oracle (19c / 10g)**:
+    *   Conectividad dinámica y test unificado validados.
 
 ### 🔐 Documentación y Pruebas
-*   **Certificación de Conectividad**: Se verificó el flujo completo de: Registro -> Test de Conexión -> Corrección de Credenciales -> Monitoreo de Métricas.
-*   **Seguridad**: Confirmación de que el cifrado reversible Fernet opera correctamente en todas las versiones de DBMS soportadas.
+*   **Dockerización**: Imagen reconstruida y verificada con soporte para la nueva estructura de servicios.
+*   **Health Check**: Verificación exitosa de conectividad PostgreSQL tras la refactorización.
 
 ### 🚀 Próximos Pasos Sugeridos
-*   **Implementar el Scheduler (APScheduler)**: Automatizar la recolección de métricas en segundo plano para poblar el histórico.
-*   **Extender a MySQL 8**: Implementar el router de métricas dinámico específico para MySQL 8 (similar al de MySQL 5).
-*   **Soporte Oracle**: Iniciar la integración del driver y lógica de conexión para Oracle 10g/11g/19c.
+*   **SSH Tunneling (Jump Server)**: Implementar el soporte de túneles para alcanzar bases de datos en redes privadas.
+*   **Implementar el Scheduler (APScheduler)**: Automatizar la recolección de métricas.
+*   **Endpoint de Descubrimiento**: Exponer `run_file_discovery` a través de un nuevo router API.

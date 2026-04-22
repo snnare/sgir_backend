@@ -3,67 +3,11 @@ from app.models.monitoring_persistence_models import Monitoreo, Metrica, TipoMet
 from app.models.infrastructure_models import Servidor, CredencialAcceso
 from app.core.ssh_orchestrator import get_ssh_connection
 from datetime import datetime
-from decimal import Decimal
-
-def execute_ssh_command(client, command: str) -> str:
-    """
-    EJECUTOR DE COMANDOS: Ejecuta el comando SSH y devuelve el stdout.
-    """
-    stdin, stdout, stderr = client.exec_command(command)
-    return stdout.read().decode('utf-8').strip()
-
-def extract_host_metrics(client, es_legacy: bool):
-    """
-    EXTRACTOR DE METRICAS: Selecciona los comandos adecuados según la versión del SO.
-    Compatible con RHEL 4 en adelante.
-    """
-    metrics = {}
-    
-    # Comandos segun si es Legacy o Moderno
-    if es_legacy:
-        # En sistemas viejos (RHEL 4), /proc/stat es lo más directo
-        cpu_cmd = "top -bn1 | grep 'Cpu(s)' | awk '{print $2}' | sed 's/%us,//'"
-        ram_cmd = "free -m | grep Mem | awk '{print ($3/$2)*100.0}'"
-        disk_cmd = "df -h / | tail -1 | awk '{print $5}' | sed 's/%//'"
-    else:
-        # Moderno (Fedora, RHEL 7+)
-        cpu_cmd = "top -bn1 | grep 'Cpu(s)' | awk '{print $2 + $4}' | sed 's/,/./'"
-        ram_cmd = "free | grep Mem | awk '{print $3/$2 * 100.0}' | sed 's/,/./'"
-        disk_cmd = "df -h / | tail -1 | awk '{print $5}' | sed 's/%//' | sed 's/,/./'"
-
-    # 1. CPU
-    try:
-        val = float(execute_ssh_command(client, cpu_cmd))
-        metrics['CPU_Usage'] = Decimal(str(round(val, 2)))
-    except:
-        metrics['CPU_Usage'] = Decimal("0.0")
-
-    # 2. RAM
-    try:
-        val = float(execute_ssh_command(client, ram_cmd))
-        metrics['RAM_Usage'] = Decimal(str(round(val, 2)))
-    except:
-        metrics['RAM_Usage'] = Decimal("0.0")
-
-    # 3. Disk
-    try:
-        val = float(execute_ssh_command(client, disk_cmd))
-        metrics['Disk_Usage'] = Decimal(str(round(val, 2)))
-    except:
-        metrics['Disk_Usage'] = Decimal("0.0")
-
-    # 4. Uptime (Universal)
-    try:
-        val = float(execute_ssh_command(client, "awk '{print $1/86400}' /proc/uptime").replace(',', '.'))
-        metrics['Uptime'] = Decimal(str(round(val, 2)))
-    except:
-        metrics['Uptime'] = Decimal("0.0")
-
-    return metrics
+from .ssh import metrics_provider, discovery_provider
 
 def run_ssh_monitoring(db_local: Session, servidor_id: int, credencial_id: int):
     """
-    ORQUESTADOR: Valida, Conecta, Ejecuta y Persiste.
+    ORQUESTADOR DE MONITOREO: Valida, Conecta, Ejecuta y Persiste.
     """
     servidor = db_local.query(Servidor).filter(Servidor.id_servidor == servidor_id).first()
     credencial = db_local.query(CredencialAcceso).filter(CredencialAcceso.id_credencial == credencial_id).first()
@@ -71,11 +15,11 @@ def run_ssh_monitoring(db_local: Session, servidor_id: int, credencial_id: int):
     if not servidor or not credencial:
         return {"error": "Servidor o Credencial no encontrados"}
 
-    # Iniciar registro en Monitoreo (id_estado_monitoreo=1: Activo)
+    # Iniciar registro en Monitoreo
     nuevo_monitoreo = Monitoreo(
         id_servidor=servidor_id,
         id_credencial=credencial_id,
-        id_estado_monitoreo=1 
+        id_estado_monitoreo=1 # Activo
     )
     db_local.add(nuevo_monitoreo)
     db_local.commit()
@@ -83,13 +27,16 @@ def run_ssh_monitoring(db_local: Session, servidor_id: int, credencial_id: int):
 
     client = None
     try:
-        # 1. CONECTAR (Vía Orquestador con reintentos y perfiles)
+        # 1. CONECTAR
         client = get_ssh_connection(servidor, credencial)
         
-        # 2. EJECUTAR (con logica de legacy para los comandos)
-        raw_metrics = extract_host_metrics(client, servidor.es_legacy)
+        # 2. EJECUTAR (Selección de perfil según flag legacy)
+        if servidor.es_legacy:
+            raw_metrics = metrics_provider.get_metrics_legacy(client)
+        else:
+            raw_metrics = metrics_provider.get_metrics_modern(client)
 
-        # 3. PERSISTIR (Modelo Fisico)
+        # 3. PERSISTIR
         for nombre, valor in raw_metrics.items():
             tipo = db_local.query(TipoMetrica).filter(TipoMetrica.nombre_tipo == nombre).first()
             if not tipo:
@@ -104,7 +51,6 @@ def run_ssh_monitoring(db_local: Session, servidor_id: int, credencial_id: int):
                 id_tipo_metrica=tipo.id_tipo_metrica
             ))
 
-        # Finalizar
         nuevo_monitoreo.fecha_fin = datetime.now()
         nuevo_monitoreo.id_estado_monitoreo = 2 # Completado
         db_local.commit()
@@ -120,6 +66,39 @@ def run_ssh_monitoring(db_local: Session, servidor_id: int, credencial_id: int):
     except Exception as e:
         nuevo_monitoreo.id_estado_monitoreo = 3 # Fallido
         db_local.commit()
+        raise e
+    finally:
+        if client:
+            client.close()
+
+def run_file_discovery(db_local: Session, servidor_id: int, credencial_id: int, path: str, extension: str):
+    """
+    ORQUESTADOR DE DESCUBRIMIENTO: Busca archivos en el servidor remoto.
+    """
+    servidor = db_local.query(Servidor).filter(Servidor.id_servidor == servidor_id).first()
+    credencial = db_local.query(CredencialAcceso).filter(CredencialAcceso.id_credencial == credencial_id).first()
+
+    if not servidor or not credencial:
+        return {"error": "Servidor o Credencial no encontrados"}
+
+    client = None
+    try:
+        client = get_ssh_connection(servidor, credencial)
+        
+        if servidor.es_legacy:
+            files = discovery_provider.search_files_legacy(client, path, extension)
+        else:
+            files = discovery_provider.search_files_modern(client, path, extension)
+
+        return {
+            "servidor": servidor.nombre_servidor,
+            "path_busqueda": path,
+            "extension": extension,
+            "archivos_encontrados": files,
+            "total": len(files),
+            "status": "success"
+        }
+    except Exception as e:
         raise e
     finally:
         if client:

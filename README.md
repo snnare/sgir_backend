@@ -17,9 +17,10 @@ SGIR es una plataforma de backend robusta desarrollada con **FastAPI** y **Postg
 *   **Estados Generales:** Sistema centralizado para definir estados (Activo, Inactivo, En Progreso, etc.) aplicables a todo el inventario.
 
 ### 📊 Monitoreo Multi-Motor y Conectividad (SRE)
-*   **Orquestador SSH Robusto:** Módulo especializado con perfiles diferenciados (`Legacy` vs `Modern`), lógica de **3 reintentos** y esperas de 5s para alta disponibilidad en el monitoreo.
-*   **Motores Soportados:** MySQL 5, MySQL 8 (v8.0.38 verificado), MongoDB.
-*   **Monitoreo Dinámico:** Resolución automática de infraestructura (Instancia -> Servidor -> Credencial) para métricas en tiempo real.
+*   **Orquestador SSH Robusto:** Módulo especializado con perfiles diferenciados (`Legacy` vs `Modern`), lógica de **3 reintentos** y esperas de 5s para alta disponibilidad.
+*   **Arquitectura Modular de SSH:** Separación de proveedores para métricas de hardware y **descubrimiento de archivos remotos** (logs, backups, scripts).
+*   **Motores Soportados:** MySQL 5, MySQL 8 (v8.0.38 verificado), Oracle (10g/19c), MongoDB.
+*   **Monitoreo Dinámico:** Resolución automática de infraestructura (Instancia -> Servidor -> Credencial) para métricas en tiempo real y tests de conectividad unificados.
 *   **Compatibilidad Legacy:** Soporte para charsets antiguos (`utf8`) en motores MySQL 5.1+.
 *   **Host Monitoring:** Monitoreo vía SSH de CPU, RAM, Disco y Uptime (compatible con RHEL 4+).
 *   **Validación de Políticas:** Protección contra valores inválidos (negativos) en frecuencias y periodos de retención.
