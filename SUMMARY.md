@@ -1,23 +1,26 @@
 # SGIR - Resumen del Estado Actual del Proyecto
 
-## 📅 Fecha: 21 de Abril, 2026 (Refactorización SSH y Descubrimiento de Archivos)
+## 📅 Fecha: 21 de Abril, 2026 (Simetría Arquitectónica y Reorganización)
 
 ### ✅ Módulos Implementados y Mejorados
-1.  **Refactorización Modular de SSH**:
-    *   **Arquitectura de Proveedores**: Separación de responsabilidades en `metrics_provider.py` (métricas de hardware) y `discovery_provider.py` (rastreo de archivos).
-    *   **Perfiles Especializados**: Implementación de lógica diferenciada para sistemas **Modernos** y **Legacy** (RHEL 4/5) en archivos independientes.
-    *   **Orquestación Limpia**: El servicio central `ssh_service.py` ahora actúa como un switchboard simplificado.
-2.  **Descubrimiento Remoto de Archivos**:
-    *   Nuevo motor de búsqueda basado en `find` compatible con múltiples extensiones (`.sql`, `.tar.gz`, `.log`).
-    *   Manejo de errores silenciosos (`2>/dev/null`) para evitar rupturas de flujo en escaneos de directorios protegidos.
-3.  **Soporte Oracle (19c / 10g)**:
-    *   Conectividad dinámica y test unificado validados.
+1.  **Reorganización Estructural (Simetría)**:
+    *   **Arquitectura por Dominios**: El proyecto ahora sigue una estructura simétrica en las capas de `routes`, `schemas` y `services`, dividida en: **Infrastructure**, **Backups**, **Security**, **Audit** y **Catalogs**.
+    *   **Mantenibilidad**: Se eliminó la saturación de archivos planos en las carpetas raíz, facilitando la navegación y escalabilidad del código.
+    *   **Exportación Centralizada**: Uso de archivos `__init__.py` para mantener la retrocompatibilidad en las importaciones de alto nivel.
+2.  **Auto-Búsqueda de Inventario (MySQL)**:
+    *   Implementación de lógica de descubrimiento para MySQL 5 y 8.
+    *   Sincronización automática de nombres, tamaños (MB) y fechas de creación en la tabla `Base_de_Datos`.
+    *   Capacidad de realizar *Upserts* y desactivar lógicamente bases de datos eliminadas en el remoto.
+3.  **Refactorización Modular de SSH**:
+    *   Separación de proveedores para métricas de hardware (`metrics_provider.py`) y rastreo de archivos (`discovery_provider.py`).
+    *   Soporte robusto para perfiles **Modern** y **Legacy** (RHEL 4/5).
 
 ### 🔐 Documentación y Pruebas
-*   **Dockerización**: Imagen reconstruida y verificada con soporte para la nueva estructura de servicios.
-*   **Health Check**: Verificación exitosa de conectividad PostgreSQL tras la refactorización.
+*   **README y SUMMARY**: Documentación exhaustiva actualizada con la nueva estructura y catálogo de endpoints.
+*   **Dockerización**: Imagen reconstruida y validada con la nueva jerarquía de carpetas.
+*   **Health Check**: Verificación exitosa de conectividad PostgreSQL.
 
 ### 🚀 Próximos Pasos Sugeridos
-*   **SSH Tunneling (Jump Server)**: Implementar el soporte de túneles para alcanzar bases de datos en redes privadas.
-*   **Implementar el Scheduler (APScheduler)**: Automatizar la recolección de métricas.
-*   **Endpoint de Descubrimiento**: Exponer `run_file_discovery` a través de un nuevo router API.
+*   **SSH Tunneling (Jump Server)**: Implementar el soporte de túneles en el orquestador SSH para alcanzar redes segmentadas.
+*   **Implementar el Scheduler (APScheduler)**: Automatizar la recolección periódica de métricas de host y bases de datos.
+*   **Extender Auto-Búsqueda**: Implementar el descubrimiento dinámico para Oracle (19c/10g) y MongoDB.
