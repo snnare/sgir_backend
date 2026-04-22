@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.db.postgres.postgres_connection import get_db
 from app.core.dependencies import get_current_user
 from app.services.monitoring.ssh_service import run_ssh_monitoring
-from app.services.audit_crud import log_event
+from app.services import log_event
 from app.models.user_models import User
 
 router = APIRouter()

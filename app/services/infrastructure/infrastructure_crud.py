@@ -1,7 +1,7 @@
 from typing import Any
 from sqlalchemy.orm import Session, joinedload
 from app.models.infrastructure_models import Servidor, CredencialAcceso, InstanciaDBMS, BaseDeDatos, NivelCriticidad, TipoAcceso, DBMS
-from app.schemas.infrastructure_schemas  import (
+from app.schemas  import (
     ServidorCreate, ServidorUpdate, 
     CredencialCreate, CredencialUpdate,
     InstanciaCreate, BaseDatosCreate,

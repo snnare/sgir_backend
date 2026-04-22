@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.audit_model import Bitacora, TipoEventoAuditoria
-from app.schemas.audit_schemas import BitacoraCreate, TipoEventoCreate
+from app.schemas import BitacoraCreate, TipoEventoCreate
 
 def log_event(
     db: Session, 

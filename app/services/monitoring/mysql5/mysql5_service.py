@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from app.schemas.monitoring_persistence_schemas import MySQL5Metrics
+from app.schemas import MySQL5Metrics
 
 def get_mysql5_metrics(db: Session) -> MySQL5Metrics:
     """

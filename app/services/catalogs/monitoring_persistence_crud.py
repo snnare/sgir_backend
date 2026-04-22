@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.monitoring_persistence_models import Monitoreo, Metrica, Alerta, TipoMetrica, NivelAlerta
-from app.schemas.monitoring_persistence_schemas import (
+from app.schemas import (
     MonitoreoCreate, MetricaCreate, AlertaCreate,
     TipoMetricaCreate, NivelAlertaCreate
 )

@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from app.db.postgres.postgres_connection import get_db as get_pg_db
 from app.services.monitoring.mongodb.mongodb_service import get_mongodb_metrics
 from app.core.dynamic_db_core import get_dynamic_session
-from app.services.infrastructure_crud import get_servidor, get_credencial
-from app.schemas.monitoring_persistence_schemas import MongoDBMetrics
+from app.services import get_servidor, get_credencial
+from app.schemas import MongoDBMetrics
 from app.core.dependencies import get_current_user
 
 router = APIRouter(dependencies=[Depends(get_current_user)])

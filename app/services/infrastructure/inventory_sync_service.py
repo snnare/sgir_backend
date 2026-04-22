@@ -2,7 +2,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.models.infrastructure_models import BaseDeDatos, InstanciaDBMS, CredencialAcceso
 from app.core.dynamic_db_core import get_dynamic_session
-from app.services.infrastructure_crud import get_instancia, get_servidor
+from app.services.infrastructure import infrastructure_crud
+get_instancia = infrastructure_crud.get_instancia
+get_servidor = infrastructure_crud.get_servidor
 
 def get_mysql_remote_databases(session):
     """

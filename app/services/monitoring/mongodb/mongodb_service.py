@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-from app.schemas.monitoring_persistence_schemas import MongoDBMetrics
+from app.schemas import MongoDBMetrics
 
 def get_mongodb_metrics(client: MongoClient) -> MongoDBMetrics:
     """

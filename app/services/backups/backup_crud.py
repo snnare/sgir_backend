@@ -4,7 +4,7 @@ from app.models.backup_models import (
     RutaRespaldo, PoliticaRespaldo, AsignacionPoliticaBD, Respaldo,
     TipoRespaldo, TipoAlmacenamiento
 )
-from app.schemas.backup_schemas import (
+from app.schemas import (
     RutaRespaldoCreate, RutaRespaldoUpdate,
     PoliticaRespaldoCreate, PoliticaRespaldoUpdate,
     RespaldoCreate, AsignacionPoliticaBDCreate,

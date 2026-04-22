@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.user_models import UserStatus
-from app.schemas.estado_general_schemas import StatusCreate
+from app.schemas import StatusCreate
 
 def create_status(db: Session, status: StatusCreate):
     db_status = UserStatus(**status.model_dump())

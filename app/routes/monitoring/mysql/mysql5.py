@@ -11,7 +11,7 @@ from app.core.dynamic_db_core import get_dynamic_session
 from app.core.dependencies import get_current_user
 # Servicios de Monitoreo y Schemas
 from app.services.monitoring.mysql5.mysql5_service import get_mysql5_metrics
-from app.schemas.monitoring_persistence_schemas import (
+from app.schemas import (
     MySQL5Metrics as MySQL5FullMetrics
 )
 
