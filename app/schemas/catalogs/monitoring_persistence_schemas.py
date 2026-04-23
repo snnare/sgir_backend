@@ -107,3 +107,31 @@ class AlertaResponse(AlertaBase):
     id_alerta: int
     fecha_alerta: datetime
     model_config = ConfigDict(from_attributes=True)
+
+# --- Oracle Modular Metrics (A, B, C) ---
+
+class ConnectivityMetrics(BaseModel):
+    status: str
+    active_connections: int
+    max_connections: int
+    total_databases: int
+
+class ResourceMetrics(BaseModel):
+    threads_count: int
+    memory_usage_mb: Decimal
+    memory_max_mb: Decimal
+    active_locks: int
+
+class PerformanceMetrics(BaseModel):
+    slow_queries_count: int
+    avg_response_time_ms: Decimal
+    cpu_usage_percent: Decimal
+
+class OracleMonitoringResponse(BaseModel):
+    id_instancia: int
+    id_servidor: int
+    nivel_criticidad: str
+    timestamp: datetime
+    grupo_a: ConnectivityMetrics
+    grupo_b: Optional[ResourceMetrics] = None
+    grupo_c: Optional[PerformanceMetrics] = None
