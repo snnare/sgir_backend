@@ -39,6 +39,7 @@ El proyecto sigue una **Arquitectura Simétrica por Dominios** para asegurar la 
 *   `GET /monitoring/inventory/summary/{id_srv}`: Resumen de almacenamiento por servidor.
 *   `GET /monitoring/mysql5/metrics/{id_inst}`: Métricas avanzadas de MySQL 5.
 *   `GET /monitoring/mysql8/{id_srv}/{id_cred}`: Monitoreo nativo de MySQL 8.
+*   `GET /monitoring/oracle/{id_inst}/{id_cred}`: Monitoreo modular (Grupos A, B, C) basado en nivel de criticidad.
 *   `GET /monitoring/mongodb/{id_srv}/{id_cred}`: Monitoreo de performance para MongoDB.
 
 ### 💾 Gestión de Respaldos (`/rutas-respaldo`, `/politicas-respaldo`, `/respaldos`)
