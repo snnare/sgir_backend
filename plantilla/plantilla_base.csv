@@ -1,0 +1,2 @@
+nombre_servidor,direccion_ip,es_legacy,nivel_criticidad,descripcion,estado,nombre_dbms,nombre_instancia,puerto_db,usuario,password,tipo_acceso
+Nombre del Servidor,Dirección IP (IPv4/v6),true/false,Bajo/Medio/Alto/Crítico,Descripción opcional,Activo/Inactivo,Oracle Database/MySQL/PostgreSQL/MongoDB,Nombre de la Instancia/SID,Puerto DB,Usuario,Contraseña,SSH/DB Native

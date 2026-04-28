@@ -1,0 +1,5 @@
+nombre_servidor,direccion_ip,es_legacy,nivel_criticidad,descripcion,estado,nombre_dbms,nombre_instancia,puerto_db,usuario,password,tipo_acceso
+Srv-Oracle-Prod,148.215.1.98,true,Crítico,Servidor de Base de Datos Principal,Activo,Oracle Database,ORCL,1521,oracle,k2!top@.l96,SSH
+Srv-Oracle-Prod,148.215.1.98,true,Crítico,Servidor de Base de Datos Principal,Activo,Oracle Database,ORCL,1521,system,manager123,DB Native
+Srv-MySQL-Modern,192.168.1.10,false,Medio,Servidor Web y App,Activo,MySQL,MYSQL8,3306,sgir_user,sgir_pass,SSH
+Srv-MySQL-Modern,192.168.1.10,false,Medio,Servidor Web y App,Activo,MySQL,MYSQL8,3306,root,root_pass,DB Native
