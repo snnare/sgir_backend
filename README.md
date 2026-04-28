@@ -37,3 +37,16 @@ El proyecto sigue una **Arquitectura Simétrica por Dominios**:
 *   **Base de Datos:** PostgreSQL 16
 *   **Gestión SSH:** Paramiko (Algoritmos Legacy habilitados)
 *   **DevOps:** Docker (Multi-stage) + `uv`
+
+                                                                                                                                                                                      │
+│                                                                                                                                                                                                            │
+│  Model Usage                                                                                                                                                                                               │
+│  Use /model to view model quota information                                                                                                                                                                │
+│                                                                                                                                                                                                            │
+│  Model                           Reqs  Input Tokens   Cache Reads Output Tokens                                                                                                                            │
+│  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────  │
+│  gemini-2.5-flash-lite             67       412,354             0         6,072                                                                                                                            │
+│    ↳ utility_router                67       412,354             0         6,072                                                                                                                            │
+│  gemini-3-flash-preview           226    17,143,773    11,845,970        74,444                                                                                                                            │
+│    ↳ main                         226    17,143,773    11,845,970        74,444                                                                                                                            │
+│  To resume this session: gemini --resume 976885f4-9a6e-409a-888d-4b98d143d1f7
