@@ -27,7 +27,7 @@ class RutaRespaldo(Base):
     id_estado_ruta = Column(Integer, ForeignKey("estado_general.id_estado"), nullable=False)
 
 class PoliticaRespaldo(Base):
-    __tablename__ = "política_de_respaldo"
+    __tablename__ = "politica_de_respaldo"
     id_politica = Column(Integer, primary_key=True, index=True)
     nombre_politica = Column(String(100), nullable=False)
     descripcion = Column(Text)

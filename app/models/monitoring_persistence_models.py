@@ -33,7 +33,7 @@ class Monitoreo(Base):
     alertas = relationship("Alerta", back_populates="monitoreo")
 
 class Metrica(Base):
-    __tablename__ = "métrica"
+    __tablename__ = "metrica"
     id_metrica = Column(BigInteger, primary_key=True, index=True)
     valor = Column(Numeric(10, 2), nullable=False)
     fecha_registro = Column(DateTime(timezone=True), server_default=func.now())
