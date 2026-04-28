@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from app.db.postgres.postgres_connection import SessionLocal
 from app.models.infrastructure_models import Servidor, InstanciaDBMS, CredencialAcceso
 from app.services.monitoring.ssh_service import run_ssh_monitoring
+from app.services.monitoring.db_unified_service import run_unified_db_monitoring
 from app.models.monitoring_persistence_models import Monitoreo, Metrica, TipoMetrica
 import logging
 
@@ -49,6 +50,24 @@ def bulk_monitor_by_criticality(nivel_criticidad_id: int):
                 scheduler_executor.submit(monitor_ssh_task, srv.id_servidor, cred.id_credencial)
             else:
                 logger.warning(f"Servidor {srv.direccion_ip} no tiene credencial SSH activa.")
+
+        # 2. Monitoreo UNIFICADO de RDBMS
+        instancias = db.query(InstanciaDBMS).join(Servidor).filter(
+            Servidor.id_nivel_criticidad == nivel_criticidad_id,
+            InstanciaDBMS.id_estado_instancia == 1 # Activa
+        ).all()
+
+        for inst in instancias:
+            # Buscar credencial DB Native activa (id_tipo_acceso = 2)
+            cred_db = db.query(CredencialAcceso).filter(
+                CredencialAcceso.id_servidor == inst.id_servidor,
+                CredencialAcceso.id_tipo_acceso == 2,
+                CredencialAcceso.id_estado_credencial == 1
+            ).first()
+
+            if cred_db:
+                from app.core.scheduler_manager import scheduler_executor
+                scheduler_executor.submit(run_unified_db_monitoring, db, inst.id_instancia, cred_db.id_credencial)
 
     except Exception as e:
         logger.error(f"Error en bulk_monitor: {str(e)}")

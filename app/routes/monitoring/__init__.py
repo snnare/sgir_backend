@@ -5,9 +5,11 @@ from .mongodb_monitoring_routes import router as mongodb_router
 from .oracle_monitoring_routes import router as oracle_router
 from .inventory_discovery_routes import router as inventory_router
 from .host_monitoring_routes import router as host_router
+from .db_monitoring_routes import router as db_router
 
 router = APIRouter()
 
+router.include_router(db_router, prefix="/db", tags=["Monitoring - Unified DB"])
 router.include_router(mysql5_router, prefix="/mysql5", tags=["Monitoring - MySQL 5"])
 router.include_router(mysql8_router, prefix="/mysql8", tags=["Monitoring - MySQL 8"])
 router.include_router(mongodb_router, prefix="/mongodb", tags=["Monitoring - MongoDB"])
