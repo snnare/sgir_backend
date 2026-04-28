@@ -4,26 +4,18 @@ from contextlib import asynccontextmanager
 from app.routes import core_crud_router
 from app.routes.healths import health_router
 from app.routes.monitoring import router as monitoring_router
-
-
-
-
-
-# Aqui import scheduler de metricas
-
+from app.core.scheduler_manager import start_scheduler, stop_scheduler
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Arranca el scraper en segundo plano
-    # Monitoreo cada x tiempo
-    # task = asyncio.create_tas()
+    # Arranca el scheduler de monitoreo automático
+    start_scheduler()
     yield
+    # Detiene el scheduler al cerrar la app
+    stop_scheduler()
 
-    pass
-
-
-# agregar la funcion anterior lifespan
-app = FastAPI(title="FastAPI SGIR Backend")
+# Aplicación FastAPI
+app = FastAPI(title="FastAPI SGIR Backend", lifespan=lifespan)
 
 
 app.add_middleware(
