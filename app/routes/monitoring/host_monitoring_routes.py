@@ -2,11 +2,23 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.postgres.postgres_connection import get_db
 from app.core.dependencies import get_current_user
-from app.services.monitoring.ssh_service import run_ssh_monitoring
+from app.services.monitoring.ssh_service import run_ssh_monitoring, get_server_health_status
 from app.services import log_event
 from app.models.user_models import User
 
 router = APIRouter()
+
+@router.get("/health-status/{server_id}")
+def check_health(
+    server_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Consulta el estado de salud actual de un servidor basándose en la última 
+    sesión del scheduler y los umbrales de métricas (90%).
+    """
+    return get_server_health_status(db, server_id)
 
 @router.get("/{server_id}/{cred_id}")
 def monitor_host_ssh(
