@@ -1,25 +1,27 @@
 # SGIR - Resumen del Estado Actual del Proyecto
 
-## 📅 Fecha: 28 de Abril, 2026 (Carga Masiva e Importación SSH Validada)
+## 📅 Fecha: 28 de Abril, 2026 (Plataforma de Observabilidad Unificada Validada)
 
 ### ✅ Módulos Implementados y Mejorados
-1.  **Carga Masiva de Infraestructura (Nuevo)**:
-    *   **Motor CSV Inteligente**: Implementado servicio de importación que procesa servidores, instancias y credenciales en cascada.
-    *   **Normalización de Catálogos**: Traducción automática de etiquetas de texto ("Crítico", "Oracle Database", "SSH") a IDs internos.
-    *   **Seguridad Integrada**: Cifrado AES-256 de todas las credenciales importadas antes de su persistencia.
-2.  **Descubrimiento Integrado de Respaldos (SSH)**:
-    *   **Rastreo por DBMS**: El sistema ahora autodetecta extensiones (`.dmp`, `.sql`, `.archive`) basándose en el motor de base de datos.
-    *   **Matching Inteligente**: Sincronización automática de archivos físicos con bases de datos de la CMDB mediante patrones de nombre.
-    *   **Trazabilidad**: Registro automático de ejecuciones exitosas en la tabla `Respaldo` y auditoría en `Bitacora`.
-3.  **Soporte SSH Legacy (Validado)**:
-    *   Verificación exitosa con **Red Hat Enterprise Linux AS 4** (IP 148.215.1.98), logrando extracción de métricas y rastreo de archivos en entornos de hace +20 años.
+1.  **Monitoreo Unificado de Bases de Datos (Hito)**:
+    *   **Motor Dual**: Implementado `db_unified_service.py` que soporta Oracle, MySQL y MongoDB bajo una misma estructura de métricas (Ping, Capacidad, Procesos).
+    *   **Lógica de Criticidad**: El nivel de detalle de las métricas de DB se adapta automáticamente al nivel del servidor (Bajo -> Crítico).
+2.  **Scheduler de Alta Disponibilidad**:
+    *   **Ejecución Paralela**: Configurado con un Pool de **80 workers** para procesar múltiples servidores simultáneamente (Host + DB) sin bloquear la API.
+    *   **Live Cache en RAM**: Creación de una capa de memoria volátil para entregar métricas en tiempo real al Frontend para sus tarjetas informativas.
+    *   **Optimización de Almacenamiento**: Implementado **Monitoreo Silencioso**; la base de datos solo guarda métricas cuando superan el umbral del **90%**.
+3.  **Gestión de Alertas y Notificaciones**:
+    *   **Centro de Notificaciones**: Nuevos endpoints para listar alertas activas, ver resúmenes por nivel y "Resolver/Cerrar" incidentes desde la interfaz.
+4.  **Soporte Legacy e Importación**:
+    *   Validación exitosa de monitoreo en **RHEL 4** (Host de 20+ años).
+    *   Importación masiva vía CSV operativa con normalización de catálogos y cifrado AES.
 
-### 🔐 Infraestructura y Recursos Disponibles
-*   **Plantillas**: Disponibles en carpeta `plantilla/` para despliegues rápidos.
-*   **Entorno Docker**: Backend optimizado con Python 3.14 y despliegue verificado en puerto 8000.
-*   **Auditoría**: Bitácora enriquecida con eventos de tipo "Ejecución de Respaldo" e "Importación Masiva".
+### 🔐 Estado de la Infraestructura de Pruebas
+*   **Servidores Monitoreados**: 4 nodos reales registrados (Legacy, Modernos y DBs).
+*   **Scheduler**: Operando en intervalos de prueba (15-30s) para validación rápida.
+*   **Contenedor**: Imagen optimizada y reconstruida con Python 3.14 y APScheduler.
 
 ### 🚀 Próximos Pasos Sugeridos
-*   **Implementar el Scheduler (APScheduler)**: Automatizar la ejecución periódica de las tareas de monitoreo y descubrimiento de backups.
-*   **SSH Tunneling (Jump Server)**: Añadir soporte para servidores de salto/bastión en el orquestador SSH.
-*   **Dashboard Frontend**: Iniciar la vinculación de los endpoints de carga masiva y descubrimiento con la interfaz de usuario.
+*   **Retention Manager**: Implementar tarea automática para purgar métricas de más de 30 días de antigüedad.
+*   **Expiración de Respaldos**: Lógica para marcar como "Expirados" los backups que superen los días de retención de su política.
+*   **SSH Tunneling**: Añadir soporte para Jump Servers en redes aisladas.
