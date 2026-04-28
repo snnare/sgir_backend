@@ -12,50 +12,50 @@ scheduler_executor = ThreadPoolExecutor(max_workers=80)
 scheduler = AsyncIOScheduler()
 
 def start_scheduler():
-    """Configura e inicia las tareas programadas por criticidad."""
+    """Configura e inicia las tareas programadas por criticidad (MODO TEST: SEGUNDOS)."""
     
-    # 1. CRÍTICO: Cada 1 minuto (ID 4 en seed)
+    # 1. CRÍTICO: Cada 15 segundos
     scheduler.add_job(
         bulk_monitor_by_criticality, 
         'interval', 
-        minutes=1, 
+        seconds=15, 
         args=[4], 
         id='monitor_critico',
         replace_existing=True
     )
 
-    # 2. ALTO: Cada 5 minutos (ID 3 en seed)
+    # 2. ALTO: Cada 20 segundos
     scheduler.add_job(
         bulk_monitor_by_criticality, 
         'interval', 
-        minutes=5, 
+        seconds=20, 
         args=[3], 
         id='monitor_alto',
         replace_existing=True
     )
 
-    # 3. MEDIO: Cada 15 minutos (ID 2 en seed)
+    # 3. MEDIO: Cada 25 segundos
     scheduler.add_job(
         bulk_monitor_by_criticality, 
         'interval', 
-        minutes=15, 
+        seconds=25, 
         args=[2], 
         id='monitor_medio',
         replace_existing=True
     )
 
-    # 4. BAJO: Cada 60 minutos (ID 1 en seed)
+    # 4. BAJO: Cada 30 segundos
     scheduler.add_job(
         bulk_monitor_by_criticality, 
         'interval', 
-        minutes=60, 
+        seconds=30, 
         args=[1], 
         id='monitor_bajo',
         replace_existing=True
     )
 
     scheduler.start()
-    logger.info("Scheduler iniciado correctamente con 80 workers disponibles.")
+    logger.info("Scheduler de PRUEBA iniciado (Intervalos de 15-30 segundos).")
 
 def stop_scheduler():
     """Detiene el scheduler y libera el pool de hilos."""

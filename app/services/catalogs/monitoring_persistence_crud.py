@@ -98,3 +98,24 @@ def create_alert(db: Session, alerta: AlertaCreate) -> Alerta:
 
 def get_alerts_by_server(db: Session, servidor_id: int) -> list[Alerta]:
     return db.query(Alerta).filter(Alerta.id_servidor == servidor_id).all()
+
+def get_active_alerts(db: Session) -> list[Alerta]:
+    """Obtiene todas las alertas con estado 'Abierta' (ID 6)."""
+    return db.query(Alerta).filter(Alerta.id_estado_alerta == 6).order_by(Alerta.fecha_alerta.desc()).all()
+
+def resolve_alert(db: Session, alerta_id: int) -> Alerta | None:
+    """Marca una alerta como 'Cerrada' (ID 7)."""
+    db_alerta = db.query(Alerta).filter(Alerta.id_alerta == alerta_id).first()
+    if db_alerta:
+        db_alerta.id_estado_alerta = 7 # Cerrada
+        db.commit()
+        db.refresh(db_alerta)
+    return db_alerta
+
+def get_alerts_summary(db: Session):
+    """Retorna un conteo de alertas activas por nivel."""
+    from sqlalchemy import func
+    return db.query(
+        Alerta.id_nivel_alerta, 
+        func.count(Alerta.id_alerta)
+    ).filter(Alerta.id_estado_alerta == 6).group_by(Alerta.id_nivel_alerta).all()
