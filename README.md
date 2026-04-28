@@ -7,56 +7,39 @@ SGIR es una plataforma de backend robusta desarrollada con **FastAPI** y **Postg
 El proyecto sigue una **Arquitectura Simétrica por Dominios** para asegurar la escalabilidad y el orden:
 
 *   **`app/core/`**: Núcleo del sistema. Contiene la configuración global, orquestador SSH con soporte Legacy, gestión de sesiones dinámicas de DB y lógica de seguridad (JWT/AES).
-*   **`app/db/`**: Configuración de conectividad para todos los motores soportados (Postgres, MySQL, Oracle, MongoDB).
-*   **`app/models/`**: Modelos físicos de SQLAlchemy que definen la CMDB, el historial de respaldos y métricas.
-*   **`app/schemas/`**: Esquemas de Pydantic organizados por dominio (Infrastructure, Backups, Security, etc.) para validación de entrada/salida.
-*   **`app/services/`**: Lógica de negocio y operaciones CRUD, desacoplada de los controladores API.
-*   **`app/routes/`**: Puntos de entrada de la API, organizados por dominios lógicos y funcionales.
+*   **`app/services/infrastructure/`**: Incluye el nuevo motor de **Importación Masiva (CSV)** con cifrado on-the-fly.
+*   **`app/services/monitoring/ssh/`**: Proveedores modulares para métricas de host y descubrimiento de archivos.
+*   **`plantilla/`**: Contiene las plantillas CSV oficiales para la carga masiva de infraestructura.
+*   **`app/models/`**, **`app/schemas/`**, **`app/routes/`**: Capas de persistencia, validación y controladores organizados por dominios.
 
 ## 🚀 Catálogo de Endpoints
 
 ### 🔐 Seguridad y Usuarios (`/users`, `/roles`)
 *   `POST /users/login`: Autenticación y generación de JWT.
-*   `POST /users/logout`: Cierre de sesión auditado.
 *   `GET /users/me`: Perfil del usuario autenticado.
 *   `POST /users/`: Registro de nuevos usuarios.
-*   `GET /users/`: Listado de usuarios.
-*   `PUT /users/{id}/password`: Cambio seguro de contraseña.
-*   `POST /roles/`: Gestión de roles de sistema.
 
-### 🏗️ Infraestructura y CMDB (`/servidores`, `/instancias`, `/credenciales`, `/dbms`)
-*   `POST /servidores/`: Registro de servidores con validación de IP.
-*   `GET /servidores/{ip}`: Consulta rápida de servidor por IP.
-*   `POST /credenciales/`: Almacenamiento cifrado de accesos.
-*   `POST /credenciales/test-ssh/{id_srv}/{id_cred}`: Test de conexión SSH (Soporta Legacy).
-*   `POST /instancias/`: Registro de instancias de DB (MySQL, Oracle, etc).
-*   `POST /instancias/test-db/{id_inst}/{id_cred}`: Test de conectividad dinámico a RDBMS.
-*   `POST /bases-de-datos/`: Registro manual de bases de datos lógicas.
+### 🏗️ Infraestructura y CMDB (`/servidores`, `/instancias`, `/credenciales`)
+*   **`POST /servidores/import-bulk`**: Carga masiva de Servidores, Instancias y Credenciales vía CSV (Normaliza etiquetas y cifra passwords).
+*   `POST /servidores/`: Registro individual de servidores.
+*   `POST /credenciales/`: Almacenamiento cifrado (AES-256) de accesos.
+*   `POST /credenciales/test-ssh/{id_srv}/{id_cred}`: Test de conexión SSH (Soporta **Legacy RHEL 4/5**).
+*   `POST /instancias/test-db/{id_inst}/{id_cred}`: Test de conectividad dinámico a RDBMS (Oracle, MySQL, Mongo).
 
 ### 📊 Monitoreo y Descubrimiento (`/monitoring`)
-*   `GET /monitoring/host/{id_srv}/{id_cred}`: Monitoreo en tiempo real de CPU, RAM y Disco vía SSH.
-*   `POST /monitoring/inventory/discover/{id_inst}/{id_cred}`: Auto-descubrimiento de DBs y tamaños en MySQL.
-*   `GET /monitoring/inventory/summary/{id_srv}`: Resumen de almacenamiento por servidor.
-*   `GET /monitoring/mysql5/metrics/{id_inst}`: Métricas avanzadas de MySQL 5.
-*   `GET /monitoring/mysql8/{id_srv}/{id_cred}`: Monitoreo nativo de MySQL 8.
-*   `GET /monitoring/oracle/{id_inst}/{id_cred}`: Monitoreo modular (Grupos A, B, C) basado en nivel de criticidad.
-*   `GET /monitoring/mongodb/{id_srv}/{id_cred}`: Monitoreo de performance para MongoDB.
+*   `GET /monitoring/host/{id_srv}/{id_cred}`: Monitoreo en tiempo real de CPU, RAM y Disco.
+*   **`POST /monitoring/inventory/discover-backups/...`**: Rastreo SSH integrado. Busca archivos (`.sql`, `.dmp`, `.archive`), vincula con BDs existentes y registra automáticamente en la tabla de Respaldos.
+*   `POST /monitoring/inventory/discover/{id_inst}`: Sincronización de inventario lógico de bases de datos.
+*   `GET /monitoring/oracle/{id_inst}/{id_cred}`: Monitoreo modular basado en criticidad (Grupos A, B, C).
 
-### 💾 Gestión de Respaldos (`/rutas-respaldo`, `/politicas-respaldo`, `/respaldos`)
-*   `POST /rutas-respaldo/`: Definición de destinos de storage (NFS, S3, Local).
-*   `POST /politicas-respaldo/`: Configuración de frecuencias y periodos de retención.
-*   `POST /asignacion-politica/`: Vinculación de bases de datos a políticas de backup.
-*   `POST /respaldos/`: Registro y auditoría de ejecuciones de respaldo.
-*   `GET /respaldos/historial`: Consulta de trazas de backup históricas.
-
-### 🛠️ Catálogos y Auditoría (`/estados`, `/audit-logs`, `/criticidad`)
-*   `GET /audit-logs/`: Bitácora inmutable de operaciones del sistema.
-*   `POST /estados/`: Gestión de estados globales (Activo, Fallido, etc).
-*   `GET /health/postgres`: Verificación de salud de la base de datos principal.
+### 💾 Gestión de Respaldos y Auditoría
+*   `GET /respaldos/historial`: Consulta de trazas de backup (manuales y auto-descubiertas).
+*   `GET /audit-logs/`: Bitácora inmutable (SRE) de todas las operaciones críticas.
+*   `GET /ping`: Health check de disponibilidad del backend.
 
 ## 🛠️ Stack Tecnológico
 *   **Backend:** FastAPI (Python 3.14) + SQLAlchemy 2.0
 *   **Base de Datos:** PostgreSQL 16
-*   **Gestión SSH:** Paramiko (con perfiles custom para Legacy)
+*   **Gestión SSH:** Paramiko (Perfiles Legacy + Modernos)
 *   **Seguridad:** JWT, Bcrypt, AES-256 (Fernet)
-*   **DevOps:** Docker (Multi-stage build) + `uv` (Fastest Python manager)
+*   **DevOps:** Docker (Multi-stage) + `uv` (Fastest Python manager)
