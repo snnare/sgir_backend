@@ -23,6 +23,7 @@ El proyecto sigue una **Arquitectura Simétrica por Dominios**:
 *   **Monitoreo Silencioso (Umbrales):** La base de datos solo persiste métricas cuando se supera el **90%** de uso, optimizando el almacenamiento.
 *   **Scheduler de Alta Disponibilidad:** 
     *   Ejecución automática de tareas usando un **Pool de 80 hilos** paralelos.
+    *   **Seguridad:** Inicia pausado por defecto para evitar ejecuciones automáticas al arranque; requiere activación manual vía API.
     *   **Controles SRE:** Endpoints dedicados para pausar, reanudar y consultar el estado del motor en tiempo real.
 *   **Salud Global:** Endpoint consolidado que devuelve el "Big Picture" de toda la infraestructura (Sanos, Críticos, Desactualizados) en una sola petición.
 
