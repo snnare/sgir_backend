@@ -21,14 +21,18 @@ El proyecto sigue una **Arquitectura Simétrica por Dominios**:
 *   **Monitoreo Unificado de DB:** Un solo estándar para Oracle, MySQL y MongoDB.
 *   **Live Cache:** Almacenamiento en RAM de métricas en tiempo real para alimentar las tarjetas (Cards) del Frontend sin latencia.
 *   **Monitoreo Silencioso (Umbrales):** La base de datos solo persiste métricas cuando se supera el **90%** de uso, optimizando el almacenamiento.
-*   **Scheduler por Criticidad:** Ejecución automática de tareas (Crítico: 1m, Alto: 5m, etc.) usando un **Pool de 80 hilos** paralelos.
+*   **Scheduler de Alta Disponibilidad:** 
+    *   Ejecución automática de tareas usando un **Pool de 80 hilos** paralelos.
+    *   **Controles SRE:** Endpoints dedicados para pausar, reanudar y consultar el estado del motor en tiempo real.
+*   **Salud Global:** Endpoint consolidado que devuelve el "Big Picture" de toda la infraestructura (Sanos, Críticos, Desactualizados) en una sola petición.
 
 ### 🏗️ Gestión de Inventario y Respaldos
 *   **Importación Masiva:** Alta de servidores, instancias y credenciales vía CSV con cifrado automático.
 *   **Descubrimiento de Respaldos:** Rastreo SSH de archivos físicos (`.sql`, `.dmp`, `.archive`) y sincronización con la CMDB.
 
-### 🔐 Seguridad y Notificaciones
+### 🔐 Seguridad, Auditoría y Mantenimiento
 *   **Centro de Notificaciones:** Endpoints dedicados para gestionar alertas activas y resolución de incidentes desde el Dashboard.
+*   **Retention Manager:** Tarea automática diaria que purga métricas y sesiones antiguas (> 30 días) para mantener la base de datos ágil.
 *   **Auditoría SRE:** Bitácora inmutable de cada acción realizada por usuarios o procesos automáticos.
 
 ## 🛠️ Stack Tecnológico
