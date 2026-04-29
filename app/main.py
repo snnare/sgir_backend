@@ -4,12 +4,14 @@ from contextlib import asynccontextmanager
 from app.routes import core_crud_router
 from app.routes.healths import health_router
 from app.routes.monitoring import router as monitoring_router
-from app.core.scheduler_manager import start_scheduler, stop_scheduler
+from app.core.scheduler_manager import start_scheduler, stop_scheduler, pause_scheduler
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Arranca el scheduler de monitoreo automático
     start_scheduler()
+    # Lo pausamos por defecto para evitar conexiones automáticas no deseadas al inicio
+    pause_scheduler()
     yield
     # Detiene el scheduler al cerrar la app
     stop_scheduler()
