@@ -8,6 +8,17 @@ from app.models.user_models import User
 
 router = APIRouter()
 
+@router.get("/global-summary")
+def get_global_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Resumen consolidado de toda la infraestructura para el Dashboard.
+    Retorna conteo de servidores sanos, críticos y desactualizados.
+    """
+    return get_global_health_summary(db)
+
 @router.get("/health-status/{server_id}")
 def check_health(
     server_id: int,

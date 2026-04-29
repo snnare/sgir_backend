@@ -1,6 +1,6 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from concurrent.futures import ThreadPoolExecutor
-from app.services.monitoring.scheduler_tasks import bulk_monitor_by_criticality
+from app.services.monitoring.scheduler_tasks import bulk_monitor_by_criticality, retention_policy_task
 import logging
 
 logger = logging.getLogger("scheduler_manager")
@@ -51,6 +51,16 @@ def start_scheduler():
         seconds=30, 
         args=[1], 
         id='monitor_bajo',
+        replace_existing=True
+    )
+
+    # 5. RETENCIÓN: Limpieza de datos antiguos cada 24 horas (Ejemplo: 3 AM)
+    scheduler.add_job(
+        retention_policy_task,
+        'cron',
+        hour=3,
+        minute=0,
+        id='retention_policy',
         replace_existing=True
     )
 

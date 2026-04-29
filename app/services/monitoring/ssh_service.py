@@ -138,6 +138,48 @@ def get_server_health_status(db: Session, servidor_id: int):
         }
     }
 
+def get_global_health_summary(db: Session):
+    """
+    RESUMEN GLOBAL: Devuelve conteos de estados para el Dashboard principal.
+    """
+    total_servers = db.query(Servidor).filter(Servidor.id_estado_servidor == 1).count()
+    
+    # 1. Obtener todas las sesiones de monitoreo más recientes por servidor
+    # (Unificamos lógica para determinar cuántos están en cada estado)
+    from sqlalchemy import func
+    subquery = db.query(
+        Monitoreo.id_servidor,
+        func.max(Monitoreo.fecha_inicio).label("max_date")
+    ).filter(Monitoreo.id_estado_monitoreo == 4).group_by(Monitoreo.id_servidor).subquery()
+
+    recent_sessions = db.query(Monitoreo).join(
+        subquery, (Monitoreo.id_servidor == subquery.c.id_servidor) & (Monitoreo.fecha_inicio == subquery.c.max_date)
+    ).all()
+
+    summary = {
+        "total_active_servers": total_servers,
+        "healthy": 0,
+        "critical": 0,
+        "stale": 0,
+        "unknown": total_servers - len(recent_sessions)
+    }
+
+    ahora = datetime.now(timezone.utc)
+    for session in recent_sessions:
+        # Frescura
+        if ahora - session.fecha_inicio > timedelta(minutes=10):
+            summary["stale"] += 1
+            continue
+        
+        # Incidentes (Métricas >= 90)
+        has_incident = db.query(Metrica).filter(Metrica.id_monitoreo == session.id_monitoreo).first()
+        if has_incident:
+            summary["critical"] += 1
+        else:
+            summary["healthy"] += 1
+
+    return summary
+
 def run_integrated_file_discovery(db: Session, instancia_id: int, credencial_id: int, ruta_id: int, user_id: int):
     instancia = db.query(InstanciaDBMS).filter(InstanciaDBMS.id_instancia == instancia_id).first()
     ruta = db.query(RutaRespaldo).filter(RutaRespaldo.id_ruta == ruta_id).first()

@@ -4,10 +4,23 @@ from app.models.infrastructure_models import Servidor, InstanciaDBMS, Credencial
 from app.services.monitoring.ssh_service import run_ssh_monitoring
 from app.services.monitoring.db_unified_service import run_unified_db_monitoring
 from app.models.monitoring_persistence_models import Monitoreo, Metrica, TipoMetrica
+from app.services.catalogs.monitoring_persistence_crud import purge_old_monitoring_data
 import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("scheduler_tasks")
+
+def retention_policy_task():
+    """Tarea para limpiar datos de monitoreo de más de 30 días."""
+    db = SessionLocal()
+    try:
+        logger.info("Ejecutando política de retención (Limpieza de datos > 30 días)...")
+        result = purge_old_monitoring_data(db, days=30)
+        logger.info(f"Limpieza completada: {result['deleted_metrics']} métricas y {result['deleted_sessions']} sesiones eliminadas.")
+    except Exception as e:
+        logger.error(f"Error en política de retención: {str(e)}")
+    finally:
+        db.close()
 
 def monitor_ssh_task(servidor_id: int, credencial_id: int):
     """Tarea individual para monitoreo SSH."""

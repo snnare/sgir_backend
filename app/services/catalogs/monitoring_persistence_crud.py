@@ -49,16 +49,23 @@ def delete_nivel_alerta(db: Session, id_nivel: int) -> bool:
 
 # --- CRUD Monitoreo (Sesiones) ---
 
-def purge_old_metrics(db: Session, days: int) -> int:
-    """
-    Elimina métricas más antiguas que N días.
-    Retorna la cantidad de registros eliminados.
-    """
-    threshold_date = datetime.now(timezone.utc) - timedelta(days=days)
-    stmt = delete(Metrica).where(Metrica.fecha_registro < threshold_date)
-    result = db.execute(stmt)
+def purge_old_monitoring_data(db: Session, days: int = 30) -> dict:
+    """Elimina métricas y sesiones de monitoreo más antiguas que N días."""
+    threshold = datetime.now(timezone.utc) - timedelta(days=days)
+    
+    # 1. Borrar métricas antiguas (Cascada manejará la relación si está configurada, 
+    # pero lo hacemos explícito para seguridad)
+    deleted_metrics = db.query(Metrica).filter(Metrica.fecha_registro < threshold).delete()
+    
+    # 2. Borrar sesiones de monitoreo antiguas
+    deleted_sessions = db.query(Monitoreo).filter(Monitoreo.fecha_inicio < threshold).delete()
+    
     db.commit()
-    return result.rowcount
+    return {
+        "deleted_metrics": deleted_metrics,
+        "deleted_sessions": deleted_sessions,
+        "threshold_date": threshold
+    }
 
 def create_monitoreo_session(db: Session, session: MonitoreoCreate) -> Monitoreo:
     db_monitoreo: Monitoreo = Monitoreo(**session.model_dump())
