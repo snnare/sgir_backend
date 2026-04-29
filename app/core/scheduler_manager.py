@@ -67,6 +67,34 @@ def start_scheduler():
     scheduler.start()
     logger.info("Scheduler de PRUEBA iniciado (Intervalos de 15-30 segundos).")
 
+def pause_scheduler():
+    """Pausa temporalmente todas las tareas del scheduler sin destruir el pool."""
+    if scheduler.running:
+        scheduler.pause()
+        logger.info("Scheduler pausado.")
+        return True
+    return False
+
+def resume_scheduler():
+    """Reanuda las tareas del scheduler."""
+    if scheduler.running:
+        scheduler.resume()
+        logger.info("Scheduler reanudado.")
+        return True
+    return False
+
+def get_scheduler_status():
+    """Devuelve el estado actual del scheduler."""
+    if not scheduler.running:
+        return "stopped"
+    # Verificar si todas las tareas están pausadas (en apscheduler no hay un estado 'paused' global, pero el scheduler tiene un flag 'state')
+    from apscheduler.schedulers.base import STATE_PAUSED, STATE_RUNNING
+    if scheduler.state == STATE_PAUSED:
+        return "paused"
+    elif scheduler.state == STATE_RUNNING:
+        return "running"
+    return "stopped"
+
 def stop_scheduler():
     """Detiene el scheduler y libera el pool de hilos."""
     scheduler.shutdown()
