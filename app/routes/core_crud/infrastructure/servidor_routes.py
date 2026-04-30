@@ -54,7 +54,14 @@ def create_server(servidor: ServidorCreate, db: Session = Depends(get_pg_db), cu
 def read_servers(skip: int = 0, limit: int = 100, db: Session = Depends(get_pg_db)):
     return infrastructure_crud.get_servidores(db, skip, limit)
 
-@router.get("/{ip}")
+@router.get("/{servidor_id}", response_model=ServidorResponse)
+def read_server_by_id(servidor_id: int, db: Session = Depends(get_pg_db)):
+    db_server = infrastructure_crud.get_servidor(db, servidor_id)
+    if not db_server:
+        raise HTTPException(status_code=404, detail="Servidor no encontrado")
+    return db_server
+
+@router.get("/ip/{ip}")
 def read_server_by_ip(ip: str, db: Session = Depends(get_pg_db)):
     db_server = infrastructure_crud.get_servidor_by_ip(db, ip)
     if not db_server:

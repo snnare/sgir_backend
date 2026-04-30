@@ -18,6 +18,7 @@ El proyecto sigue una **Arquitectura Simétrica por Dominios**:
 
 ### 📊 Observabilidad y Monitoreo (Full-Stack)
 *   **Monitoreo de Host (SSH):** Extracción de CPU, RAM, Disco y Uptime (Soporta **Legacy RHEL 4/5**).
+    *   **Soporte Multi-Partición:** Capacidad de vigilar múltiples puntos de montaje (ej. `/`, `/u01`, `/data`) de forma independiente por servidor.
 *   **Monitoreo Unificado de DB:** Un solo estándar para Oracle, MySQL y MongoDB.
 *   **Live Cache:** Almacenamiento en RAM de métricas en tiempo real para alimentar las tarjetas (Cards) del Frontend sin latencia.
 *   **Monitoreo Silencioso (Umbrales):** La base de datos solo persiste métricas cuando se supera el **90%** de uso, optimizando el almacenamiento.

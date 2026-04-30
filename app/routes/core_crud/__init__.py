@@ -8,6 +8,7 @@ from .audit.bitacora_routes import router as bitacora_router
 from .catalogs.nivel_criticidad_routes import router as nivel_criticidad_router
 from .catalogs.tipo_acceso_routes import router as tipo_acceso_router
 from .infrastructure.servidor_routes import router as servidor_router
+from .infrastructure.servidor_particion_routes import router as servidor_particion_router
 from .infrastructure.credencial_acceso_routes import router as credencial_router
 from .infrastructure.dbms_routes import router as dbms_router
 from .infrastructure.instancia_routes import router as instancia_router
@@ -42,6 +43,7 @@ router.include_router(bitacora_router, prefix="/audit-logs", tags=["Audit - Logs
 
 # Infraestructura (CMDB)
 router.include_router(servidor_router, prefix="/servidores", tags=["Infrastructure - Servidores"])
+router.include_router(servidor_particion_router, prefix="/particiones", tags=["Infrastructure - Particiones"])
 router.include_router(credencial_router, prefix="/credenciales", tags=["Infrastructure - Credenciales"])
 router.include_router(dbms_router, prefix="/dbms", tags=["Infrastructure - DBMS"])
 router.include_router(instancia_router, prefix="/instancias", tags=["Infrastructure - Instancias"])

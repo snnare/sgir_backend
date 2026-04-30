@@ -36,16 +36,22 @@ def run_ssh_monitoring(db_local: Session, servidor_id: int, credencial_id: int):
     try:
         client = get_ssh_connection(servidor, credencial)
         
+        # Obtener particiones configuradas
+        partition_paths = [p.path for p in servidor.particiones] if servidor.particiones else ["/"]
+
         if servidor.es_legacy:
-            raw_metrics = metrics_provider.get_metrics_legacy(client)
+            raw_metrics = metrics_provider.get_metrics_legacy(client, partition_paths)
         else:
-            raw_metrics = metrics_provider.get_metrics_modern(client)
+            raw_metrics = metrics_provider.get_metrics_modern(client, partition_paths)
 
         # 1. ACTUALIZAR LIVE CACHE (Siempre, para las Cards del Front)
+        # Extraemos las métricas de disco para el caché
+        disk_metrics = {k.split("(")[1].split(")")[0]: float(v) for k, v in raw_metrics.items() if "Disk_Usage" in k}
+        
         LIVE_METRICS_CACHE[servidor_id] = {
             "cpu": float(raw_metrics.get("CPU_Usage", 0)),
             "ram": float(raw_metrics.get("RAM_Usage", 0)),
-            "disk": float(raw_metrics.get("Disk_Usage", 0)),
+            "disks": disk_metrics,
             "uptime": float(raw_metrics.get("Uptime", 0)),
             "last_update": datetime.now(timezone.utc)
         }
@@ -134,7 +140,7 @@ def get_server_health_status(db: Session, servidor_id: int):
         "last_check": last_session.fecha_inicio,
         "is_stale": is_stale,
         "live_metrics": live_data if live_data else {
-            "cpu": 0, "ram": 0, "disk": 0, "uptime": 0, "message": "Datos de caché no disponibles"
+            "cpu": 0, "ram": 0, "disks": {}, "uptime": 0, "message": "Datos de caché no disponibles"
         }
     }
 

@@ -38,6 +38,21 @@ class DBMSResponse(DBMSBase):
     id_dbms: int
     model_config = ConfigDict(from_attributes=True)
 
+# --- Particiones de Servidor ---
+
+class ServidorParticionBase(BaseModel):
+    path: str
+    etiqueta: str
+
+class ServidorParticionCreate(ServidorParticionBase):
+    id_servidor: int
+
+class ServidorParticionResponse(ServidorParticionBase):
+    id_particion: int
+    id_servidor: int
+    fecha_registro: datetime
+    model_config = ConfigDict(from_attributes=True)
+
 # --- Servidor ---
 
 class ServidorBase(BaseModel):
@@ -63,6 +78,7 @@ class ServidorUpdate(BaseModel):
 class ServidorResponse(ServidorBase):
     id_servidor: int
     fecha_registro: datetime
+    particiones: List[ServidorParticionResponse] = []
     model_config = ConfigDict(from_attributes=True)
 
 # --- Credencial ---

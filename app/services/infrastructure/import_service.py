@@ -1,7 +1,7 @@
 import csv
 import io
 from sqlalchemy.orm import Session
-from app.models.infrastructure_models import Servidor, CredencialAcceso, InstanciaDBMS, NivelCriticidad, TipoAcceso, DBMS
+from app.models.infrastructure_models import Servidor, CredencialAcceso, InstanciaDBMS, NivelCriticidad, TipoAcceso, DBMS, ServidorParticion
 from app.models.user_models import UserStatus
 from app.models.audit_model import Bitacora
 from app.core.security.encryption import encrypt_password
@@ -85,6 +85,35 @@ def process_infrastructure_csv(db: Session, file_content: bytes, user_id: int) -
             else:
                 servidor_id = servidor.id_servidor
                 processed_ips[ip] = servidor_id
+
+            # 2.1 MANEJO DE PARTICIONES
+            paths_raw = row.get("particiones") or row.get("paths")
+            
+            # Si está vacío o no existe, por defecto es la raíz /
+            if not paths_raw or not paths_raw.strip():
+                paths_raw = "/"
+
+            # Limpiar formato (path1, path2)
+            clean_paths = paths_raw.strip()
+            if clean_paths.startswith('(') and clean_paths.endswith(')'):
+                clean_paths = clean_paths[1:-1]
+            
+            paths_list = [p.strip() for p in clean_paths.split(',') if p.strip()]
+            
+            for p_path in paths_list:
+                # Evitar duplicados para este servidor
+                exists = db.query(ServidorParticion).filter(
+                    ServidorParticion.id_servidor == servidor_id,
+                    ServidorParticion.path == p_path
+                ).first()
+                
+                if not exists:
+                    nueva_part = ServidorParticion(
+                        id_servidor=servidor_id,
+                        path=p_path,
+                        etiqueta="Importado"
+                    )
+                    db.add(nueva_part)
 
             # 3. MANEJO DE INSTANCIA (Si hay datos de DBMS e Instancia)
             instancia_id = None

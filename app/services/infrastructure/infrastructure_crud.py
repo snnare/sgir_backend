@@ -1,11 +1,12 @@
 from typing import Any
 from sqlalchemy.orm import Session, joinedload
-from app.models.infrastructure_models import Servidor, CredencialAcceso, InstanciaDBMS, BaseDeDatos, NivelCriticidad, TipoAcceso, DBMS
+from app.models.infrastructure_models import Servidor, CredencialAcceso, InstanciaDBMS, BaseDeDatos, NivelCriticidad, TipoAcceso, DBMS, ServidorParticion
 from app.schemas  import (
     ServidorCreate, ServidorUpdate, 
     CredencialCreate, CredencialUpdate,
     InstanciaCreate, BaseDatosCreate,
-    NivelCriticidadCreate, TipoAccesoCreate, DBMSCreate
+    NivelCriticidadCreate, TipoAccesoCreate, DBMSCreate,
+    ServidorParticionCreate
 )
 from app.core.security.encryption import encrypt_password
 
@@ -64,13 +65,13 @@ def get_dbms_all(db: Session, skip: int = 0, limit: int = 100) -> list[DBMS]:
 # --- CRUD Servidor ---
 
 def get_servidor(db: Session, servidor_id: int) -> Servidor | None:
-    return db.query(Servidor).filter(Servidor.id_servidor == servidor_id).first()
+    return db.query(Servidor).options(joinedload(Servidor.particiones)).filter(Servidor.id_servidor == servidor_id).first()
 
 def get_servidor_by_ip(db: Session, ip: str) -> Servidor | None:
-    return db.query(Servidor).filter(Servidor.direccion_ip == ip).first()
+    return db.query(Servidor).options(joinedload(Servidor.particiones)).filter(Servidor.direccion_ip == ip).first()
 
 def get_servidores(db: Session, skip: int = 0, limit: int = 100) -> list[Servidor]:
-    return db.query(Servidor).offset(skip).limit(limit).all()
+    return db.query(Servidor).options(joinedload(Servidor.particiones)).offset(skip).limit(limit).all()
 
 def create_servidor(db: Session, servidor: ServidorCreate) -> Servidor | None:
     # Validar si la IP ya existe
@@ -100,6 +101,26 @@ def delete_servidor(db: Session, servidor_id: int) -> bool:
     db_servidor = get_servidor(db, servidor_id)
     if db_servidor:
         db.delete(db_servidor)
+        db.commit()
+        return True
+    return False
+
+# --- CRUD Particion ---
+
+def get_particiones_by_servidor(db: Session, servidor_id: int) -> list[ServidorParticion]:
+    return db.query(ServidorParticion).filter(ServidorParticion.id_servidor == servidor_id).all()
+
+def create_particion(db: Session, particion: ServidorParticionCreate) -> ServidorParticion:
+    db_particion = ServidorParticion(**particion.model_dump())
+    db.add(db_particion)
+    db.commit()
+    db.refresh(db_particion)
+    return db_particion
+
+def delete_particion(db: Session, id_particion: int) -> bool:
+    db_particion = db.query(ServidorParticion).filter(ServidorParticion.id_particion == id_particion).first()
+    if db_particion:
+        db.delete(db_particion)
         db.commit()
         return True
     return False

@@ -40,6 +40,18 @@ class Servidor(Base):
     # Relaciones
     instancias = relationship("InstanciaDBMS", back_populates="servidor", cascade="all, delete-orphan")
     credenciales = relationship("CredencialAcceso", back_populates="servidor", cascade="all, delete-orphan")
+    particiones = relationship("ServidorParticion", back_populates="servidor", cascade="all, delete-orphan")
+
+class ServidorParticion(Base):
+    __tablename__ = "servidor_particion"
+    id_particion = Column(Integer, primary_key=True, index=True)
+    id_servidor = Column(Integer, ForeignKey("servidor.id_servidor", ondelete="CASCADE"), nullable=False)
+    path = Column(Text, nullable=False)
+    etiqueta = Column(String(100), nullable=False)
+    fecha_registro = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relación
+    servidor = relationship("Servidor", back_populates="particiones")
 
 class CredencialAcceso(Base):
     __tablename__ = "credencial_acceso"
