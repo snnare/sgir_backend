@@ -13,6 +13,7 @@ from .infrastructure.credencial_acceso_routes import router as credencial_router
 from .infrastructure.dbms_routes import router as dbms_router
 from .infrastructure.instancia_routes import router as instancia_router
 from .infrastructure.base_de_datos_routes import router as base_de_datos_router
+from .infrastructure.conexion_routes import router as conexion_router
 from .backups.tipo_respaldo_routes import router as tipo_respaldo_router
 from .backups.tipo_almacenamiento_routes import router as tipo_almacenamiento_router
 from .backups.ruta_respaldo_routes import router as ruta_respaldo_router
