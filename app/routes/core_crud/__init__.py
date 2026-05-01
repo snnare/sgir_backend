@@ -48,6 +48,7 @@ router.include_router(credencial_router, prefix="/credenciales", tags=["Infrastr
 router.include_router(dbms_router, prefix="/dbms", tags=["Infrastructure - DBMS"])
 router.include_router(instancia_router, prefix="/instancias", tags=["Infrastructure - Instancias"])
 router.include_router(base_de_datos_router, prefix="/bases-de-datos", tags=["Infrastructure - Bases de Datos"])
+router.include_router(conexion_router, prefix="/conexion", tags=["Infrastructure - Conexiones (Test)"])
 
 # Backups
 router.include_router(tipo_respaldo_router, prefix="/tipo-respaldo", tags=["Backups - Tipos de Respaldo"])

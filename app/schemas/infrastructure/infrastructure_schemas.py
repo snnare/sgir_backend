@@ -158,3 +158,11 @@ class BaseDatos(BaseDatosBase):
     id_base_datos: int
     fecha_creacion: datetime
     model_config = ConfigDict(from_attributes=True)
+
+# --- Test de Conexión Dinámico ---
+
+class ConnectionTestRequest(BaseModel):
+    direccion_ip: str
+    puerto: Optional[int] = None
+    usuario: str
+    password: str
