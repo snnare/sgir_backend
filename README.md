@@ -91,6 +91,7 @@ Gestión, rastreo y cumplimiento de políticas de copias de seguridad de las bas
 - **POST, GET, PUT, DELETE** `/politicas-respaldo/`
 - **POST, DELETE** `/asignacion-politica/`
 - **POST** `/monitoring/inventory/discover-backups/{instancia_id}/{credencial_id}/{ruta_id}`
+- **POST** `/monitoring/inventory/discover-backups-server/{servidor_id}/{credencial_id}/{ruta_id}` (Descubrimiento global por servidor)
 - **POST, GET** `/respaldos/` (Incluye historial)
 
 ---

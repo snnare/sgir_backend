@@ -216,3 +216,77 @@ def run_integrated_file_discovery(db: Session, instancia_id: int, credencial_id:
         return {"status": "success", "servidor": servidor.direccion_ip, "ruta": ruta.path, "archivos_fisicos": len(found_files), "registros_respaldo_creados": respaldos_creados}
     finally:
         if client: client.close()
+
+def run_server_integrated_file_discovery(db: Session, servidor_id: int, credencial_id: int, ruta_id: int, user_id: int):
+    """
+    Descubrimiento GLOBAL por servidor: Busca respaldos para TODAS las instancias y bases de datos
+    registradas en un servidor específico.
+    """
+    servidor = db.query(Servidor).filter(Servidor.id_servidor == servidor_id).first()
+    ruta = db.query(RutaRespaldo).filter(RutaRespaldo.id_ruta == ruta_id).first()
+    credencial = db.query(CredencialAcceso).filter(CredencialAcceso.id_credencial == credencial_id).first()
+    
+    if not servidor or not ruta or not credencial: 
+        return {"error": "Servidor, Ruta o Credencial no encontrados"}
+    
+    instancias = db.query(InstanciaDBMS).filter(InstanciaDBMS.id_servidor == servidor_id).all()
+    if not instancias:
+        return {"error": "El servidor no tiene instancias de DBMS registradas"}
+
+    # Obtener extensiones únicas basadas en los DBMS de las instancias del servidor
+    extension_map = {"PostgreSQL": ".sql", "MySQL": ".sql", "Oracle Database": ".dmp", "MongoDB": ".archive"}
+    unique_extensions = set()
+    for inst in instancias:
+        dbms = db.query(DBMS).filter(DBMS.id_dbms == inst.id_dbms).first()
+        if dbms:
+            unique_extensions.add(extension_map.get(dbms.nombre_dbms, ".sql"))
+
+    client = None
+    try:
+        client = get_ssh_connection(servidor, credencial)
+        all_found_files = []
+        for ext in unique_extensions:
+            files = discovery_provider.search_files_legacy(client, ruta.path, ext) if servidor.es_legacy else discovery_provider.search_files_modern(client, ruta.path, ext)
+            all_found_files.extend(files)
+
+        # Obtener todas las bases de datos de todas las instancias del servidor
+        databases = db.query(BaseDeDatos).join(InstanciaDBMS).filter(InstanciaDBMS.id_servidor == servidor_id).all()
+        
+        respaldos_creados = 0
+        for file_path, size_bytes in all_found_files:
+            for bd in databases:
+                if bd.nombre_base.lower() in file_path.lower():
+                    asignacion = db.query(AsignacionPoliticaBD).filter(AsignacionPoliticaBD.id_base_datos == bd.id_base_datos).first()
+                    if asignacion:
+                        nuevo_respaldo = Respaldo(
+                            id_base_datos=bd.id_base_datos, 
+                            id_politica=asignacion.id_politica, 
+                            id_credencial=credencial_id, 
+                            id_ruta_respaldo=ruta_id, 
+                            id_estado_ejecucion=4, 
+                            tamano_mb=Decimal(str(round(size_bytes / (1024 * 1024), 2))), 
+                            fecha_fin=datetime.now()
+                        )
+                        db.add(nuevo_respaldo)
+                        respaldos_creados += 1
+                        break
+        
+        nueva_bitacora = Bitacora(
+            entidad_afectada="Respaldo (Server)", 
+            id_entidad=servidor_id, 
+            descripcion_evento=f"Descubrimiento GLOBAL SSH en {ruta.path}. Archivos: {len(all_found_files)}, Registrados: {respaldos_creados}", 
+            id_usuario=user_id, 
+            id_tipo_evento=6
+        )
+        db.add(nueva_bitacora)
+        db.commit()
+        
+        return {
+            "status": "success", 
+            "servidor": servidor.direccion_ip, 
+            "ruta": ruta.path, 
+            "archivos_fisicos_totales": len(all_found_files), 
+            "registros_respaldo_creados": respaldos_creados
+        }
+    finally:
+        if client: client.close()

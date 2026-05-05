@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.db.postgres.postgres_connection import get_db as get_pg_db
 from app.services import sync_databases_inventory
-from app.services.monitoring.ssh_service import run_integrated_file_discovery
+from app.services.monitoring.ssh_service import run_integrated_file_discovery, run_server_integrated_file_discovery
 from app.core.dependencies import get_current_user
 from app.models.user_models import User
 from sqlalchemy import func
@@ -34,6 +34,23 @@ def discover_integrated_backups(
     las ejecuciones en la tabla Respaldo basándose en el DBMS y las BDs existentes.
     """
     result = run_integrated_file_discovery(db, instancia_id, credencial_id, ruta_id, current_user.id_usuario)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+@router.post("/discover-backups-server/{servidor_id}/{credencial_id}/{ruta_id}")
+def discover_server_backups(
+    servidor_id: int,
+    credencial_id: int,
+    ruta_id: int,
+    db: Session = Depends(get_pg_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Busca archivos físicos en TODO el servidor (todas sus instancias) y registra 
+    automáticamente las ejecuciones en la tabla Respaldo.
+    """
+    result = run_server_integrated_file_discovery(db, servidor_id, credencial_id, ruta_id, current_user.id_usuario)
     if "error" in result:
         raise HTTPException(status_code=404, detail=result["error"])
     return result
