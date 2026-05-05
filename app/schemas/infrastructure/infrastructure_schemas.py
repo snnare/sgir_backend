@@ -166,3 +166,13 @@ class ConnectionTestRequest(BaseModel):
     puerto: Optional[int] = None
     usuario: str
     password: str
+
+class BaseDatosSearchResult(BaseModel):
+    id_base_datos: int
+    nombre_base: str
+    ip_servidor: str
+    nombre_servidor: str
+    tipo_dbms: str
+    version_dbms: str
+    estado_bd: str
+    model_config = ConfigDict(from_attributes=True)

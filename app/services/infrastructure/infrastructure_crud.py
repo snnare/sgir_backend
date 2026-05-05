@@ -1,6 +1,7 @@
 from typing import Any
 from sqlalchemy.orm import Session, joinedload
 from app.models.infrastructure_models import Servidor, CredencialAcceso, InstanciaDBMS, BaseDeDatos, NivelCriticidad, TipoAcceso, DBMS, ServidorParticion
+from app.models.user_models import UserStatus
 from app.schemas  import (
     ServidorCreate, ServidorUpdate, 
     CredencialCreate, CredencialUpdate,
@@ -152,6 +153,36 @@ def delete_instancia(db: Session, id_instancia: int) -> bool:
 
 def get_base_datos(db: Session, id_base_datos: int) -> BaseDeDatos | None:
     return db.query(BaseDeDatos).filter(BaseDeDatos.id_base_datos == id_base_datos).first()
+
+def get_bases_de_datos_by_servidor(db: Session, servidor_id: int) -> list[BaseDeDatos]:
+    return db.query(BaseDeDatos).join(InstanciaDBMS).filter(InstanciaDBMS.id_servidor == servidor_id).all()
+
+def search_bases_de_datos(db: Session, query: str) -> list[dict]:
+    resultados = db.query(
+        BaseDeDatos.id_base_datos,
+        BaseDeDatos.nombre_base,
+        Servidor.direccion_ip.label("ip_servidor"),
+        Servidor.nombre_servidor,
+        DBMS.nombre_dbms.label("tipo_dbms"),
+        DBMS.version.label("version_dbms"),
+        UserStatus.nombre_estado.label("estado_bd")
+    ).join(InstanciaDBMS, BaseDeDatos.id_instancia == InstanciaDBMS.id_instancia)\
+     .join(Servidor, InstanciaDBMS.id_servidor == Servidor.id_servidor)\
+     .join(DBMS, InstanciaDBMS.id_dbms == DBMS.id_dbms)\
+     .join(UserStatus, BaseDeDatos.id_estado_bd == UserStatus.id_estado)\
+     .filter(BaseDeDatos.nombre_base.ilike(f"%{query}%")).all()
+    
+    return [
+        {
+            "id_base_datos": r.id_base_datos,
+            "nombre_base": r.nombre_base,
+            "ip_servidor": r.ip_servidor,
+            "nombre_servidor": r.nombre_servidor,
+            "tipo_dbms": r.tipo_dbms,
+            "version_dbms": r.version_dbms,
+            "estado_bd": r.estado_bd
+        } for r in resultados
+    ]
 
 def create_base_datos(db: Session, base_datos: BaseDatosCreate) -> BaseDeDatos:
     db_bd: BaseDeDatos = BaseDeDatos(**base_datos.model_dump())
