@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from app.db.postgres.postgres_connection import get_db as get_pg_db
 from app.schemas import BaseDatosCreate, BaseDatos as BaseDatosResponse
 from app.schemas.infrastructure.infrastructure_schemas import BaseDatosSearchResult
@@ -32,3 +32,8 @@ def read_bases_de_datos_by_servidor(servidor_id: int, db: Session = Depends(get_
 def search_bases_de_datos_endpoint(query: str, db: Session = Depends(get_pg_db)):
     """Busca bases de datos por nombre (coincidencia parcial) y devuelve detalles enriquecidos (IP, DBMS, Estado)."""
     return infrastructure_crud.search_bases_de_datos(db, query)
+
+@router.get("/filter", response_model=List[BaseDatosSearchResult])
+def filter_bases_de_datos_endpoint(nombre: Optional[str] = None, ip: Optional[str] = None, db: Session = Depends(get_pg_db)):
+    """Filtra bases de datos por nombre y/o IP del servidor."""
+    return infrastructure_crud.filter_bases_de_datos(db, nombre, ip)

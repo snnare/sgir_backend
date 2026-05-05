@@ -27,6 +27,8 @@ Centraliza el registro, organización y descubrimiento de toda la infraestructur
 - **POST, GET** `/dbms/`
 - **POST, GET** `/instancias/`
 - **POST, GET** `/bases-de-datos/` (Incluye búsqueda por ID de servidor)
+- **GET** `/bases-de-datos/search` (Búsqueda enriquecida por nombre)
+- **GET** `/bases-de-datos/filter` (Filtrado por nombre e IP del servidor)
 
 **Credenciales y Pruebas de Conexión Dinámica:**
 - **POST, GET, PUT, DELETE** `/credenciales/`

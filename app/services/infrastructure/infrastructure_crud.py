@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 from sqlalchemy.orm import Session, joinedload
 from app.models.infrastructure_models import Servidor, CredencialAcceso, InstanciaDBMS, BaseDeDatos, NivelCriticidad, TipoAcceso, DBMS, ServidorParticion
 from app.models.user_models import UserStatus
@@ -171,6 +171,39 @@ def search_bases_de_datos(db: Session, query: str) -> list[dict]:
      .join(DBMS, InstanciaDBMS.id_dbms == DBMS.id_dbms)\
      .join(UserStatus, BaseDeDatos.id_estado_bd == UserStatus.id_estado)\
      .filter(BaseDeDatos.nombre_base.ilike(f"%{query}%")).all()
+    
+    return [
+        {
+            "id_base_datos": r.id_base_datos,
+            "nombre_base": r.nombre_base,
+            "ip_servidor": r.ip_servidor,
+            "nombre_servidor": r.nombre_servidor,
+            "tipo_dbms": r.tipo_dbms,
+            "version_dbms": r.version_dbms,
+            "estado_bd": r.estado_bd
+        } for r in resultados
+    ]
+
+def filter_bases_de_datos(db: Session, nombre: Optional[str] = None, ip: Optional[str] = None) -> list[dict]:
+    query_obj = db.query(
+        BaseDeDatos.id_base_datos,
+        BaseDeDatos.nombre_base,
+        Servidor.direccion_ip.label("ip_servidor"),
+        Servidor.nombre_servidor,
+        DBMS.nombre_dbms.label("tipo_dbms"),
+        DBMS.version.label("version_dbms"),
+        UserStatus.nombre_estado.label("estado_bd")
+    ).join(InstanciaDBMS, BaseDeDatos.id_instancia == InstanciaDBMS.id_instancia)\
+     .join(Servidor, InstanciaDBMS.id_servidor == Servidor.id_servidor)\
+     .join(DBMS, InstanciaDBMS.id_dbms == DBMS.id_dbms)\
+     .join(UserStatus, BaseDeDatos.id_estado_bd == UserStatus.id_estado)
+
+    if nombre:
+        query_obj = query_obj.filter(BaseDeDatos.nombre_base.ilike(f"%{nombre}%"))
+    if ip:
+        query_obj = query_obj.filter(Servidor.direccion_ip.ilike(f"%{ip}%"))
+
+    resultados = query_obj.all()
     
     return [
         {
