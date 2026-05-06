@@ -219,8 +219,8 @@ def run_integrated_file_discovery(db: Session, instancia_id: int, credencial_id:
 
 def run_server_integrated_file_discovery(db: Session, servidor_id: int, credencial_id: int, ruta_id: int, user_id: int):
     """
-    Descubrimiento GLOBAL por servidor: Busca respaldos para TODAS las instancias y bases de datos
-    registradas en un servidor específico.
+    Descubrimiento GLOBAL por servidor (RAW): Lista archivos recientes en una ruta
+    sin depender de las instancias registradas.
     """
     servidor = db.query(Servidor).filter(Servidor.id_servidor == servidor_id).first()
     ruta = db.query(RutaRespaldo).filter(RutaRespaldo.id_ruta == ruta_id).first()
@@ -229,52 +229,24 @@ def run_server_integrated_file_discovery(db: Session, servidor_id: int, credenci
     if not servidor or not ruta or not credencial: 
         return {"error": "Servidor, Ruta o Credencial no encontrados"}
     
-    instancias = db.query(InstanciaDBMS).filter(InstanciaDBMS.id_servidor == servidor_id).all()
-    if not instancias:
-        return {"error": "El servidor no tiene instancias de DBMS registradas"}
-
-    # Obtener extensiones únicas basadas en los DBMS de las instancias del servidor
-    extension_map = {"PostgreSQL": ".sql", "MySQL": ".sql", "Oracle Database": ".dmp", "MongoDB": ".archive"}
-    unique_extensions = set()
-    for inst in instancias:
-        dbms = db.query(DBMS).filter(DBMS.id_dbms == inst.id_dbms).first()
-        if dbms:
-            unique_extensions.add(extension_map.get(dbms.nombre_dbms, ".sql"))
-
     client = None
     try:
         client = get_ssh_connection(servidor, credencial)
-        all_found_files = []
-        for ext in unique_extensions:
-            files = discovery_provider.search_files_legacy(client, ruta.path, ext) if servidor.es_legacy else discovery_provider.search_files_modern(client, ruta.path, ext)
-            all_found_files.extend(files)
+        
+        # Obtener archivos modificados en las últimas 24 horas (1 día)
+        if servidor.es_legacy:
+            found_files = discovery_provider.list_recent_files_legacy(client, ruta.path, days=1)
+        else:
+            found_files = discovery_provider.list_recent_files_modern(client, ruta.path, days=1)
 
-        # Obtener todas las bases de datos de todas las instancias del servidor
-        databases = db.query(BaseDeDatos).join(InstanciaDBMS).filter(InstanciaDBMS.id_servidor == servidor_id).all()
-        
-        respaldos_creados = 0
-        for file_path, size_bytes in all_found_files:
-            for bd in databases:
-                if bd.nombre_base.lower() in file_path.lower():
-                    asignacion = db.query(AsignacionPoliticaBD).filter(AsignacionPoliticaBD.id_base_datos == bd.id_base_datos).first()
-                    if asignacion:
-                        nuevo_respaldo = Respaldo(
-                            id_base_datos=bd.id_base_datos, 
-                            id_politica=asignacion.id_politica, 
-                            id_credencial=credencial_id, 
-                            id_ruta_respaldo=ruta_id, 
-                            id_estado_ejecucion=4, 
-                            tamano_mb=Decimal(str(round(size_bytes / (1024 * 1024), 2))), 
-                            fecha_fin=datetime.now()
-                        )
-                        db.add(nuevo_respaldo)
-                        respaldos_creados += 1
-                        break
-        
+        total_size_bytes = sum(f["size"] for f in found_files)
+        total_peso_mb = round(total_size_bytes / (1024 * 1024), 2)
+        lista_nombres = [f["name"] for f in found_files]
+
         nueva_bitacora = Bitacora(
-            entidad_afectada="Respaldo (Server)", 
+            entidad_afectada="Respaldo (Raw Server)", 
             id_entidad=servidor_id, 
-            descripcion_evento=f"Descubrimiento GLOBAL SSH en {ruta.path}. Archivos: {len(all_found_files)}, Registrados: {respaldos_creados}", 
+            descripcion_evento=f"Descubrimiento RAW SSH en {ruta.path}. Archivos detectados: {len(found_files)}", 
             id_usuario=user_id, 
             id_tipo_evento=6
         )
@@ -285,8 +257,9 @@ def run_server_integrated_file_discovery(db: Session, servidor_id: int, credenci
             "status": "success", 
             "servidor": servidor.direccion_ip, 
             "ruta": ruta.path, 
-            "archivos_fisicos_totales": len(all_found_files), 
-            "registros_respaldo_creados": respaldos_creados
+            "archivos_fisicos_totales": len(found_files), 
+            "peso": f"{total_peso_mb} MB",
+            "lista_archivos": lista_nombres
         }
     finally:
         if client: client.close()

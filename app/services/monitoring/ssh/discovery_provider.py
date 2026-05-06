@@ -41,3 +41,42 @@ def search_files_legacy(client, path: str, extension: str) -> list:
             path_file = parts[8]
             results.append((path_file, size))
     return results
+
+def list_recent_files_modern(client, path: str, days: int = 1) -> list:
+    """
+    Lista archivos modificados en los últimos 'n' días.
+    Retorna lista de diccionarios con name y size_bytes.
+    """
+    cmd = f"find {path} -maxdepth 1 -type f -mtime -{days} -printf '%f|%s\\n' 2>/dev/null"
+    output = execute_command(client, cmd)
+    if not output:
+        return []
+    
+    results = []
+    for line in output.split('\n'):
+        if '|' in line:
+            parts = line.split('|')
+            results.append({"name": parts[0], "size": int(parts[1])})
+    return results
+
+def list_recent_files_legacy(client, path: str, days: int = 1) -> list:
+    """
+    Lista archivos modificados recientemente en sistemas antiguos.
+    Usa mtime de find (estándar POSIX).
+    """
+    cmd = f"find {path} -maxdepth 1 -type f -mtime -{days} -exec ls -nl {{}} \\; 2>/dev/null"
+    output = execute_command(client, cmd)
+    if not output:
+        return []
+    
+    results = []
+    for line in output.split('\n'):
+        parts = line.split()
+        if len(parts) >= 9:
+            size = int(parts[4])
+            # En ls -nl, el nombre puede estar en la última posición, pero find puede devolver path completo
+            # Intentamos extraer solo el nombre del path
+            full_path = parts[8]
+            name = full_path.split('/')[-1]
+            results.append({"name": name, "size": size})
+    return results
