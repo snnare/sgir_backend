@@ -72,6 +72,7 @@ Vigilancia en tiempo real de recursos y servicios mediante tareas programadas as
 - **POST** `/monitoring/host/scheduler/pause`
 - **POST** `/monitoring/host/scheduler/resume`
 - **GET** `/monitoring/host/global-summary`
+- **GET** `/monitoring/host/live-cache` (Métricas en tiempo real CPU/RAM/Disco)
 - **GET** `/monitoring/host/health-status/{server_id}`
 - **GET** `/monitoring/host/{server_id}/{cred_id}`
 
@@ -81,6 +82,7 @@ Vigilancia en tiempo real de recursos y servicios mediante tareas programadas as
 Gestión, rastreo y cumplimiento de políticas de copias de seguridad de las bases de datos.
 
 ### 🚀 Capacidades
+*   **Rutas Exclusivas:** Las rutas de respaldo ahora están vinculadas a un servidor específico en la CMDB para mejor organización.
 *   **Descubrimiento de Respaldos (Discovery):** Rastreo remoto vía SSH de archivos físicos (`.sql`, `.dmp`, `.archive`) y sincronización con el inventario CMDB.
 *   **Políticas de Retención:** Asignación de reglas de ciclo de vida para diferenciar backups diarios, semanales, etc.
 *   **Retention Manager:** Purga automática nocturna de registros que superen el tiempo de retención permitido.
@@ -88,8 +90,7 @@ Gestión, rastreo y cumplimiento de políticas de copias de seguridad de las bas
 ### 🔌 Endpoints de Respaldos
 - **POST, GET, DELETE** `/tipo-respaldo/`, `/tipo-almacenamiento/`
 - **POST, GET, PUT, DELETE** `/rutas-respaldo/`
-- **POST, GET, PUT, DELETE** `/politicas-respaldo/`
-- **POST, DELETE** `/asignacion-politica/`
+- **GET** `/rutas-respaldo/servidor/{servidor_id}` (Filtrado por servidor)
 - **POST** `/monitoring/inventory/discover-backups/{instancia_id}/{credencial_id}/{ruta_id}`
 - **POST** `/monitoring/inventory/discover-backups-server/{servidor_id}/{credencial_id}/{ruta_id}` (Descubrimiento global por servidor)
 - **POST, GET** `/respaldos/` (Incluye historial)

@@ -59,16 +59,18 @@ def get_ssh_connection(servidor: Servidor, credencial: CredencialAcceso) -> para
         )
 
     password = decrypt_password(credencial.password_hash)
-    host = servidor.direccion_ip
+    host_raw = servidor.direccion_ip
     user = credencial.usuario
     
-    # Mapeo de puerto (Default: 22, Local Dev: 2222)
-    port = 22
-    if ":" in host:
-        host, port_str = host.split(":")
+    # Mapeo de puerto dinámico
+    # 1. Si la IP trae puerto (ej: 127.0.0.1:2224), lo usamos
+    if ":" in host_raw:
+        host, port_str = host_raw.split(":")
         port = int(port_str)
-    elif host in ["localhost", "127.0.0.1"]:
-        port = 2222 
+    # 2. En cualquier otro caso, usamos el puerto estándar 22 (incluyendo localhost si no se especifica otro)
+    else:
+        host = host_raw
+        port = 22
 
     max_intentos = 3
     ultimo_error = ""

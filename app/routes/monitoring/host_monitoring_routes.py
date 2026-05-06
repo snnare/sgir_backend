@@ -2,7 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.postgres.postgres_connection import get_db
 from app.core.dependencies import get_current_user
-from app.services.monitoring.ssh_service import run_ssh_monitoring, get_server_health_status, get_global_health_summary
+from app.services.monitoring.ssh_service import (
+    run_ssh_monitoring, 
+    get_server_health_status, 
+    get_global_health_summary,
+    LIVE_METRICS_CACHE
+)
 from app.services import log_event
 from app.models.user_models import User
 from app.core.scheduler_manager import pause_scheduler, resume_scheduler, get_scheduler_status
@@ -45,6 +50,14 @@ def get_global_summary(
     Retorna conteo de servidores sanos, críticos y desactualizados.
     """
     return get_global_health_summary(db)
+
+@router.get("/live-cache")
+def get_live_metrics(current_user: User = Depends(get_current_user)):
+    """
+    Devuelve las métricas en tiempo real (CPU, RAM, Disco) de todos los servidores
+    almacenadas en la caché global de memoria.
+    """
+    return LIVE_METRICS_CACHE
 
 @router.get("/health-status/{server_id}")
 def check_health(
