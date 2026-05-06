@@ -22,6 +22,11 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # --- Stage 2: Runtime limpio ---
 FROM python:3.14-slim-bookworm
 
+# Instalar dependencias de sistema necesarias en tiempo de ejecución
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    iputils-ping \
+    && rm -rf /var/lib/apt/lists/*
+
 # Crear un usuario de sistema sin shell y sin home para seguridad
 RUN addgroup --system sgir_group && \
   adduser --system --group --no-create-home --shell /bin/false sgir_user
