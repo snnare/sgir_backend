@@ -36,18 +36,20 @@ def monitor_ssh_task(servidor_id: int, credencial_id: int):
 def bulk_monitor_by_criticality(nivel_criticidad_id: int):
     """
     Orquestador masivo: Busca todos los activos de un nivel y los manda al pool.
-    Limitado exclusivamente a monitoreo SSH por requerimiento.
+    SOLO monitorea servidores que ya existan en la tabla Monitoreo (Lista Blanca).
     """
     db = SessionLocal()
     try:
         # 1. Monitoreo SSH
+        # Filtramos servidores que tengan AL MENOS un registro previo en Monitoreo
         servidores = db.query(Servidor).filter(
             Servidor.id_nivel_criticidad == nivel_criticidad_id,
-            Servidor.id_estado_servidor == 1 # Activo
+            Servidor.id_estado_servidor == 1, # Activo en CMDB
+            db.query(Monitoreo).filter(Monitoreo.id_servidor == Servidor.id_servidor).exists()
         ).all()
 
         if not servidores:
-            logger.info(f"No hay servidores activos para criticidad ID: {nivel_criticidad_id}")
+            logger.info(f"No hay servidores con registro en Monitoreo para criticidad ID: {nivel_criticidad_id}")
             return
 
         for srv in servidores:
