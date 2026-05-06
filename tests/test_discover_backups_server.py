@@ -101,6 +101,7 @@ print(f"Registrando ruta de respaldo: {BACKUP_PATH}...")
 ruta_payload = {
     "descripcion_ruta": RUTA_DESC,
     "path": BACKUP_PATH,
+    "id_servidor": server_id, # Requerido ahora por el modelo v2
     "id_tipo_almacenamiento": 1, # Local
     "id_estado_ruta": 1 # Activo
 }

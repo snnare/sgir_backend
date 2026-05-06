@@ -41,6 +41,7 @@ class Servidor(Base):
     instancias = relationship("InstanciaDBMS", back_populates="servidor", cascade="all, delete-orphan")
     credenciales = relationship("CredencialAcceso", back_populates="servidor", cascade="all, delete-orphan")
     particiones = relationship("ServidorParticion", back_populates="servidor", cascade="all, delete-orphan")
+    rutas_respaldo = relationship("RutaRespaldo", back_populates="servidor", cascade="all, delete-orphan")
 
 class ServidorParticion(Base):
     __tablename__ = "servidor_particion"

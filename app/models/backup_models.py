@@ -23,8 +23,12 @@ class RutaRespaldo(Base):
     descripcion_ruta = Column(String(150), nullable=False)
     path = Column(Text, nullable=False)
     
+    id_servidor = Column(Integer, ForeignKey("servidor.id_servidor", ondelete="CASCADE"), nullable=False)
     id_tipo_almacenamiento = Column(Integer, ForeignKey("tipo_almacenamiento.id_tipo_almacenamiento"), nullable=False)
     id_estado_ruta = Column(Integer, ForeignKey("estado_general.id_estado"), nullable=False)
+
+    # Relación
+    servidor = relationship("app.models.infrastructure_models.Servidor", back_populates="rutas_respaldo")
 
 class PoliticaRespaldo(Base):
     __tablename__ = "politica_de_respaldo"

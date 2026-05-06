@@ -61,6 +61,9 @@ def create_ruta_respaldo(db: Session, ruta: RutaRespaldoCreate) -> RutaRespaldo:
 def get_rutas_respaldo(db: Session) -> List[RutaRespaldo]:
     return db.query(RutaRespaldo).all()
 
+def get_rutas_respaldo_by_servidor(db: Session, id_servidor: int) -> List[RutaRespaldo]:
+    return db.query(RutaRespaldo).filter(RutaRespaldo.id_servidor == id_servidor).all()
+
 def get_ruta_respaldo(db: Session, id_ruta: int) -> Optional[RutaRespaldo]:
     return db.query(RutaRespaldo).filter(RutaRespaldo.id_ruta == id_ruta).first()
 

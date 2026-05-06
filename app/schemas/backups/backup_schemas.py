@@ -32,6 +32,7 @@ class TipoAlmacenamientoResponse(TipoAlmacenamientoBase):
 class RutaRespaldoBase(BaseModel):
     descripcion_ruta: str
     path: str
+    id_servidor: int
     id_tipo_almacenamiento: int
     id_estado_ruta: int = 1
 
@@ -41,6 +42,7 @@ class RutaRespaldoCreate(RutaRespaldoBase):
 class RutaRespaldoUpdate(BaseModel):
     descripcion_ruta: Optional[str] = None
     path: Optional[str] = None
+    id_servidor: Optional[int] = None
     id_tipo_almacenamiento: Optional[int] = None
     id_estado_ruta: Optional[int] = None
 

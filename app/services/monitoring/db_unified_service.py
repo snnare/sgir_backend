@@ -76,7 +76,7 @@ def run_unified_db_monitoring(db: Session, instancia_id: int, credencial_id: int
     dbms = db.query(DBMS).filter(DBMS.id_dbms == instancia.id_dbms).first()
 
     # Iniciar Monitoreo
-    nuevo_monitoreo = Monitoreo(id_servidor=servidor.id_servidor, id_credencial=credencial_id, id_estado_monitoreo=1)
+    nuevo_monitoreo = Monitoreo(id_servidor=servidor.id_servidor, id_estado_monitoreo=1)
     db.add(nuevo_monitoreo)
     db.commit()
     db.refresh(nuevo_monitoreo)

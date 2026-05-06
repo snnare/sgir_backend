@@ -25,7 +25,6 @@ def run_ssh_monitoring(db_local: Session, servidor_id: int, credencial_id: int):
 
     nuevo_monitoreo = Monitoreo(
         id_servidor=servidor_id,
-        id_credencial=credencial_id,
         id_estado_monitoreo=1 # Activo
     )
     db_local.add(nuevo_monitoreo)
@@ -192,6 +191,11 @@ def run_integrated_file_discovery(db: Session, instancia_id: int, credencial_id:
     credencial = db.query(CredencialAcceso).filter(CredencialAcceso.id_credencial == credencial_id).first()
     if not instancia or not ruta or not credencial: return {"error": "Instancia, Ruta o Credencial no encontrados"}
     servidor = instancia.servidor
+
+    # Validación de pertenencia de ruta
+    if ruta.id_servidor != servidor.id_servidor:
+        return {"error": f"La ruta {ruta.path} no pertenece al servidor {servidor.nombre_servidor}"}
+
     dbms = db.query(DBMS).filter(DBMS.id_dbms == instancia.id_dbms).first()
     extension_map = {"PostgreSQL": ".sql", "MySQL": ".sql", "Oracle Database": ".dmp", "MongoDB": ".archive"}
     ext = extension_map.get(dbms.nombre_dbms, ".sql")
@@ -229,6 +233,10 @@ def run_server_integrated_file_discovery(db: Session, servidor_id: int, credenci
     if not servidor or not ruta or not credencial: 
         return {"error": "Servidor, Ruta o Credencial no encontrados"}
     
+    # Validación de pertenencia de ruta
+    if ruta.id_servidor != servidor.id_servidor:
+        return {"error": f"La ruta {ruta.path} no pertenece al servidor {servidor.nombre_servidor}"}
+
     client = None
     try:
         client = get_ssh_connection(servidor, credencial)

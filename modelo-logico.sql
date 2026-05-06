@@ -157,7 +157,6 @@ CREATE TABLE Monitoreo (
     fecha_inicio TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     fecha_fin TIMESTAMPTZ,
     id_servidor INT NOT NULL REFERENCES Servidor(id_servidor) ON DELETE CASCADE,
-    id_credencial INT NOT NULL REFERENCES Credencial_Acceso(id_credencial),
     id_estado_monitoreo INT NOT NULL REFERENCES Estado_General(id_estado)
 );
 

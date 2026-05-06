@@ -26,6 +26,11 @@ def create_ruta(ruta: RutaRespaldoCreate, db: Session = Depends(get_pg_db), curr
 def read_rutas(db: Session = Depends(get_pg_db)):
     return backup_crud.get_rutas_respaldo(db)
 
+@router.get("/servidor/{servidor_id}", response_model=List[RutaRespaldoResponse])
+def read_rutas_by_servidor(servidor_id: int, db: Session = Depends(get_pg_db)):
+    """Obtiene todas las rutas de respaldo asociadas a un servidor específico."""
+    return backup_crud.get_rutas_respaldo_by_servidor(db, servidor_id)
+
 @router.put("/{ruta_id}", response_model=RutaRespaldoResponse)
 def update_ruta(ruta_id: int, ruta_update: RutaRespaldoUpdate, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
     db_ruta = backup_crud.update_ruta_respaldo(db, ruta_id, ruta_update)

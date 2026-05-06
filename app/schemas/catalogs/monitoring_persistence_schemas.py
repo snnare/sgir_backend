@@ -45,7 +45,6 @@ class MetricaResponse(MetricaBase):
 
 class MonitoreoBase(BaseModel):
     id_servidor: int
-    id_credencial: int
     id_estado_monitoreo: int
 
 class MonitoreoCreate(MonitoreoBase):

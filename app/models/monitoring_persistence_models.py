@@ -25,7 +25,6 @@ class Monitoreo(Base):
     fecha_fin = Column(DateTime(timezone=True), nullable=True)
     
     id_servidor = Column(Integer, ForeignKey("servidor.id_servidor", ondelete="CASCADE"), nullable=False)
-    id_credencial = Column(Integer, ForeignKey("credencial_acceso.id_credencial"), nullable=False)
     id_estado_monitoreo = Column(Integer, ForeignKey("estado_general.id_estado"), nullable=False)
 
     # Relaciones

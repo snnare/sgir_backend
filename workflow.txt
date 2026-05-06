@@ -101,7 +101,7 @@ curl -X POST "http://localhost:8000/respaldos/" -H "Authorization: Bearer <TOKEN
 ------------------------------------------------------------------------------
 
 * POST /monitoreo/ : Inicia una sesión de recolección.
-curl -X POST "http://localhost:8000/monitoreo/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"id_servidor": 4, "id_credencial": 4, "id_estado_monitoreo": 8}'
+curl -X POST "http://localhost:8000/monitoreo/" -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"id_servidor": 4, "id_estado_monitoreo": 8}'
 
 * PUT /monitoreo/{id}/close : Finaliza la sesión y marca fecha_fin.
 curl -X PUT "http://localhost:8000/monitoreo/4/close" -H "Authorization: Bearer <TOKEN>"
