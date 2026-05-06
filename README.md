@@ -23,6 +23,7 @@ Centraliza el registro, organización y descubrimiento de toda la infraestructur
 **Infraestructura (Servidores, Particiones, DBMS):**
 - **POST** `/servidores/import-bulk`
 - **POST, GET, PUT, DELETE** `/servidores/` (Incluye búsqueda por IP y ID)
+- **GET** `/servidores/ping/{ip_server}` (Test de conectividad básica)
 - **POST, GET, DELETE** `/particiones/`
 - **POST, GET** `/dbms/`
 - **POST, GET** `/instancias/`

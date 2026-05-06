@@ -36,6 +36,13 @@
 ### 🛠️ Oportunidades de Mejora (Optimización)
 *   **Logging Profesional**: Migrar prints a un sistema de logs rotativos.
 
+## 📅 Fecha: 6 de Mayo, 2026 (Endpoint de Ping de Infraestructura)
+
+### ✅ Módulos Implementados (Hitos Críticos)
+1.  **Ping de Servidor**:
+    *   **Nuevo Endpoint**: `GET /servidores/ping/{ip_server}` implementado para validación rápida de conectividad de red.
+    *   **Integración icmplib**: Reutilización de la lógica de ping estándar del sistema.
+
 ---
 **Hash de Sesión:** `02aab3db-eaaf-4424-8b24-e12b73abeb16`
 
@@ -43,8 +50,9 @@
 ### 🏁 ¿Dónde nos quedamos?
 Hemos logrado la **observabilidad completa y en tiempo real** de un servidor Fedora corriendo en Docker. El sistema es capaz de:
 1. Onboardear el servidor con criticidad Crítica.
-2. Establecer conexión SSH dinámica (puerto 22).
-3. Capturar métricas y exponerlas vía Live Cache.
-4. Filtrar el monitoreo automático basándose en una lista blanca.
+2. Realizar ping de conectividad básica vía `/servidores/ping/`.
+3. Establecer conexión SSH dinámica (puerto 22).
+4. Capturar métricas y exponerlas vía Live Cache.
+5. Filtrar el monitoreo automático basándose en una lista blanca.
 
 El próximo paso es atacar el backlog de **Expiración de Respaldos** dentro del Scheduler.

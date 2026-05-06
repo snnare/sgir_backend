@@ -22,9 +22,8 @@ def health_postgres(db: Session = Depends(get_pg_db)):
 def ping_host(request: PingRequest):
     """Realiza un ping a una IP usando icmplib y devuelve true si es alcanzable, false si no."""
     try:
-        # En entornos Docker/Linux sin privilegios root, esto puede fallar a menos que
-        # se use privileged=true o se añada cap_add: [NET_RAW]
-        host = ping(request.ip, count=1, interval=1, timeout=2)
+        # privileged=False permite ejecutar ping sin ser root usando sockets UDP (Linux)
+        host = ping(request.ip, count=1, interval=1, timeout=2, privileged=False)
         return host.is_alive
     except Exception as e:
         # Si falla por falta de permisos de socket, devolvemos false o registramos el error

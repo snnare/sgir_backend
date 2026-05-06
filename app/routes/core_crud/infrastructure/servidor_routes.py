@@ -7,6 +7,7 @@ from app.services import infrastructure_crud, audit_crud
 from app.services.infrastructure.import_service import process_infrastructure_csv
 from app.core.dependencies import get_current_user
 from app.models.user_models import User
+from icmplib import ping
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
@@ -67,6 +68,20 @@ def read_server_by_ip(ip: str, db: Session = Depends(get_pg_db)):
     if not db_server:
         raise HTTPException(status_code=404, detail="Servidor no encontrado")
     return {"message": "Servidor registrado", "server": db_server}
+
+@router.get("/ping/{ip_server}")
+def ping_server(ip_server: str):
+    """
+    Realiza un ping a una IP y devuelve true si es alcanzable, false si no.
+    """
+    try:
+        # Realizamos 1 solo paquete de ping con timeout de 2 segundos
+        # privileged=False permite ejecutar ping sin ser root en la mayoría de sistemas Linux/Docker
+        host = ping(ip_server, count=1, interval=1, timeout=2, privileged=False)
+        return host.is_alive
+    except Exception as e:
+        print(f"Error ejecutando ping a {ip_server}: {str(e)}")
+        return False
 
 @router.put("/{servidor_id}", response_model=ServidorResponse)
 def update_server(servidor_id: int, servidor_update: ServidorUpdate, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
