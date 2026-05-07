@@ -12,10 +12,10 @@ from .ssh import metrics_provider, discovery_provider
 # Estructura: { servidor_id: {"cpu": 10.5, "ram": 45.2, "disk": 30.0, "last_update": datetime} }
 LIVE_METRICS_CACHE = {}
 
-def run_ssh_monitoring(db_local: Session, servidor_id: int, credencial_id: int):
+def run_ssh_monitoring(db_local: Session, servidor_id: int, credencial_id: int, use_pool: bool = True):
     """
-    MONITOREO CON LIVE CACHE Y UMBRAL (90%):
-    Actualiza siempre la memoria para el front, pero solo persiste en DB si hay alarma.
+    MONITOREO CON LIVE CACHE, POOLING Y UMBRAL (90%):
+    Reutiliza conexiones del Pool para evitar sobrecarga de red.
     """
     servidor = db_local.query(Servidor).filter(Servidor.id_servidor == servidor_id).first()
     credencial = db_local.query(CredencialAcceso).filter(CredencialAcceso.id_credencial == credencial_id).first()
@@ -33,7 +33,8 @@ def run_ssh_monitoring(db_local: Session, servidor_id: int, credencial_id: int):
 
     client = None
     try:
-        client = get_ssh_connection(servidor, credencial)
+        # Usar el Pool para el monitoreo recurrente
+        client = get_ssh_connection(servidor, credencial, use_pool=use_pool)
         
         # Obtener particiones configuradas
         partition_paths = [p.path for p in servidor.particiones] if servidor.particiones else ["/"]
@@ -43,17 +44,20 @@ def run_ssh_monitoring(db_local: Session, servidor_id: int, credencial_id: int):
         else:
             raw_metrics = metrics_provider.get_metrics_modern(client, partition_paths)
 
-        # 1. ACTUALIZAR LIVE CACHE (Siempre, para las Cards del Front)
-        # Extraemos las métricas de disco para el caché
-        disk_metrics = {k.split("(")[1].split(")")[0]: float(v) for k, v in raw_metrics.items() if "Disk_Usage" in k}
+        # 1. ACTUALIZAR LIVE CACHE COMPACTO (Ahorro de bytes)
+        # Formato: "cpu|ram|disco1:val,disco2:val|uptime|timestamp"
+        cpu = round(float(raw_metrics.get("CPU_Usage", 0)), 1)
+        ram = round(float(raw_metrics.get("RAM_Usage", 0)), 1)
+        uptime = round(float(raw_metrics.get("Uptime", 0)), 1)
         
-        LIVE_METRICS_CACHE[servidor_id] = {
-            "cpu": float(raw_metrics.get("CPU_Usage", 0)),
-            "ram": float(raw_metrics.get("RAM_Usage", 0)),
-            "disks": disk_metrics,
-            "uptime": float(raw_metrics.get("Uptime", 0)),
-            "last_update": datetime.now(timezone.utc)
-        }
+        disks_str = ",".join([
+            f"{k.split('(')[1].split(')')[0]}:{round(float(v), 1)}" 
+            for k, v in raw_metrics.items() if "Disk_Usage" in k
+        ])
+        
+        timestamp = int(datetime.now(timezone.utc).timestamp())
+        
+        LIVE_METRICS_CACHE[servidor_id] = f"{cpu}|{ram}|{disks_str}|{uptime}|{timestamp}"
 
         # 2. FILTRADO POR UMBRAL (Solo >= 90% va a la tabla 'metrica')
         exceso_detectado = False
@@ -104,7 +108,9 @@ def run_ssh_monitoring(db_local: Session, servidor_id: int, credencial_id: int):
         db_local.commit()
         raise e
     finally:
-        if client: client.close()
+        # IMPORTANTE: NO cerrar el cliente si viene del pool
+        if not use_pool and client:
+            client.close()
 
 def get_server_health_status(db: Session, servidor_id: int):
     """
@@ -134,13 +140,29 @@ def get_server_health_status(db: Session, servidor_id: int):
     if is_stale: status = "stale"
     elif has_incident: status = "critical"
 
+    # Decodificar cache compacto si existe para la respuesta individual
+    decoded_metrics = {
+        "cpu": 0, "ram": 0, "disks": {}, "uptime": 0, "message": "Datos de caché no disponibles"
+    }
+    
+    if live_data and isinstance(live_data, str):
+        try:
+            parts = live_data.split("|")
+            decoded_metrics = {
+                "cpu": float(parts[0]),
+                "ram": float(parts[1]),
+                "disks": {d.split(":")[0]: float(d.split(":")[1]) for d in parts[2].split(",")} if parts[2] else {},
+                "uptime": float(parts[3]),
+                "timestamp": int(parts[4])
+            }
+        except Exception:
+            pass
+
     return {
         "status": status,
         "last_check": last_session.fecha_inicio,
         "is_stale": is_stale,
-        "live_metrics": live_data if live_data else {
-            "cpu": 0, "ram": 0, "disks": {}, "uptime": 0, "message": "Datos de caché no disponibles"
-        }
+        "live_metrics": decoded_metrics
     }
 
 def get_global_health_summary(db: Session):
@@ -201,7 +223,8 @@ def run_integrated_file_discovery(db: Session, instancia_id: int, credencial_id:
     ext = extension_map.get(dbms.nombre_dbms, ".sql")
     client = None
     try:
-        client = get_ssh_connection(servidor, credencial)
+        # Discovery suele ser una tarea puntual, pero podemos usar el pool si el servidor ya está bajo monitoreo
+        client = get_ssh_connection(servidor, credencial, use_pool=True)
         found_files = discovery_provider.search_files_legacy(client, ruta.path, ext) if servidor.es_legacy else discovery_provider.search_files_modern(client, ruta.path, ext)
         databases = db.query(BaseDeDatos).filter(BaseDeDatos.id_instancia == instancia_id).all()
         respaldos_creados = 0
@@ -219,7 +242,8 @@ def run_integrated_file_discovery(db: Session, instancia_id: int, credencial_id:
         db.commit()
         return {"status": "success", "servidor": servidor.direccion_ip, "ruta": ruta.path, "archivos_fisicos": len(found_files), "registros_respaldo_creados": respaldos_creados}
     finally:
-        if client: client.close()
+        # No cerramos si viene del pool
+        pass
 
 def run_server_integrated_file_discovery(db: Session, servidor_id: int, credencial_id: int, ruta_id: int, user_id: int):
     """
@@ -239,7 +263,7 @@ def run_server_integrated_file_discovery(db: Session, servidor_id: int, credenci
 
     client = None
     try:
-        client = get_ssh_connection(servidor, credencial)
+        client = get_ssh_connection(servidor, credencial, use_pool=True)
         
         # Obtener archivos modificados en las últimas 24 horas (1 día)
         if servidor.es_legacy:
@@ -270,4 +294,5 @@ def run_server_integrated_file_discovery(db: Session, servidor_id: int, credenci
             "lista_archivos": lista_nombres
         }
     finally:
-        if client: client.close()
+        # No cerramos si viene del pool
+        pass

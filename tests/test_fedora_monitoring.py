@@ -12,8 +12,8 @@ ADMIN_PASS = "123Nokia"
 
 # Datos del Servidor (Fedora Latest)
 SERVER_NAME = "Fedora Latest"
-SERVER_IP = "sgir_fedora_latest" 
-ES_LEGACY = False
+SERVER_IP = "148.215.1.98" 
+ES_LEGACY = True
 CRITICIDAD_CRITICA = 4 # Misión Crítica
 
 # Datos de la Credencial SSH
@@ -124,7 +124,18 @@ while time.time() - start_time < duration:
     if isinstance(summary, dict) and str(server_id) in summary:
         data = summary[str(server_id)]
         metrics_captured += 1
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] [OK] CPU: {data['cpu']}% | RAM: {data['ram']}% | DISCOS: {data['disks']} | Uptime: {data['uptime']}s (Quedan {remaining}s)")
+        
+        # Soporte para formato compacto: "cpu|ram|disks|uptime|timestamp"
+        if isinstance(data, str):
+            parts = data.split("|")
+            cpu = parts[0]
+            ram = parts[1]
+            disks = parts[2]
+            uptime = parts[3]
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] [OK] (COMPACT) CPU: {cpu}% | RAM: {ram}% | DISCOS: {disks} | Uptime: {uptime}s (Quedan {remaining}s)")
+        else:
+            # Formato antiguo (Legacy)
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] [OK] CPU: {data['cpu']}% | RAM: {data['ram']}% | DISCOS: {data['disks']} | Uptime: {data['uptime']}s (Quedan {remaining}s)")
     else:
         print(f"[{datetime.now().strftime('%H:%M:%S')}] [WAIT] Esperando primer latido del scheduler... (Quedan {remaining}s)")
     

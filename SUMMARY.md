@@ -36,23 +36,26 @@
 ### 🛠️ Oportunidades de Mejora (Optimización)
 *   **Logging Profesional**: Migrar prints a un sistema de logs rotativos.
 
-## 📅 Fecha: 6 de Mayo, 2026 (Endpoint de Ping de Infraestructura)
+## 📅 Fecha: 6 de Mayo, 2026 (Endpoint de Ping y Estabilidad en Docker)
 
 ### ✅ Módulos Implementados (Hitos Críticos)
 1.  **Ping de Servidor**:
     *   **Nuevo Endpoint**: `GET /servidores/ping/{ip_server}` implementado para validación rápida de conectividad de red.
-    *   **Integración icmplib**: Reutilización de la lógica de ping estándar del sistema.
+    *   **Corrección de Privilegios**: Ajuste de `icmplib` a modo no privilegiado (`privileged=False`) para permitir la ejecución dentro de contenedores Docker sin root.
+2.  **Infraestructura y DevOps**:
+    *   **Imagen Docker Optimizada**: Inclusión de `iputils-ping` en el stage de runtime para garantizar capacidades de red al usuario `sgir_user`.
+3.  **Herramientas de Validación (SRE Tests)**:
+    *   **Test de Ping**: `tests/test_ping_server.py` para validar conectividad básica.
+    *   **Test de Live Cache**: `tests/test_live_cache.py` para visualizar el flujo de métricas en tiempo real (CPU/RAM/Disco) generado por el APScheduler.
 
 ---
 **Hash de Sesión:** `02aab3db-eaaf-4424-8b24-e12b73abeb16`
 
 ---
 ### 🏁 ¿Dónde nos quedamos?
-Hemos logrado la **observabilidad completa y en tiempo real** de un servidor Fedora corriendo en Docker. El sistema es capaz de:
-1. Onboardear el servidor con criticidad Crítica.
-2. Realizar ping de conectividad básica vía `/servidores/ping/`.
-3. Establecer conexión SSH dinámica (puerto 22).
-4. Capturar métricas y exponerlas vía Live Cache.
-5. Filtrar el monitoreo automático basándose en una lista blanca.
+Hemos consolidado la **capa de conectividad y diagnóstico** del sistema. El backend ahora es capaz de:
+1. Validar la existencia de red de un servidor vía `/servidores/ping/` de forma segura en Docker.
+2. Exponer métricas de hardware en tiempo real a través de un Live Cache eficiente.
+3. El APScheduler alimenta correctamente la memoria global, permitiendo al frontend mostrar dashboards sin latencia de base de datos.
 
-El próximo paso es atacar el backlog de **Expiración de Respaldos** dentro del Scheduler.
+El próximo paso es atacar el backlog de **Expiración de Respaldos** dentro del Scheduler para completar el ciclo de vida de los backups.

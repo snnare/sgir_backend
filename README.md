@@ -46,7 +46,7 @@ Vigilancia en tiempo real de recursos y servicios mediante tareas programadas as
 ### 🚀 Capacidades
 *   **Monitoreo de Host (SSH):** Extracción de CPU, RAM, Disco y Uptime con soporte para Legacy RHEL 4/5 y múltiples particiones de montaje.
 *   **Monitoreo Unificado de DB:** Estándar de recolección para Oracle, MySQL y MongoDB.
-*   **Live Cache:** Almacenamiento en RAM de métricas en tiempo real para evitar latencia en los tableros.
+*   **Live Cache:** Almacenamiento en RAM de métricas en tiempo real (CPU, RAM, Discos) para alimentar el Dashboard instantáneamente sin latencia de base de datos.
 *   **Monitoreo Silencioso:** Persiste métricas en BD solo si superan umbrales críticos (ej. > 90% CPU).
 *   **Scheduler de Alta Disponibilidad:** Pool concurrente de 80 hilos que ajusta los escaneos basado en la criticidad de los servidores.
 *   **Alertas Inteligentes:** Endpoints dedicados para gestión, resumen y resolución de incidentes.
@@ -126,3 +126,41 @@ Base sobre la cual corren todos los módulos y que garantiza el control de las o
 *   **Base de Datos:** PostgreSQL 16
 *   **Gestión SSH:** Paramiko (Algoritmos Legacy habilitados)
 *   **DevOps:** Docker (Multi-stage) + `uv`
+
+---
+
+## 📊 Especificación de Protocolo: Live Cache (Compact Pulse)
+
+Para optimizar el ancho de banda, el endpoint masivo de métricas en tiempo real utiliza un formato de cadena compacta serializada por tuberías.
+
+### `GET /monitoring/host/live-cache`
+*   **Descripción:** Retorna el último "latido" de todos los servidores activos en RAM.
+*   **Autenticación:** Requiere Bearer Token (JWT).
+*   **Formato de Respuesta:** `JSON { "id_servidor": "payload_compacto" }`
+
+**Estructura del Payload:**
+`cpu|ram|discos|uptime|timestamp`
+
+| Campo | Tipo | Descripción | Ejemplo |
+| :--- | :--- | :--- | :--- |
+| **cpu** | float (1 dec) | Porcentaje de uso de CPU | `10.5` |
+| **ram** | float (1 dec) | Porcentaje de uso de RAM | `45.2` |
+| **discos** | string | Lista de `path:valor` separados por coma | `/:30.0,u01:80.5` |
+| **uptime** | float | Días de actividad del servidor | `12.5` |
+| **timestamp** | int | Tiempo Unix (Epoch) de la captura | `1715085600` |
+
+**Ejemplo de respuesta:**
+```json
+{
+  "1": "10.5|45.2|/:30.0,u01:80.5|12.5|1715085600",
+  "2": "5.0|20.1|/:15.0|3.2|1715085605"
+}
+```
+
+
+
+│  gemini-2.5-flash-lite             11        70,338             0           959                                                                                                      │
+│    ↳ utility_router                11        70,338             0           959                                                                                                      │
+│  gemini-3-flash-preview            59     1,793,354     1,282,903        11,108                                                                                                      │
+│    ↳ main                          59     1,793,354     1,282,903        11,108                                                                                                      │
+│  To resume this session: gemini --resume 668ace37-bd2f-4201-a26b-2b1eddb576bd
