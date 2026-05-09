@@ -96,8 +96,10 @@ def get_scheduler_status():
     return "stopped"
 
 def stop_scheduler():
-    """Detiene el scheduler y libera el pool de hilos y conexiones SSH."""
+    """Detiene el scheduler y libera el pool de hilos y conexiones SSH/DB."""
+    from app.core.db_pool_manager import db_pool
     scheduler.shutdown()
     scheduler_executor.shutdown(wait=True)
     close_all_ssh_connections()
-    logger.info("Scheduler, Pool de hilos y Conexiones SSH detenidos.")
+    db_pool.close_all()
+    logger.info("Scheduler, Pool de hilos, Conexiones SSH y DB detenidos.")

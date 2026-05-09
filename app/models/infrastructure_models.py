@@ -34,6 +34,10 @@ class Servidor(Base):
     fecha_registro = Column(DateTime(timezone=True), server_default=func.now())
     descripcion = Column(Text)
     
+    # Configuración de Alcance (Frontend)
+    monitoreo_host = Column(Boolean, default=False) # Hardware (CPU, RAM, Disco)
+    monitoreo_db = Column(Boolean, default=False)   # Motores de BD
+    
     id_nivel_criticidad = Column(Integer, ForeignKey("nivel_criticidad.id_nivel_criticidad"), nullable=False)
     id_estado_servidor = Column(Integer, ForeignKey("estado_general.id_estado"), nullable=False)
 

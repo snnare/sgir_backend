@@ -60,6 +60,8 @@ class ServidorBase(BaseModel):
     direccion_ip: str
     es_legacy: bool
     descripcion: Optional[str] = None
+    monitoreo_host: Optional[bool] = False
+    monitoreo_db: Optional[bool] = False
     id_nivel_criticidad: int
     id_estado_servidor: int
     model_config = ConfigDict(extra="forbid")
@@ -72,6 +74,8 @@ class ServidorUpdate(BaseModel):
     direccion_ip: Optional[str] = None
     es_legacy: Optional[bool] = None
     descripcion: Optional[str] = None
+    monitoreo_host: Optional[bool] = None
+    monitoreo_db: Optional[bool] = None
     id_nivel_criticidad: Optional[int] = None
     id_estado_servidor: Optional[int] = None
 

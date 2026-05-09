@@ -37,38 +37,39 @@ def bulk_monitor_by_criticality(nivel_criticidad_id: int):
     """
     Orquestador masivo: Busca todos los activos de un nivel y los manda al pool.
     SOLO monitorea servidores que ya existan en la tabla Monitoreo (Lista Blanca).
+    Respeta los flags monitoreo_host y monitoreo_db.
     """
     db = SessionLocal()
     try:
-        # 1. Monitoreo SSH
-        # Filtramos servidores que tengan AL MENOS un registro previo en Monitoreo
+        # 1. Monitoreo SSH (HARDWARE)
         servidores = db.query(Servidor).filter(
             Servidor.id_nivel_criticidad == nivel_criticidad_id,
             Servidor.id_estado_servidor == 1, # Activo en CMDB
+            Servidor.monitoreo_host == True,  # <--- Solo si tiene activo el monitoreo de host
             db.query(Monitoreo).filter(Monitoreo.id_servidor == Servidor.id_servidor).exists()
         ).all()
 
-        if not servidores:
-            logger.info(f"No hay servidores con registro en Monitoreo para criticidad ID: {nivel_criticidad_id}")
-            return
+        if servidores:
+            for srv in servidores:
+                # Buscar credencial SSH activa (id_tipo_acceso = 1)
+                cred = db.query(CredencialAcceso).filter(
+                    CredencialAcceso.id_servidor == srv.id_servidor,
+                    CredencialAcceso.id_tipo_acceso == 1,
+                    CredencialAcceso.id_estado_credencial == 1
+                ).first()
+                
+                if cred:
+                    from app.core.scheduler_manager import scheduler_executor
+                    scheduler_executor.submit(monitor_ssh_task, srv.id_servidor, cred.id_credencial)
+                else:
+                    logger.warning(f"Servidor {srv.direccion_ip} no tiene credencial SSH activa.")
+        else:
+            logger.info(f"No hay servidores para monitoreo de HOST en criticidad ID: {nivel_criticidad_id}")
 
-        for srv in servidores:
-            # Buscar credencial SSH activa (id_tipo_acceso = 1)
-            cred = db.query(CredencialAcceso).filter(
-                CredencialAcceso.id_servidor == srv.id_servidor,
-                CredencialAcceso.id_tipo_acceso == 1,
-                CredencialAcceso.id_estado_credencial == 1
-            ).first()
-            
-            if cred:
-                from app.core.scheduler_manager import scheduler_executor
-                scheduler_executor.submit(monitor_ssh_task, srv.id_servidor, cred.id_credencial)
-            else:
-                logger.warning(f"Servidor {srv.direccion_ip} no tiene credencial SSH activa.")
-
-        # 2. Monitoreo UNIFICADO de RDBMS
+        # 2. Monitoreo UNIFICADO de RDBMS (BASE DE DATOS)
         instancias = db.query(InstanciaDBMS).join(Servidor).filter(
             Servidor.id_nivel_criticidad == nivel_criticidad_id,
+            Servidor.monitoreo_db == True,     # <--- Solo si tiene activo el monitoreo de DB
             InstanciaDBMS.id_estado_instancia == 1 # Activa
         ).all()
 
