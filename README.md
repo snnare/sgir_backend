@@ -57,7 +57,8 @@ Vigilancia en tiempo real de recursos y servicios mediante tareas programadas as
 - **POST** `/metricas/`
 - **POST, GET, PUT** `/alertas/` (Incluye alertas activas, por servidor y resolución)
 
-**Ejecución de Métricas y Discovery de DBs:**
+**Ejecución de Métricas e Inventario Global:**
+- **GET** `/monitoring/inventory/assets` (Búsqueda consolidada de toda la infraestructura)
 - **POST, GET, PUT** `/monitoreo/`
 - **GET** `/monitoring/db/health-status/{instancia_id}`
 - **POST** `/monitoring/db/run-adhoc/{instancia_id}/{credencial_id}`
@@ -65,7 +66,7 @@ Vigilancia en tiempo real de recursos y servicios mediante tareas programadas as
 - **GET** `/monitoring/mysql8/{servidor_id}/{credencial_id}`
 - **GET** `/monitoring/mongodb/{servidor_id}/{credencial_id}`
 - **GET** `/monitoring/oracle/{id_instancia}/{id_credencial}`
-- **POST** `/monitoring/inventory/discover/{instancia_id}/{credencial_id}`
+- **POST** `/monitoring/inventory/discover/{instancia_id}/{credencial_id}` (Auto-descubrimiento Oracle/MySQL/Mongo)
 - **GET** `/monitoring/inventory/summary/{servidor_id}`
 
 **Gestión del Scheduler (Motor de Tareas):**
@@ -124,7 +125,8 @@ Base sobre la cual corren todos los módulos y que garantiza el control de las o
 *   **Backend:** FastAPI (Python 3.14) + SQLAlchemy 2.0
 *   **Motor de Tareas:** APScheduler (Async + ThreadPool)
 *   **Base de Datos:** PostgreSQL 16
-*   **Gestión SSH:** Paramiko (Algoritmos Legacy habilitados)
+*   **Gestión SSH:** Paramiko (SSH Pooling + Keep-Alive)
+*   **Gestión DB:** SQLAlchemy (Connection Pooling) + PyMongo
 *   **DevOps:** Docker (Multi-stage) + `uv`
 
 ---

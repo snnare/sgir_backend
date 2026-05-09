@@ -217,6 +217,49 @@ def filter_bases_de_datos(db: Session, nombre: Optional[str] = None, ip: Optiona
         } for r in resultados
     ]
 
+def get_global_inventory(db: Session) -> list[dict]:
+    """
+    Retorna el inventario consolidado para la búsqueda de activos.
+    Incluye servidores e instancias incluso si no tienen bases de datos (LEFT JOIN).
+    """
+    from app.models.infrastructure_models import NivelCriticidad
+    
+    query = db.query(
+        Servidor.id_servidor,
+        Servidor.nombre_servidor,
+        Servidor.direccion_ip,
+        DBMS.nombre_dbms,
+        InstanciaDBMS.id_instancia,
+        InstanciaDBMS.nombre_instancia,
+        BaseDeDatos.id_base_datos,
+        BaseDeDatos.nombre_base,
+        UserStatus.nombre_estado,
+        NivelCriticidad.nombre_nivel
+    ).select_from(Servidor)\
+     .join(NivelCriticidad, Servidor.id_nivel_criticidad == NivelCriticidad.id_nivel_criticidad)\
+     .join(InstanciaDBMS, Servidor.id_servidor == InstanciaDBMS.id_servidor)\
+     .join(DBMS, InstanciaDBMS.id_dbms == DBMS.id_dbms)\
+     .outerjoin(BaseDeDatos, InstanciaDBMS.id_instancia == BaseDeDatos.id_instancia)\
+     .outerjoin(UserStatus, BaseDeDatos.id_estado_bd == UserStatus.id_estado)\
+     .order_by(Servidor.nombre_servidor, InstanciaDBMS.nombre_instancia)
+
+    resultados = query.all()
+    
+    assets = []
+    for r in resultados:
+        db_id_str = str(r.id_base_datos) if r.id_base_datos else "null"
+        assets.append({
+            "id_asset": f"S{r.id_servidor}-I{r.id_instancia}-D{db_id_str}",
+            "servidor": r.nombre_servidor,
+            "ip": r.direccion_ip,
+            "motor": r.nombre_dbms,
+            "instancia": r.nombre_instancia,
+            "base_datos": r.nombre_base,
+            "estado": r.nombre_estado if r.nombre_estado else "Pendiente",
+            "criticidad": r.nombre_nivel
+        })
+    return assets
+
 def create_base_datos(db: Session, base_datos: BaseDatosCreate) -> BaseDeDatos:
     db_bd: BaseDeDatos = BaseDeDatos(**base_datos.model_dump())
     db.add(db_bd)

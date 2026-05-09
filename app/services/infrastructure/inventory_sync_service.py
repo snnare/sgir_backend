@@ -32,6 +32,62 @@ def get_mysql_remote_databases(session):
         })
     return databases
 
+def get_oracle_remote_databases(session):
+    """
+    Ejecuta la consulta de descubrimiento en una instancia Oracle.
+    Filtra esquemas de sistema comunes.
+    """
+    query = text("""
+        SELECT 
+            username AS nombre_db,
+            0 AS tamano_mb,
+            created AS fecha_creacion
+        FROM all_users
+        WHERE username NOT IN (
+            'SYS', 'SYSTEM', 'DBSNMP', 'OUTLN', 'APPQOSSYS', 'CTXSYS', 'ANONYMOUS', 
+            'WMSYS', 'XDB', 'ORDDATA', 'ORDSYS', 'MDSYS', 'OLAPSYS', 'MDDATA', 
+            'SPATIAL_WFS_ADMIN_USR', 'SPATIAL_CSW_ADMIN_USR', 'APEX_040200', 
+            'GSMADMIN_INTERNAL', 'LBACSYS', 'DVSYS', 'DVF', 'AUDSYS', 'GSMUSER', 
+            'GGSYS', 'APEX_PUBLIC_USER', 'FLOWS_FILES', 'APEX_030200', 'MGMT_VIEW', 
+            'OWBSYS', 'OWBSYS_AUDIT', 'SI_INFORMTN_SCHEMA', 'ORDPLUGINS'
+        )
+        ORDER BY username
+    """)
+    
+    result = session.execute(query)
+    databases = []
+    for row in result:
+        databases.append({
+            "nombre": row[0],
+            "tamano_mb": float(row[1]),
+            "fecha_creacion": row[2]
+        })
+    return databases
+
+def get_mongodb_remote_databases(client):
+    """
+    Usa el cliente de MongoDB para listar bases de datos y sus tamaños.
+    """
+    databases = []
+    # list_database_names() requiere privilegios, similar a listDatabases
+    for db_name in client.list_database_names():
+        if db_name not in ['admin', 'config', 'local']:
+            try:
+                stats = client[db_name].command("dbStats")
+                databases.append({
+                    "nombre": db_name,
+                    "tamano_mb": round(stats.get("dataSize", 0) / 1024 / 1024, 2),
+                    "fecha_creacion": None
+                })
+            except Exception:
+                # Si no tiene permisos para dbStats, al menos traemos el nombre
+                databases.append({
+                    "nombre": db_name,
+                    "tamano_mb": 0,
+                    "fecha_creacion": None
+                })
+    return databases
+
 def sync_databases_inventory(db: Session, instancia_id: int, credencial_id: int):
     """
     ORQUESTADOR DE AUTO-BÚSQUEDA Y SINCRONIZACIÓN:
@@ -50,15 +106,25 @@ def sync_databases_inventory(db: Session, instancia_id: int, credencial_id: int)
     remote_dbs = []
     session_remota = None
     try:
-        if instancia.id_dbms in [2, 3]: # MySQL 5 u 8
-            session_remota = get_dynamic_session(servidor, credencial, dbms_id=instancia.id_dbms)
+        # 2, 3: MySQL, 4: Oracle, 5: MongoDB
+        session_remota = get_dynamic_session(servidor, credencial, dbms_id=instancia.id_dbms, db_name=instancia.nombre_instancia)
+        
+        if instancia.id_dbms in [2, 3]: # MySQL
             remote_dbs = get_mysql_remote_databases(session_remota)
+        elif instancia.id_dbms == 4: # Oracle
+            remote_dbs = get_oracle_remote_databases(session_remota)
+        elif instancia.id_dbms == 5: # MongoDB
+            remote_dbs = get_mongodb_remote_databases(session_remota)
         else:
             return {"error": f"DBMS ID {instancia.id_dbms} no soportado para auto-búsqueda actualmente"}
+            
     except Exception as e:
         return {"error": f"Fallo en conexión remota: {str(e)}"}
     finally:
-        if session_remota:
+        # En MongoDB session_remota es un MongoClient que manejamos vía pool ahora, 
+        # pero get_dynamic_session devuelve la instancia del pool. 
+        # No cerramos si es Mongo (manejado por pool)
+        if session_remota and instancia.id_dbms != 5 and hasattr(session_remota, 'close'):
             session_remota.close()
 
     # 2. Sincronizar localmente (Upsert)

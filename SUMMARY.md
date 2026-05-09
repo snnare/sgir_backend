@@ -80,4 +80,28 @@ El próximo paso es atacar el backlog de **Expiración de Respaldos** dentro del
 ### 🏁 ¿Dónde nos quedamos?
 Hemos transformado el sistema de monitoreo de un modelo "on-demand" ineficiente a un **modelo de alto rendimiento y baja latencia**. El backend ahora es capaz de manejar cientos de servidores con un impacto mínimo en red y CPU. 
 
+## 📅 Fecha: 8 de Mayo, 2026 (Alcance de Monitoreo, DB Pooling e Inventario Global)
+
+### ✅ Módulos Implementados (Hitos Críticos)
+1.  **Selección de Alcance (Alcance de Monitoreo)**:
+    *   **Flags de Control**: Implementación de `monitoreo_host` y `monitoreo_db` en la tabla `Servidor` (Default `FALSE`).
+    *   **Scheduler Inteligente**: El orquestador ahora solo dispara tareas (SSH o DB) si el servidor tiene activado el alcance correspondiente.
+2.  **Persistencia de Conexiones (DB Pooling)**:
+    *   **DBConnectionPool**: Creación de un administrador de conexiones persistentes para RDBMS y MongoDB.
+    *   **Optimización**: Reutilización de Engines de SQLAlchemy y Clientes de Mongo, eliminando la latencia de handshake TCP en cada ciclo de monitoreo.
+3.  **Auto-Descubrimiento Extendido**:
+    *   **Oracle & MongoDB**: Lógica implementada para extraer esquemas/bases de datos automáticamente al registrar nuevas instancias.
+4.  **Endpoint de Búsqueda de Activos (Global CMDB)**:
+    *   **Vista Consolidada**: Nuevo endpoint `/monitoring/inventory/assets` que realiza un `LEFT JOIN` masivo para mostrar servidores, instancias y bases de datos en una sola tabla.
+5.  **Pruebas de Integración Full**:
+    *   **Script de Flujo Completo**: `tests/test_full_system_flow.py` que automatiza el registro de toda la infraestructura del laboratorio y verifica el inventario.
+
+---
+**Hash de Sesión:** `668ace37-bd2f-4201-a26b-2b1eddb576bd`
+
+---
+### 🏁 ¿Dónde nos quedamos?
+Hemos cerrado el ciclo de **Gestión de Activos y Observabilidad**. El sistema ahora es capaz de descubrir su propia infraestructura de forma inteligente y mantener conexiones persistentes de alto rendimiento.
+
 El siguiente paso técnico es implementar la **Lógica de Expiración de Respaldos** (Retention Manager) para purgar automáticamente archivos viejos según las políticas de la CMDB.
+

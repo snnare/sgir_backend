@@ -9,17 +9,17 @@ ADMIN_EMAIL = "admin@admin.com"
 ADMIN_PASS = "123Nokia"
 
 # Datos del Servidor
-SERVER_NAME = "SRV-TEST Moderno"
-SERVER_IP = "148.215.109.242" # Cambiar por IP real si se desea probar conexión
+SERVER_NAME = "Docker SSH Server"
+SERVER_IP = "172.19.0.9" 
 ES_LEGACY = False
 
 # Datos de la Ruta de Respaldo
-BACKUP_PATH = "/bkpbd/Backup/"
-RUTA_DESC = "Server No critico"
+BACKUP_PATH = "/tmp/"
+RUTA_DESC = "Ruta Temporal de Pruebas"
 
 # Datos de la Credencial SSH
-SSH_USER = "areabd"
-SSH_PASS = "B@s3#my8s3r!"
+SSH_USER = "sgir_user"
+SSH_PASS = "sgir_pass"
 
 # -------------------------------
 

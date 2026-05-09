@@ -180,3 +180,14 @@ class BaseDatosSearchResult(BaseModel):
     version_dbms: str
     estado_bd: str
     model_config = ConfigDict(from_attributes=True)
+
+class GlobalAssetResponse(BaseModel):
+    id_asset: str # ID compuesto S{srv_id}-I{inst_id}-D{db_id or 'null'}
+    servidor: str
+    ip: str
+    motor: str
+    instancia: str
+    base_datos: Optional[str] = None
+    estado: str
+    criticidad: str
+    model_config = ConfigDict(from_attributes=True)
