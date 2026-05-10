@@ -107,7 +107,11 @@ def sync_databases_inventory(db: Session, instancia_id: int, credencial_id: int)
     session_remota = None
     try:
         # 2, 3: MySQL, 4: Oracle, 5: MongoDB
-        session_remota = get_dynamic_session(servidor, credencial, dbms_id=instancia.id_dbms, db_name=instancia.nombre_instancia)
+        # CORRECCIÓN: Para MySQL descubrimiento, conectamos a information_schema.
+        # Para Oracle/Mongo usamos el nombre de instancia/CDB normal.
+        db_conn_name = "information_schema" if instancia.id_dbms in [2, 3] else instancia.nombre_instancia
+        
+        session_remota = get_dynamic_session(servidor, credencial, dbms_id=instancia.id_dbms, db_name=db_conn_name)
         
         if instancia.id_dbms in [2, 3]: # MySQL
             remote_dbs = get_mysql_remote_databases(session_remota)

@@ -83,7 +83,10 @@ def run_unified_db_monitoring(db: Session, instancia_id: int, credencial_id: int
 
     remote_session = None
     try:
-        remote_session = get_dynamic_session(servidor, credencial, instancia.id_dbms, db_name=instancia.nombre_instancia)
+        # CORRECCIÓN: Para MySQL monitoreo, conectamos a information_schema para evitar error 1049.
+        db_conn_name = "information_schema" if instancia.id_dbms in [2, 3] else instancia.nombre_instancia
+        
+        remote_session = get_dynamic_session(servidor, credencial, instancia.id_dbms, db_name=db_conn_name)
         raw_metrics = get_db_metrics_by_engine(dbms.nombre_dbms, remote_session, servidor.id_nivel_criticidad)
 
         # 1. Actualizar Live Cache
