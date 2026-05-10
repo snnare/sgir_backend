@@ -101,13 +101,16 @@ Hemos transformado el sistema de monitoreo de un modelo "on-demand" ineficiente 
 7.  **Correcciones de Estabilidad**:
     *   **Import Fix**: Corrección de error de importación en el `scheduler_manager`.
     *   **MySQL Connectivity**: Resolución definitiva del error 1049 (Unknown Database).
+8.  **Automatización del Ciclo de Vida de Respaldos**:
+    *   **Retention Manager**: Implementación de `run_backup_retention_policy` para marcar automáticamente respaldos obsoletos.
+    *   **Programación Nocturna**: Tarea integrada en el Scheduler para ejecutarse a las 4:00 AM.
+    *   **Control Manual**: Endpoint `POST /scheduler/trigger-backup-retention` para ejecuciones bajo demanda.
 
 ---
 **Hash de Sesión:** `668ace37-bd2f-4201-a26b-2b1eddb576bd`
 
 ---
 ### 🏁 ¿Dónde nos quedamos?
-Hemos cerrado el ciclo de **Gestión de Activos y Observabilidad**. El sistema ahora es capaz de descubrir su propia infraestructura de forma inteligente y mantener conexiones persistentes de alto rendimiento.
+Hemos concluido exitosamente el desarrollo del motor core de **Observabilidad y Gestión de Respaldos**. El sistema es ahora una plataforma SRE completa que permite descubrir activos, monitorear salud en tiempo real con latencia mínima, y gestionar el ciclo de vida de los backups de forma totalmente desatendida.
 
-El siguiente paso técnico es implementar la **Lógica de Expiración de Respaldos** (Retention Manager) para purgar automáticamente archivos viejos según las políticas de la CMDB.
 

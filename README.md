@@ -13,8 +13,9 @@ Centraliza el registro, organización y descubrimiento de toda la infraestructur
 
 ### 🚀 Capacidades
 *   **Importación Masiva:** Alta de servidores, instancias y credenciales vía CSV con cifrado automático (AES-256).
-*   **Test de Conexión Dinámico:** Validar credenciales SSH y de Bases de Datos (Raw Payload) antes de su registro.
-*   **Organización Jerárquica:** Soporta estructuras complejas: Servidores -> Particiones -> DBMS -> Instancias -> Bases de Datos.
+*   **Auto-Descubrimiento Inteligente:** Sincronización automática de bases de datos para MySQL, Oracle y MongoDB.
+*   **Búsqueda Global de Activos:** Endpoint unificado que agrupa servidores e instancias con sus bases de datos y tamaños.
+*   **Gestión de Particiones:** Descubrimiento remoto vía SSH (`df -h`) y registro de puntos de montaje.
 
 ### 🔌 Endpoints de Activos e Infraestructura
 **Catálogos del Sistema:**
@@ -23,16 +24,22 @@ Centraliza el registro, organización y descubrimiento de toda la infraestructur
 **Infraestructura (Servidores, Particiones, DBMS):**
 - **POST** `/servidores/import-bulk`
 - **POST, GET, PUT, DELETE** `/servidores/` (Incluye búsqueda por IP y ID)
-- **GET** `/servidores/ping/{ip_server}` (Test de conectividad básica)
+- **GET** `/servidores/ip/{ip}` (Búsqueda rápida por IP)
+- **GET** `/servidores/ping/{ip_server}` (Test de conectividad básica en Docker)
 - **POST, GET, DELETE** `/particiones/`
+- **POST** `/particiones/register-upsert` (Registro inteligente de puntos de montaje)
+- **GET** `/particiones/servidor/{servidor_id}` (Listar particiones por servidor)
 - **POST, GET** `/dbms/`
-- **POST, GET** `/instancias/`
-- **POST, GET** `/bases-de-datos/` (Incluye búsqueda por ID de servidor)
+- **POST, GET, DELETE** `/instancias/`
+- **GET** `/instancias/servidor/{servidor_id}` (Listar instancias por servidor)
+- **POST, GET, DELETE** `/bases-de-datos/`
+- **GET** `/bases-de-datos/servidor/{servidor_id}` (Listar BDs por servidor)
 - **GET** `/bases-de-datos/search` (Búsqueda enriquecida por nombre)
 - **GET** `/bases-de-datos/filter` (Filtrado por nombre e IP del servidor)
 
-**Credenciales y Pruebas de Conexión Dinámica:**
+**Credenciales y Pruebas de Conexión:**
 - **POST, GET, PUT, DELETE** `/credenciales/`
+- **GET** `/credenciales/servidor/{servidor_id}` (Listar credenciales de un servidor)
 - **POST** `/credenciales/test-ssh/{id_servidor}/{id_credencial}`
 - **POST** `/instancias/test-db/{id_instancia}/{id_credencial}`
 - **POST** `/conexion/test/db/{motor}`
@@ -44,86 +51,68 @@ Centraliza el registro, organización y descubrimiento de toda la infraestructur
 Vigilancia en tiempo real de recursos y servicios mediante tareas programadas asíncronas.
 
 ### 🚀 Capacidades
-*   **Monitoreo de Host (SSH):** Extracción de CPU, RAM, Disco y Uptime con soporte para Legacy RHEL 4/5 y múltiples particiones de montaje.
-*   **Monitoreo Unificado de DB:** Estándar de recolección para Oracle, MySQL y MongoDB.
-*   **Live Cache:** Almacenamiento en RAM de métricas en tiempo real (CPU, RAM, Discos) para alimentar el Dashboard instantáneamente sin latencia de base de datos.
-*   **Monitoreo Silencioso:** Persiste métricas en BD solo si superan umbrales críticos (ej. > 90% CPU).
-*   **Scheduler de Alta Disponibilidad:** Pool concurrente de 80 hilos que ajusta los escaneos basado en la criticidad de los servidores.
-*   **Alertas Inteligentes:** Endpoints dedicados para gestión, resumen y resolución de incidentes.
+*   **Monitoreo de Host (SSH):** Extracción de CPU, RAM, Disco y Uptime con soporte para Legacy RHEL 4/5.
+*   **DB Connection Pooling:** Reutilización de conexiones persistentes para MySQL, Oracle y MongoDB.
+*   **Alcance Selectivo:** Configuración por servidor para monitorear solo Hardware, solo DB o ambos.
+*   **Live Cache:** Métricas en tiempo real en RAM para Dashboard sin latencia.
+*   **Monitoreo Silencioso:** Persistencia en DB solo bajo umbrales críticos (> 90%).
 
 ### 🔌 Endpoints de Monitoreo
-**Configuración de Métricas y Alertas:**
+**Gestión de Métricas e Inventario:**
+- **GET** `/monitoring/inventory/assets` (Búsqueda de activos agrupada por instancia)
+- **POST** `/monitoring/inventory/discover/{instancia_id}/{credencial_id}` (Sync de BDs)
+- **POST** `/monitoring/inventory/discover-all` (Sincronización masiva en paralelo)
+- **GET** `/monitoring/inventory/summary/{servidor_id}`
 - **POST, GET, DELETE** `/tipo-metrica/`, `/nivel-alerta/`
 - **POST** `/metricas/`
-- **POST, GET, PUT** `/alertas/` (Incluye alertas activas, por servidor y resolución)
+- **POST, GET, PUT** `/alertas/` (Alertas activas, por servidor y resolución)
 
-**Ejecución de Métricas e Inventario Global:**
-- **GET** `/monitoring/inventory/assets` (Búsqueda consolidada de toda la infraestructura)
-- **POST, GET, PUT** `/monitoreo/`
-- **GET** `/monitoring/db/health-status/{instancia_id}`
-- **POST** `/monitoring/db/run-adhoc/{instancia_id}/{credencial_id}`
-- **GET** `/monitoring/mysql5/metrics/{id_instancia}`
-- **GET** `/monitoring/mysql8/{servidor_id}/{credencial_id}`
-- **GET** `/monitoring/mongodb/{servidor_id}/{credencial_id}`
-- **GET** `/monitoring/oracle/{id_instancia}/{id_credencial}`
-- **POST** `/monitoring/inventory/discover/{instancia_id}/{credencial_id}` (Auto-descubrimiento Oracle/MySQL/Mongo)
-- **POST** `/monitoring/inventory/discover-all` (Sincronización masiva de inventario)
-- **GET** `/monitoring/inventory/summary/{servidor_id}`
-
-**Gestión del Scheduler (Motor de Tareas):**
+**Gestión del Scheduler y Salud:**
 - **GET** `/monitoring/host/scheduler/status`
-- **POST** `/monitoring/host/scheduler/pause`
-- **POST** `/monitoring/host/scheduler/resume`
-- **POST** `/monitoring/host/scheduler/trigger-backup-retention` (Ejecución manual de purga de respaldos)
+- **POST** `/monitoring/host/scheduler/pause` / `/monitoring/host/scheduler/resume`
+- **POST** `/monitoring/host/scheduler/trigger-backup-retention` (Limpieza manual)
 - **GET** `/monitoring/host/global-summary`
-- **GET** `/monitoring/host/live-cache` (Métricas en tiempo real CPU/RAM/Disco)
+- **GET** `/monitoring/host/live-cache` (Métricas compactas en RAM)
 - **GET** `/monitoring/host/health-status/{server_id}`
-- **GET** `/monitoring/host/discover-filesystems/{servidor_id}` (Descubrimiento remoto de discos vía SSH)
-- **GET** `/monitoring/host/{server_id}/{cred_id}`
+- **GET** `/monitoring/host/discover-filesystems/{servidor_id}` (df -h vía SSH)
+- **GET** `/monitoring/host/{server_id}/{cred_id}` (Ejecución ad-hoc)
 
 ---
 
 ## 3️⃣ Módulo de Automatización de Respaldos
-Gestión, rastreo y cumplimiento de políticas de copias de seguridad de las bases de datos.
+Gestión, rastreo y cumplimiento de políticas de copias de seguridad.
 
 ### 🚀 Capacidades
-*   **Rutas Exclusivas:** Las rutas de respaldo ahora están vinculadas a un servidor específico en la CMDB para mejor organización.
-*   **Descubrimiento de Respaldos (Discovery):** Rastreo remoto vía SSH de archivos físicos (`.sql`, `.dmp`, `.archive`) y sincronización con el inventario CMDB.
-*   **Políticas de Retención:** Asignación de reglas de ciclo de vida para diferenciar backups diarios, semanales, etc.
-*   **Retention Manager:** Purga automática nocturna de registros que superen el tiempo de retención permitido.
+*   **Descubrimiento de Respaldos:** Rastreo remoto vía SSH de archivos físicos (`.sql`, `.dmp`, `.archive`).
+*   **Retention Manager:** Purga automática nocturna (4:00 AM) de registros expirados según política.
+*   **Políticas Flexibles:** Configuración de retención por días y frecuencia por horas.
 
 ### 🔌 Endpoints de Respaldos
 - **POST, GET, DELETE** `/tipo-respaldo/`, `/tipo-almacenamiento/`
 - **POST, GET, PUT, DELETE** `/rutas-respaldo/`
-- **POST** `/particiones/register-upsert` (Registro/Actualización de puntos de montaje)
-- **GET** `/rutas-respaldo/servidor/{servidor_id}` (Filtrado por servidor)
+- **GET** `/rutas-respaldo/servidor/{servidor_id}`
+- **POST** `/politicas-respaldo/` (CRUD de políticas)
+- **POST** `/asignacion-politica/` (Vincular política a BD)
+- **POST** `/respaldos/` (Registro de ejecución)
+- **GET** `/respaldos/historial` (Historial de backups por BD)
 - **POST** `/monitoring/inventory/discover-backups/{instancia_id}/{credencial_id}/{ruta_id}`
-- **POST** `/monitoring/inventory/discover-backups-server/{servidor_id}/{credencial_id}/{ruta_id}` (Descubrimiento global por servidor)
-- **POST, GET** `/respaldos/` (Incluye historial)
+- **POST** `/monitoring/inventory/discover-backups-server/{servidor_id}/{credencial_id}/{ruta_id}`
 
 ---
 
 ## 🛡️ Núcleo: Seguridad, Auditoría y Sistema Base
-Base sobre la cual corren todos los módulos y que garantiza el control de las operaciones SRE.
-
-### 🚀 Capacidades
-*   **Auditoría SRE:** Bitácora inmutable de cada acción, inicio de sesión o modificación.
-*   **Control de Accesos:** Gestión de Usuarios y Roles protegidos con JWT.
+Base sobre la cual corren todos los módulos.
 
 ### 🔌 Endpoints Core
-**Documentación y Salud del Sistema:**
-- **GET** `/openapi.json`, `/docs`, `/redoc`, `/health/postgres`, `/ping`, `/`
-
-**Usuarios y Roles:**
-- **POST** `/users/login`, `/users/logout`
-- **POST, GET, PUT, DELETE** `/users/` (Incluye `/users/me`, búsqueda por ID/email y reset de password)
-- **POST, GET, DELETE** `/roles/`
-
-**Auditoría:**
-- **POST, GET, DELETE** `/audit-types/`
-- **GET** `/audit-logs/` (Incluye búsqueda por Bitácora ID)
+- **Usuarios:** `/users/login`, `/users/logout`, `/users/me`, `/users/` (CRUD), `/roles/`
+- **Auditoría:** `/audit-types/`, `/audit-logs/` (Bitácora inmutable)
+- **Salud:** `/health/postgres`, `/ping`, `/openapi.json`
 
 ---
+
+## 📊 Especificación de Protocolo: Live Cache (Compact Pulse)
+`cpu|ram|discos|uptime|timestamp`
+*Ejemplo:* `10.5|45.2|/:30.0,u01:80.5|12.5|1715085600`
 
 ## 🛠️ Stack Tecnológico
 *   **Backend:** FastAPI (Python 3.14) + SQLAlchemy 2.0
@@ -132,33 +121,3 @@ Base sobre la cual corren todos los módulos y que garantiza el control de las o
 *   **Gestión SSH:** Paramiko (SSH Pooling + Keep-Alive)
 *   **Gestión DB:** SQLAlchemy (Connection Pooling) + PyMongo
 *   **DevOps:** Docker (Multi-stage) + `uv`
-
----
-
-## 📊 Especificación de Protocolo: Live Cache (Compact Pulse)
-
-Para optimizar el ancho de banda, el endpoint masivo de métricas en tiempo real utiliza un formato de cadena compacta serializada por tuberías.
-
-### `GET /monitoring/host/live-cache`
-*   **Descripción:** Retorna el último "latido" de todos los servidores activos en RAM.
-*   **Autenticación:** Requiere Bearer Token (JWT).
-*   **Formato de Respuesta:** `JSON { "id_servidor": "payload_compacto" }`
-
-**Estructura del Payload:**
-`cpu|ram|discos|uptime|timestamp`
-
-| Campo | Tipo | Descripción | Ejemplo |
-| :--- | :--- | :--- | :--- |
-| **cpu** | float (1 dec) | Porcentaje de uso de CPU | `10.5` |
-| **ram** | float (1 dec) | Porcentaje de uso de RAM | `45.2` |
-| **discos** | string | Lista de `path:valor` separados por coma | `/:30.0,u01:80.5` |
-| **uptime** | float | Días de actividad del servidor | `12.5` |
-| **timestamp** | int | Tiempo Unix (Epoch) de la captura | `1715085600` |
-
-**Ejemplo de respuesta:**
-```json
-{
-  "1": "10.5|45.2|/:30.0,u01:80.5|12.5|1715085600",
-  "2": "5.0|20.1|/:15.0|3.2|1715085605"
-}
-```
