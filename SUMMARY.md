@@ -95,6 +95,12 @@ Hemos transformado el sistema de monitoreo de un modelo "on-demand" ineficiente 
     *   **Vista Consolidada**: Nuevo endpoint `/monitoring/inventory/assets` que realiza un `LEFT JOIN` masivo para mostrar servidores, instancias y bases de datos en una sola tabla.
 5.  **Pruebas de Integración Full**:
     *   **Script de Flujo Completo**: `tests/test_full_system_flow.py` que automatiza el registro de toda la infraestructura del laboratorio y verifica el inventario.
+6.  **Gestión Avanzada de Almacenamiento (SSH)**:
+    *   **Descubrimiento de FileSystems**: Endpoint `/monitoring/host/discover-filesystems/{id}` para listar discos reales vía `df -h`.
+    *   **Registro Upsert de Particiones**: Nuevo flujo para sincronizar puntos de montaje en la CMDB de forma automática o manual.
+7.  **Correcciones de Estabilidad**:
+    *   **Import Fix**: Corrección de error de importación en el `scheduler_manager`.
+    *   **MySQL Connectivity**: Resolución definitiva del error 1049 (Unknown Database).
 
 ---
 **Hash de Sesión:** `668ace37-bd2f-4201-a26b-2b1eddb576bd`

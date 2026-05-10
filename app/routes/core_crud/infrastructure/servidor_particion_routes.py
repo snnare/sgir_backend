@@ -32,6 +32,31 @@ def create_particion(particion: ServidorParticionCreate, db: Session = Depends(g
 def read_particiones_by_servidor(servidor_id: int, db: Session = Depends(get_pg_db)):
     return infrastructure_crud.get_particiones_by_servidor(db, servidor_id)
 
+@router.post("/register-upsert", response_model=ServidorParticionResponse)
+def register_particion_upsert(
+    particion: ServidorParticionCreate, 
+    db: Session = Depends(get_pg_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Registra o actualiza una partición de servidor. 
+    Si el path ya existe, actualiza la etiqueta.
+    """
+    if not infrastructure_crud.get_servidor(db, particion.id_servidor):
+        raise HTTPException(status_code=404, detail="Servidor no encontrado")
+        
+    result = infrastructure_crud.register_partition_upsert(db, particion)
+    
+    audit_crud.log_event(
+        db=db,
+        user_id=current_user.id_usuario,
+        entidad="ServidorParticion",
+        entidad_id=result.id_particion,
+        descripcion=f"Partición sincronizada: {result.etiqueta} ({result.path}) en servidor ID: {result.id_servidor}",
+        tipo_evento_id=3 # Modificación/Sincronización
+    )
+    return result
+
 @router.delete("/{id_particion}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_particion(id_particion: int, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
     if not infrastructure_crud.delete_particion(db, id_particion):

@@ -296,3 +296,35 @@ def run_server_integrated_file_discovery(db: Session, servidor_id: int, credenci
     finally:
         # No cerramos si viene del pool
         pass
+
+def run_filesystem_discovery(db: Session, servidor_id: int):
+    """
+    Descubre puntos de montaje reales en el servidor remoto vía SSH.
+    """
+    servidor = db.query(Servidor).filter(Servidor.id_servidor == servidor_id).first()
+    if not servidor:
+        return {"error": "Servidor no encontrado"}
+    
+    # Buscar credencial SSH activa
+    credencial = db.query(CredencialAcceso).filter(
+        CredencialAcceso.id_servidor == servidor_id,
+        CredencialAcceso.id_tipo_acceso == 1,
+        CredencialAcceso.id_estado_credencial == 1
+    ).first()
+
+    if not credencial:
+        return {"error": "El servidor no cuenta con credenciales SSH activas"}
+
+    client = None
+    try:
+        client = get_ssh_connection(servidor, credencial, use_pool=True)
+        filesystems = discovery_provider.discover_filesystems(client)
+        
+        return {
+            "id_server": servidor.id_servidor,
+            "ip_server": servidor.direccion_ip,
+            "legacy": servidor.es_legacy,
+            "filesystems": filesystems
+        }
+    except Exception as e:
+        return {"error": f"Fallo en descubrimiento SSH: {str(e)}"}

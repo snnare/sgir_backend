@@ -1,6 +1,11 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from concurrent.futures import ThreadPoolExecutor
-from app.services.monitoring.scheduler_tasks import bulk_monitor_by_criticality, retention_policy_task
+from app.services.monitoring.scheduler_tasks import (
+    bulk_monitor_by_criticality, 
+    retention_policy_task,
+    backup_retention_task
+)
+from app.core.ssh_orchestrator import close_all_ssh_connections
 import logging
 
 logger = logging.getLogger("scheduler_manager")
@@ -54,7 +59,7 @@ def start_scheduler():
         replace_existing=True
     )
 
-    # 5. RETENCIÓN: Limpieza de datos antiguos cada 24 horas (Ejemplo: 3 AM)
+    # 5. RETENCIÓN MÉTRICAS: Limpieza de datos antiguos cada 24 horas (Ejemplo: 3 AM)
     scheduler.add_job(
         retention_policy_task,
         'cron',
@@ -64,8 +69,18 @@ def start_scheduler():
         replace_existing=True
     )
 
+    # 6. EXPIRACIÓN DE RESPALDOS: Cada noche (Ejemplo: 4 AM)
+    scheduler.add_job(
+        backup_retention_task,
+        'cron',
+        hour=4,
+        minute=0,
+        id='backup_retention',
+        replace_existing=True
+    )
+
     scheduler.start()
-    logger.info("Scheduler de PRUEBA iniciado (Intervalos de 15-30 segundos).")
+    logger.info("Scheduler iniciado (Monitoreo cada 15-30s | Retenciones a las 3/4 AM).")
 
 def pause_scheduler():
     """Pausa temporalmente todas las tareas del scheduler sin destruir el pool."""
@@ -87,7 +102,6 @@ def get_scheduler_status():
     """Devuelve el estado actual del scheduler."""
     if not scheduler.running:
         return "stopped"
-    # Verificar si todas las tareas están pausadas (en apscheduler no hay un estado 'paused' global, pero el scheduler tiene un flag 'state')
     from apscheduler.schedulers.base import STATE_PAUSED, STATE_RUNNING
     if scheduler.state == STATE_PAUSED:
         return "paused"

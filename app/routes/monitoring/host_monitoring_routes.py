@@ -39,6 +39,18 @@ def resume_monitoring(current_user: User = Depends(get_current_user)):
         return {"message": "El scheduler ya estaba corriendo o falló la reanudación"}
     return {"message": "Monitoreo reanudado exitosamente", "status": "running"}
 
+@router.post("/scheduler/trigger-backup-retention")
+def trigger_backup_retention(current_user: User = Depends(get_current_user)):
+    """Ejecuta manualmente la política de retención de respaldos. Solo Admin."""
+    if current_user.id_rol != 1:
+        raise HTTPException(status_code=403, detail="Privilegios insuficientes")
+    
+    from app.services.monitoring.scheduler_tasks import backup_retention_task
+    # Ejecutamos de forma síncrona para que el usuario reciba el resultado
+    # Opcionalmente se podría enviar al executor si fuera muy pesada
+    backup_retention_task()
+    return {"message": "Política de retención de respaldos ejecutada exitosamente"}
+
 @router.get("/global-summary")
 
 def get_global_summary(
@@ -70,6 +82,22 @@ def check_health(
     sesión del scheduler y los umbrales de métricas (90%).
     """
     return get_server_health_status(db, server_id)
+
+@router.get("/discover-filesystems/{servidor_id}")
+def discover_server_filesystems(
+    servidor_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Escanea el servidor vía SSH y devuelve una lista de filesystems reales.
+    Utiliza df -h internamente.
+    """
+    from app.services.monitoring.ssh_service import run_filesystem_discovery
+    result = run_filesystem_discovery(db, servidor_id)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
 
 @router.get("/{server_id}/{cred_id}")
 def monitor_host_ssh(

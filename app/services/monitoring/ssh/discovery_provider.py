@@ -80,3 +80,46 @@ def list_recent_files_legacy(client, path: str, days: int = 1) -> list:
             name = full_path.split('/')[-1]
             results.append({"name": name, "size": size})
     return results
+
+def discover_filesystems(client) -> list:
+    """
+    Ejecuta df -h y parsea la salida para identificar puntos de montaje reales.
+    Filtra filesystems virtuales como tmpfs, devtmpfs, etc.
+    """
+    cmd = "df -h"
+    output = execute_command(client, cmd)
+    if not output:
+        return []
+    
+    lines = output.split('\n')
+    if not lines:
+        return []
+    
+    # El encabezado suele ser: Filesystem Size Used Avail Use% Mounted on
+    results = []
+    for line in lines[1:]: # Saltar encabezado
+        parts = line.split()
+        if len(parts) >= 6:
+            fs_source = parts[0]
+            size = parts[1]
+            used = parts[2]
+            avail = parts[3]
+            usage_pct = parts[4]
+            mount_point = parts[5]
+            
+            # Filtro de FS irrelevantes para monitoreo de SRE
+            ignored_prefixes = ['tmpfs', 'devtmpfs', 'udev', 'loop']
+            if any(fs_source.startswith(p) for p in ignored_prefixes):
+                continue
+            if mount_point.startswith('/boot') or mount_point.startswith('/run'):
+                continue
+                
+            results.append({
+                "source": fs_source,
+                "size": size,
+                "used": used,
+                "avail": avail,
+                "usage_pct": usage_pct,
+                "mount_point": mount_point
+            })
+    return results

@@ -126,6 +126,28 @@ def delete_particion(db: Session, id_particion: int) -> bool:
         return True
     return False
 
+def register_partition_upsert(db: Session, particion: ServidorParticionCreate) -> ServidorParticion:
+    """
+    Registra una partición (Upsert): Si el path ya existe para ese servidor, 
+    actualiza la etiqueta; de lo contrario, crea un nuevo registro.
+    """
+    db_exists = db.query(ServidorParticion).filter(
+        ServidorParticion.id_servidor == particion.id_servidor,
+        ServidorParticion.path == particion.path
+    ).first()
+
+    if db_exists:
+        db_exists.etiqueta = particion.etiqueta
+        db.commit()
+        db.refresh(db_exists)
+        return db_exists
+    else:
+        new_part = ServidorParticion(**particion.model_dump())
+        db.add(new_part)
+        db.commit()
+        db.refresh(new_part)
+        return new_part
+
 # --- CRUD Instancia ---
 
 def get_instancia(db: Session, id_instancia: int) -> InstanciaDBMS | None:

@@ -5,10 +5,23 @@ from app.services.monitoring.ssh_service import run_ssh_monitoring
 from app.services.monitoring.db_unified_service import run_unified_db_monitoring
 from app.models.monitoring_persistence_models import Monitoreo, Metrica, TipoMetrica
 from app.services.catalogs.monitoring_persistence_crud import purge_old_monitoring_data
+from app.services.backups.retention_manager import run_backup_retention_policy
 import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("scheduler_tasks")
+
+def backup_retention_task():
+    """Tarea para marcar como expirados los respaldos fuera de política."""
+    db = SessionLocal()
+    try:
+        logger.info("Ejecutando política de retención de RESPALDOS...")
+        expired_count = run_backup_retention_policy(db)
+        logger.info(f"Proceso de respaldos finalizado. {expired_count} registros marcados como expirados.")
+    except Exception as e:
+        logger.error(f"Error en backup_retention_task: {str(e)}")
+    finally:
+        db.close()
 
 def retention_policy_task():
     """Tarea para limpiar datos de monitoreo de más de 30 días."""

@@ -67,15 +67,18 @@ Vigilancia en tiempo real de recursos y servicios mediante tareas programadas as
 - **GET** `/monitoring/mongodb/{servidor_id}/{credencial_id}`
 - **GET** `/monitoring/oracle/{id_instancia}/{id_credencial}`
 - **POST** `/monitoring/inventory/discover/{instancia_id}/{credencial_id}` (Auto-descubrimiento Oracle/MySQL/Mongo)
+- **POST** `/monitoring/inventory/discover-all` (Sincronización masiva de inventario)
 - **GET** `/monitoring/inventory/summary/{servidor_id}`
 
 **Gestión del Scheduler (Motor de Tareas):**
 - **GET** `/monitoring/host/scheduler/status`
 - **POST** `/monitoring/host/scheduler/pause`
 - **POST** `/monitoring/host/scheduler/resume`
+- **POST** `/monitoring/host/scheduler/trigger-backup-retention` (Ejecución manual de purga de respaldos)
 - **GET** `/monitoring/host/global-summary`
 - **GET** `/monitoring/host/live-cache` (Métricas en tiempo real CPU/RAM/Disco)
 - **GET** `/monitoring/host/health-status/{server_id}`
+- **GET** `/monitoring/host/discover-filesystems/{servidor_id}` (Descubrimiento remoto de discos vía SSH)
 - **GET** `/monitoring/host/{server_id}/{cred_id}`
 
 ---
@@ -92,6 +95,7 @@ Gestión, rastreo y cumplimiento de políticas de copias de seguridad de las bas
 ### 🔌 Endpoints de Respaldos
 - **POST, GET, DELETE** `/tipo-respaldo/`, `/tipo-almacenamiento/`
 - **POST, GET, PUT, DELETE** `/rutas-respaldo/`
+- **POST** `/particiones/register-upsert` (Registro/Actualización de puntos de montaje)
 - **GET** `/rutas-respaldo/servidor/{servidor_id}` (Filtrado por servidor)
 - **POST** `/monitoring/inventory/discover-backups/{instancia_id}/{credencial_id}/{ruta_id}`
 - **POST** `/monitoring/inventory/discover-backups-server/{servidor_id}/{credencial_id}/{ruta_id}` (Descubrimiento global por servidor)
@@ -158,11 +162,3 @@ Para optimizar el ancho de banda, el endpoint masivo de métricas en tiempo real
   "2": "5.0|20.1|/:15.0|3.2|1715085605"
 }
 ```
-
-
-
-│  gemini-2.5-flash-lite             11        70,338             0           959                                                                                                      │
-│    ↳ utility_router                11        70,338             0           959                                                                                                      │
-│  gemini-3-flash-preview            59     1,793,354     1,282,903        11,108                                                                                                      │
-│    ↳ main                          59     1,793,354     1,282,903        11,108                                                                                                      │
-│  To resume this session: gemini --resume 668ace37-bd2f-4201-a26b-2b1eddb576bd
