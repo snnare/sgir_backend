@@ -220,7 +220,7 @@ def filter_bases_de_datos(db: Session, nombre: Optional[str] = None, ip: Optiona
 def get_global_inventory(db: Session) -> list[dict]:
     """
     Retorna el inventario consolidado para la búsqueda de activos.
-    Incluye servidores e instancias incluso si no tienen bases de datos (LEFT JOIN).
+    Agrupa las bases de datos por instancia de servidor.
     """
     from app.models.infrastructure_models import NivelCriticidad
     
@@ -231,9 +231,9 @@ def get_global_inventory(db: Session) -> list[dict]:
         DBMS.nombre_dbms,
         InstanciaDBMS.id_instancia,
         InstanciaDBMS.nombre_instancia,
-        BaseDeDatos.id_base_datos,
         BaseDeDatos.nombre_base,
-        UserStatus.nombre_estado,
+        BaseDeDatos.tamano_mb,
+        UserStatus.nombre_estado.label("estado_bd"),
         NivelCriticidad.nombre_nivel
     ).select_from(Servidor)\
      .join(NivelCriticidad, Servidor.id_nivel_criticidad == NivelCriticidad.id_nivel_criticidad)\
@@ -245,20 +245,35 @@ def get_global_inventory(db: Session) -> list[dict]:
 
     resultados = query.all()
     
-    assets = []
+    # Agrupación por instancia
+    inventory_map = {}
+    
     for r in resultados:
-        db_id_str = str(r.id_base_datos) if r.id_base_datos else "null"
-        assets.append({
-            "id_asset": f"S{r.id_servidor}-I{r.id_instancia}-D{db_id_str}",
-            "servidor": r.nombre_servidor,
-            "ip": r.direccion_ip,
-            "motor": r.nombre_dbms,
-            "instancia": r.nombre_instancia,
-            "base_datos": r.nombre_base,
-            "estado": r.nombre_estado if r.nombre_estado else "Pendiente",
-            "criticidad": r.nombre_nivel
-        })
-    return assets
+        # La llave del grupo es la instancia única
+        key = f"S{r.id_servidor}-I{r.id_instancia}"
+        
+        if key not in inventory_map:
+            inventory_map[key] = {
+                "ip": r.direccion_ip,
+                "motor": r.nombre_dbms,
+                "instancia": r.nombre_instancia,
+                "servidor": r.nombre_servidor,
+                "criticidad": r.nombre_nivel,
+                "bases_de_datos": []
+            }
+        
+        # Si hay una base de datos vinculada, la añadimos a la lista
+        if r.nombre_base:
+            inventory_map[key]["bases_de_datos"].append({
+                "nombre": r.nombre_base,
+                "tamano_mb": r.tamano_mb,
+                "estado": r.estado_bd if r.estado_bd else "Activo"
+            })
+        else:
+            # Si no hay DBs aún (instancia vacía), podemos dejar una lista vacía o marcarlo
+            pass
+
+    return list(inventory_map.values())
 
 def create_base_datos(db: Session, base_datos: BaseDatosCreate) -> BaseDeDatos:
     db_bd: BaseDeDatos = BaseDeDatos(**base_datos.model_dump())

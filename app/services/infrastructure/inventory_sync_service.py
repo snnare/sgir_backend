@@ -175,3 +175,60 @@ def sync_databases_inventory(db: Session, instancia_id: int, credencial_id: int)
 
     db.commit()
     return sync_results
+
+def run_bulk_inventory_sync(db: Session):
+    """
+    Orquestador masivo que recorre todos los servidores con monitoreo_db activo
+    y sincroniza sus bases de datos en paralelo.
+    """
+    from app.models.infrastructure_models import Servidor
+    from app.core.scheduler_manager import scheduler_executor
+    from concurrent.futures import as_completed
+
+    # 1. Buscar todas las instancias de servidores que tengan monitoreo_db activo
+    instancias = db.query(InstanciaDBMS).join(Servidor).filter(
+        Servidor.monitoreo_db == True,
+        InstanciaDBMS.id_estado_instancia == 1 # Activa
+    ).all()
+
+    summary = {
+        "instancias_encontradas": len(instancias),
+        "instancias_procesadas": 0,
+        "omitidas_sin_credenciales": 0,
+        "total_db_size_mb": 0.0
+    }
+
+    futures = []
+    
+    for inst in instancias:
+        # Buscar credencial DB Native activa (id_tipo_acceso = 2)
+        cred = db.query(CredencialAcceso).filter(
+            CredencialAcceso.id_servidor == inst.id_servidor,
+            CredencialAcceso.id_tipo_acceso == 2,
+            CredencialAcceso.id_estado_credencial == 1
+        ).first()
+
+        if cred:
+            # Lanzamos al pool de hilos
+            futures.append(scheduler_executor.submit(sync_databases_inventory, db, inst.id_instancia, cred.id_credencial))
+        else:
+            summary["omitidas_sin_credenciales"] += 1
+
+    # 2. Esperar resultados y sumar tamaños (opcionalmente podemos hacerlo asíncrono puro, 
+    # pero para el reporte del endpoint esperaremos los hilos)
+    for future in as_completed(futures):
+        try:
+            res = future.result()
+            if "error" not in res:
+                summary["instancias_procesadas"] += 1
+                # Nota: sync_databases_inventory no devuelve el tamaño total por defecto, 
+                # tendríamos que sumar de la DB local o modificar el retorno.
+        except Exception:
+            pass
+
+    # 3. Calcular tamaño total real desde la tabla local después de la sincronización
+    from sqlalchemy import func
+    total_size = db.query(func.sum(BaseDeDatos.tamano_mb)).filter(BaseDeDatos.id_estado_bd == 1).scalar()
+    summary["total_db_size_mb"] = float(total_size or 0)
+
+    return summary

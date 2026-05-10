@@ -20,6 +20,15 @@ def get_global_assets(db: Session = Depends(get_pg_db)):
     """
     return infrastructure_crud.get_global_inventory(db)
 
+@router.post("/discover-all")
+def discover_all_databases(db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
+    """
+    Inicia un auto-descubrimiento masivo en todos los servidores con monitoreo_db activo.
+    Sincroniza el inventario global y devuelve un resumen de almacenamiento.
+    """
+    from app.services.infrastructure.inventory_sync_service import run_bulk_inventory_sync
+    return run_bulk_inventory_sync(db)
+
 @router.post("/discover/{instancia_id}/{credencial_id}")
 def discover_and_sync(instancia_id: int, credencial_id: int, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
     """

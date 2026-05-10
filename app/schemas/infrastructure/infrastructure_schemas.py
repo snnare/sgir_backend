@@ -181,13 +181,16 @@ class BaseDatosSearchResult(BaseModel):
     estado_bd: str
     model_config = ConfigDict(from_attributes=True)
 
+class DatabaseInfo(BaseModel):
+    nombre: Optional[str] = None
+    tamano_mb: Optional[Decimal] = None
+    estado: str
+
 class GlobalAssetResponse(BaseModel):
-    id_asset: str # ID compuesto S{srv_id}-I{inst_id}-D{db_id or 'null'}
-    servidor: str
     ip: str
     motor: str
     instancia: str
-    base_datos: Optional[str] = None
-    estado: str
+    servidor: str
     criticidad: str
+    bases_de_datos: List[DatabaseInfo] = []
     model_config = ConfigDict(from_attributes=True)
