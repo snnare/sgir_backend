@@ -1,0 +1,125 @@
+# SGIR - Sistema de Gestión de Infraestructura y Respaldos
+
+SGIR es una plataforma de backend robusta desarrollada con **FastAPI** y **PostgreSQL**, diseñada para la observabilidad de infraestructura crítica (SRE), gestión automatizada de respaldos y monitoreo inteligente multi-motor.
+
+## 📁 Estructura del Proyecto
+
+El proyecto sigue una **Arquitectura Simétrica por Dominios**, dividido funcionalmente en tres módulos principales y un núcleo de seguridad base:
+
+---
+
+## 1️⃣ Módulo de Búsqueda de Activos (Gestión de Inventario CMDB)
+Centraliza el registro, organización y descubrimiento de toda la infraestructura tecnológica.
+
+### 🚀 Capacidades
+*   **Importación Masiva:** Alta de servidores, instancias y credenciales vía CSV con cifrado automático (AES-256).
+*   **Auto-Descubrimiento Inteligente:** Sincronización automática de bases de datos para MySQL, Oracle y MongoDB.
+*   **Búsqueda Global de Activos:** Endpoint unificado que agrupa servidores e instancias con sus bases de datos y tamaños.
+*   **Gestión de Particiones:** Descubrimiento remoto vía SSH (`df -h`) y registro de puntos de montaje.
+
+### 🔌 Endpoints de Activos e Infraestructura
+**Catálogos del Sistema:**
+- **POST, GET, DELETE** `/estados/`, `/criticidad/`, `/tipo-acceso/`
+
+**Infraestructura (Servidores, Particiones, DBMS):**
+- **POST** `/servidores/import-bulk`
+- **POST, GET, PUT, DELETE** `/servidores/` (Incluye búsqueda por IP y ID)
+- **GET** `/servidores/ip/{ip}` (Búsqueda rápida por IP)
+- **GET** `/servidores/ping/{ip_server}` (Test de conectividad básica en Docker)
+- **POST, GET, DELETE** `/particiones/`
+- **POST** `/particiones/register-upsert` (Registro inteligente de puntos de montaje)
+- **GET** `/particiones/servidor/{servidor_id}` (Listar particiones por servidor)
+- **POST, GET** `/dbms/`
+- **POST, GET, DELETE** `/instancias/`
+- **GET** `/instancias/servidor/{servidor_id}` (Listar instancias por servidor)
+- **POST, GET, DELETE** `/bases-de-datos/`
+- **GET** `/bases-de-datos/servidor/{servidor_id}` (Listar BDs por servidor)
+- **GET** `/bases-de-datos/search` (Búsqueda enriquecida por nombre)
+- **GET** `/bases-de-datos/filter` (Filtrado por nombre e IP del servidor)
+
+**Credenciales y Pruebas de Conexión:**
+- **POST, GET, PUT, DELETE** `/credenciales/`
+- **GET** `/credenciales/servidor/{servidor_id}` (Listar credenciales de un servidor)
+- **POST** `/credenciales/test-ssh/{id_servidor}/{id_credencial}`
+- **POST** `/instancias/test-db/{id_instancia}/{id_credencial}`
+- **POST** `/conexion/test/db/{motor}`
+- **POST** `/conexion/test/ssh`
+
+---
+
+## 2️⃣ Módulo de Monitoreo Activo (Observabilidad SRE)
+Vigilancia en tiempo real de recursos y servicios mediante tareas programadas asíncronas.
+
+### 🚀 Capacidades
+*   **Monitoreo de Host (SSH):** Extracción de CPU, RAM, Disco y Uptime con soporte para Legacy RHEL 4/5.
+*   **DB Connection Pooling:** Reutilización de conexiones persistentes para MySQL, Oracle y MongoDB.
+*   **Alcance Selectivo:** Configuración por servidor para monitorear solo Hardware, solo DB o ambos.
+*   **Live Cache:** Métricas en tiempo real en RAM para Dashboard sin latencia.
+*   **Monitoreo Silencioso:** Persistencia en DB solo bajo umbrales críticos (> 90%).
+
+### 🔌 Endpoints de Monitoreo
+**Gestión de Métricas e Inventario:**
+- **GET** `/monitoring/inventory/assets` (Búsqueda de activos agrupada por instancia)
+- **POST** `/monitoring/inventory/discover/{instancia_id}/{credencial_id}` (Sync de BDs)
+- **POST** `/monitoring/inventory/discover-all` (Sincronización masiva en paralelo)
+- **GET** `/monitoring/inventory/summary/{servidor_id}`
+- **POST, GET, DELETE** `/tipo-metrica/`, `/nivel-alerta/`
+- **POST** `/metricas/`
+- **POST, GET, PUT** `/alertas/` (Alertas activas, resueltas, hoy y recientes)
+- **GET** `/alertas/today` (Alertas del día actual)
+- **GET** `/alertas/recent` (Últimas alertas del sistema)
+
+**Gestión del Scheduler y Salud:**
+- **GET** `/monitoring/host/scheduler/status`
+- **POST** `/monitoring/host/scheduler/pause` / `/monitoring/host/scheduler/resume`
+- **POST** `/monitoring/host/scheduler/trigger-backup-retention` (Limpieza manual)
+- **GET** `/monitoring/host/global-summary`
+- **GET** `/monitoring/host/live-cache` (Métricas compactas en RAM)
+- **GET** `/monitoring/host/health-status/{server_id}`
+- **GET** `/monitoring/host/discover-filesystems/{servidor_id}` (df -h vía SSH)
+- **GET** `/monitoring/host/{server_id}/{cred_id}` (Ejecución ad-hoc)
+
+---
+
+## 3️⃣ Módulo de Automatización de Respaldos
+Gestión, rastreo y cumplimiento de políticas de copias de seguridad.
+
+### 🚀 Capacidades
+*   **Descubrimiento de Respaldos:** Rastreo remoto vía SSH de archivos físicos (`.sql`, `.dmp`, `.archive`).
+*   **Retention Manager:** Purga automática nocturna (4:00 AM) de registros expirados según política.
+*   **Políticas Flexibles:** Configuración de retención por días y frecuencia por horas.
+
+### 🔌 Endpoints de Respaldos
+- **POST, GET, DELETE** `/tipo-respaldo/`, `/tipo-almacenamiento/`
+- **POST, GET, PUT, DELETE** `/rutas-respaldo/`
+- **GET** `/rutas-respaldo/servidor/{servidor_id}`
+- **POST** `/politicas-respaldo/` (CRUD de políticas)
+- **POST** `/asignacion-politica/` (Vincular política a BD)
+- **POST** `/respaldos/` (Registro de ejecución)
+- **GET** `/respaldos/historial` (Historial de backups por BD)
+- **POST** `/monitoring/inventory/discover-backups/{instancia_id}/{credencial_id}/{ruta_id}`
+- **POST** `/monitoring/inventory/discover-backups-server/{servidor_id}/{credencial_id}/{ruta_id}`
+
+---
+
+## 🛡️ Núcleo: Seguridad, Auditoría y Sistema Base
+Base sobre la cual corren todos los módulos.
+
+### 🔌 Endpoints Core
+- **Usuarios:** `/users/login`, `/users/logout`, `/users/me`, `/users/` (CRUD), `/roles/`
+- **Auditoría:** `/audit-types/`, `/audit-logs/` (Bitácora inmutable)
+- **Salud:** `/health/postgres`, `/ping`, `/openapi.json`
+
+---
+
+## 📊 Especificación de Protocolo: Live Cache (Compact Pulse)
+`cpu|ram|discos|uptime|timestamp`
+*Ejemplo:* `10.5|45.2|/:30.0,u01:80.5|12.5|1715085600`
+
+## 🛠️ Stack Tecnológico
+*   **Backend:** FastAPI (Python 3.14) + SQLAlchemy 2.0
+*   **Motor de Tareas:** APScheduler (Async + ThreadPool)
+*   **Base de Datos:** PostgreSQL 16
+*   **Gestión SSH:** Paramiko (SSH Pooling + Keep-Alive)
+*   **Gestión DB:** SQLAlchemy (Connection Pooling) + PyMongo
+*   **DevOps:** Docker (Multi-stage) + `uv`
