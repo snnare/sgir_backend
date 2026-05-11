@@ -33,6 +33,16 @@ def read_alerts_summary(db: Session = Depends(get_pg_db)):
     summary = monitoring_persistence_crud.get_alerts_summary(db)
     return {str(nivel): count for nivel, count in summary}
 
+@router.get("/today", response_model=List[AlertaResponse])
+def read_alerts_today(db: Session = Depends(get_pg_db)):
+    """Consulta todas las alertas generadas en el día actual."""
+    return monitoring_persistence_crud.get_alerts_today(db)
+
+@router.get("/recent", response_model=List[AlertaResponse])
+def read_recent_alerts(limit: int = 50, db: Session = Depends(get_pg_db)):
+    """Consulta las alertas más recientes del sistema."""
+    return monitoring_persistence_crud.get_recent_alerts(db, limit)
+
 @router.put("/{alerta_id}/resolve", response_model=AlertaResponse)
 def resolve_alert(alerta_id: int, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
     """Marca una notificación como leída/resuelta."""

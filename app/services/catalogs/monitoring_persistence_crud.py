@@ -126,3 +126,12 @@ def get_alerts_summary(db: Session):
         Alerta.id_nivel_alerta, 
         func.count(Alerta.id_alerta)
     ).filter(Alerta.id_estado_alerta == 6).group_by(Alerta.id_nivel_alerta).all()
+
+def get_alerts_today(db: Session) -> list[Alerta]:
+    """Obtiene todas las alertas registradas en el día actual (UTC)."""
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    return db.query(Alerta).filter(Alerta.fecha_alerta >= today_start).order_by(Alerta.fecha_alerta.desc()).all()
+
+def get_recent_alerts(db: Session, limit: int = 50) -> list[Alerta]:
+    """Obtiene las alertas más recientes del sistema."""
+    return db.query(Alerta).order_by(Alerta.fecha_alerta.desc()).limit(limit).all()
