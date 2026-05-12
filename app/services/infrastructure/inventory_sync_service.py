@@ -183,6 +183,7 @@ def run_bulk_inventory_sync(db: Session):
     """
     from app.models.infrastructure_models import Servidor
     from app.core.scheduler_manager import scheduler_executor
+    from app.db.postgres.postgres_connection import SessionLocal
     from concurrent.futures import as_completed
 
     # 1. Buscar todas las instancias de servidores que tengan monitoreo_db activo
@@ -192,13 +193,23 @@ def run_bulk_inventory_sync(db: Session):
     ).all()
 
     summary = {
-        "instancias_encontradas": len(instancias),
-        "instancias_procesadas": 0,
+        "total_instancias_encontradas": len(instancias),
+        "instancias_procesadas_exitosamente": 0,
+        "instancias_fallidas": 0,
         "omitidas_sin_credenciales": 0,
+        "detalles": [],
         "total_db_size_mb": 0.0
     }
 
-    futures = []
+    def worker_task(inst_id, cred_id):
+        # Cada hilo debe manejar su propia sesión para ser thread-safe
+        worker_db = SessionLocal()
+        try:
+            return sync_databases_inventory(worker_db, inst_id, cred_id)
+        finally:
+            worker_db.close()
+
+    futures = {}
     
     for inst in instancias:
         # Buscar credencial DB Native activa (id_tipo_acceso = 2)
@@ -210,21 +221,44 @@ def run_bulk_inventory_sync(db: Session):
 
         if cred:
             # Lanzamos al pool de hilos
-            futures.append(scheduler_executor.submit(sync_databases_inventory, db, inst.id_instancia, cred.id_credencial))
+            future = scheduler_executor.submit(worker_task, inst.id_instancia, cred.id_credencial)
+            futures[future] = inst.nombre_instancia
         else:
             summary["omitidas_sin_credenciales"] += 1
+            summary["detalles"].append({
+                "instancia": inst.nombre_instancia,
+                "status": "skipped",
+                "error": "No se encontró credencial DB Native activa"
+            })
 
-    # 2. Esperar resultados y sumar tamaños (opcionalmente podemos hacerlo asíncrono puro, 
-    # pero para el reporte del endpoint esperaremos los hilos)
+    # 2. Esperar resultados y consolidar detalles
     for future in as_completed(futures):
+        inst_name = futures[future]
         try:
             res = future.result()
-            if "error" not in res:
-                summary["instancias_procesadas"] += 1
-                # Nota: sync_databases_inventory no devuelve el tamaño total por defecto, 
-                # tendríamos que sumar de la DB local o modificar el retorno.
-        except Exception:
-            pass
+            if isinstance(res, dict) and "error" in res:
+                summary["instancias_fallidas"] += 1
+                summary["detalles"].append({
+                    "instancia": inst_name,
+                    "status": "failed",
+                    "error": res["error"]
+                })
+            else:
+                summary["instancias_procesadas_exitosamente"] += 1
+                summary["detalles"].append({
+                    "instancia": inst_name,
+                    "status": "success",
+                    "nuevas": res.get("creadas", 0),
+                    "actualizadas": res.get("actualizadas", 0),
+                    "desactivadas": res.get("desactivadas", 0)
+                })
+        except Exception as e:
+            summary["instancias_fallidas"] += 1
+            summary["detalles"].append({
+                "instancia": inst_name,
+                "status": "error_critical",
+                "error": str(e)
+            })
 
     # 3. Calcular tamaño total real desde la tabla local después de la sincronización
     from sqlalchemy import func
