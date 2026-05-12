@@ -77,6 +77,30 @@ class PoliticaRespaldoResponse(PoliticaRespaldoBase):
     class Config:
         from_attributes = True
 
+# --- Schemas para Vista de Detalle Enriquecida ---
+
+class DatabaseSimpleInfo(BaseModel):
+    id_base_datos: int
+    nombre_base: str
+    tamano_mb: Optional[Decimal] = None
+    estado: str
+
+class ServidorGroupedAssets(BaseModel):
+    ip: str
+    motor: str
+    databases: List[DatabaseSimpleInfo]
+
+class PoliticaDetalleAssetsResponse(BaseModel):
+    id_politica: int
+    nombre_politica: str
+    descripcion: Optional[str] = None
+    frecuencia_horas: int
+    retencion_dias: int
+    servidores_vinculados: List[ServidorGroupedAssets]
+    
+    class Config:
+        from_attributes = True
+
 # --- Asignaciones ---
 
 class AsignacionPoliticaBDCreate(BaseModel):

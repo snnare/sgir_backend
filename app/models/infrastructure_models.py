@@ -99,4 +99,6 @@ class BaseDeDatos(Base):
     id_estado_bd = Column(Integer, ForeignKey("estado_general.id_estado"), nullable=False)
 
     instancia = relationship("InstanciaDBMS", back_populates="bases_datos")
+    # Relación N:M hacia PoliticaRespaldo
+    politicas = relationship("app.models.backup_models.PoliticaRespaldo", secondary="asignacion_politica_bd", back_populates="bases_datos")
 

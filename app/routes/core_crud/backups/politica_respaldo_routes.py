@@ -2,12 +2,25 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.db.postgres.postgres_connection import get_db as get_pg_db
-from app.schemas import PoliticaRespaldoCreate, PoliticaRespaldoResponse, PoliticaRespaldoUpdate
+from app.schemas import (
+    PoliticaRespaldoCreate, PoliticaRespaldoResponse, 
+    PoliticaRespaldoUpdate, PoliticaDetalleAssetsResponse
+)
 from app.services import backup_crud, audit_crud
 from app.core.dependencies import get_current_user
 from app.models.user_models import User
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
+
+@router.get("/{politica_id}/assets", response_model=PoliticaDetalleAssetsResponse)
+def get_politica_assets(politica_id: int, db: Session = Depends(get_pg_db)):
+    """
+    Retorna el detalle de una política con sus bases de datos agrupadas por servidor.
+    """
+    result = backup_crud.get_politica_assets_grouped(db, politica_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Política no encontrada")
+    return result
 
 @router.post("/", response_model=PoliticaRespaldoResponse, status_code=status.HTTP_201_CREATED)
 def create_politica(politica: PoliticaRespaldoCreate, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):

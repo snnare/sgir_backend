@@ -71,6 +71,7 @@ This document lists all active endpoints in the SGIR Backend, their HTTP methods
 | DELETE | `/rutas-respaldo/{ruta_id}` | `app/routes/core_crud/backups/ruta_respaldo_routes.py` |
 | POST | `/politicas-respaldo/` | `app/routes/core_crud/backups/politica_respaldo_routes.py` |
 | GET | `/politicas-respaldo/` | `app/routes/core_crud/backups/politica_respaldo_routes.py` |
+| GET | `/politicas-respaldo/{politica_id}/assets` | `app/routes/core_crud/backups/politica_respaldo_routes.py` |
 | PUT | `/politicas-respaldo/{politica_id}` | `app/routes/core_crud/backups/politica_respaldo_routes.py` |
 | DELETE | `/politicas-respaldo/{politica_id}` | `app/routes/core_crud/backups/politica_respaldo_routes.py` |
 | POST | `/asignacion-politica/` | `app/routes/core_crud/backups/asignacion_politica_routes.py` |

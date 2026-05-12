@@ -41,12 +41,15 @@ class PoliticaRespaldo(Base):
     id_tipo_respaldo = Column(Integer, ForeignKey("tipo_respaldo.id_tipo_respaldo"), nullable=False)
     id_estado_politica = Column(Integer, ForeignKey("estado_general.id_estado"), nullable=False)
 
+    # Relación N:M hacia BaseDeDatos
+    bases_datos = relationship("app.models.infrastructure_models.BaseDeDatos", secondary="asignacion_politica_bd", back_populates="politicas")
+
 # --- Tabla Intermedia (N:M) ---
 
 class AsignacionPoliticaBD(Base):
     __tablename__ = "asignacion_politica_bd"
     id_base_datos = Column(Integer, ForeignKey("base_de_datos.id_base_datos", ondelete="CASCADE"), primary_key=True)
-    id_politica = Column(Integer, ForeignKey("política_de_respaldo.id_politica", ondelete="CASCADE"), primary_key=True)
+    id_politica = Column(Integer, ForeignKey("politica_de_respaldo.id_politica", ondelete="CASCADE"), primary_key=True)
 
 # --- Tabla Transaccional ---
 
@@ -59,7 +62,7 @@ class Respaldo(Base):
     hash_integridad = Column(String(255))
     
     id_base_datos = Column(Integer, ForeignKey("base_de_datos.id_base_datos"), nullable=False)
-    id_politica = Column(Integer, ForeignKey("política_de_respaldo.id_politica"), nullable=False)
+    id_politica = Column(Integer, ForeignKey("politica_de_respaldo.id_politica"), nullable=False)
     id_credencial = Column(Integer, ForeignKey("credencial_acceso.id_credencial"), nullable=False)
     id_ruta_respaldo = Column(Integer, ForeignKey("ruta_respaldo.id_ruta"), nullable=False)
     id_estado_ejecucion = Column(Integer, ForeignKey("estado_general.id_estado"), nullable=False)

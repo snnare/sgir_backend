@@ -118,6 +118,64 @@ def delete_politica_respaldo(db: Session, id_politica: int) -> bool:
         return True
     return False
 
+def get_politica_assets_grouped(db: Session, id_politica: int) -> Optional[dict]:
+    """
+    Obtiene el detalle de una política y sus bases de datos asociadas,
+    agrupándolas por servidor y motor DBMS.
+    """
+    from sqlalchemy.orm import joinedload
+    from app.models.infrastructure_models import DBMS, Servidor, InstanciaDBMS, BaseDeDatos
+    from app.models.backup_models import PoliticaRespaldo
+
+    politica = db.query(PoliticaRespaldo).options(
+        joinedload(PoliticaRespaldo.bases_datos)
+        .joinedload(BaseDeDatos.instancia)
+        .joinedload(InstanciaDBMS.servidor),
+        joinedload(PoliticaRespaldo.bases_datos)
+        .joinedload(BaseDeDatos.instancia)
+        .joinedload(InstanciaDBMS.dbms)
+    ).filter(PoliticaRespaldo.id_politica == id_politica).first()
+
+    if not politica:
+        return None
+
+    # Agrupar por servidor
+    grupos = {}
+    for db_obj in politica.bases_datos:
+        instancia = db_obj.instancia
+        servidor = instancia.servidor
+        motor = instancia.dbms
+        
+        server_key = (servidor.direccion_ip, f"{motor.nombre_dbms} {motor.version}")
+        
+        if server_key not in grupos:
+            grupos[server_key] = []
+            
+        grupos[server_key].append({
+            "id_base_datos": db_obj.id_base_datos,
+            "nombre_base": db_obj.nombre_base,
+            "tamano_mb": float(db_obj.tamano_mb or 0),
+            "estado": "ACTIVO" if db_obj.id_estado_bd == 1 else "INACTIVO"
+        })
+
+    # Transformar a formato de respuesta
+    servidores_vinculados = []
+    for (ip, motor_str), dbs in grupos.items():
+        servidores_vinculados.append({
+            "ip": ip,
+            "motor": motor_str,
+            "databases": dbs
+        })
+
+    return {
+        "id_politica": politica.id_politica,
+        "nombre_politica": politica.nombre_politica,
+        "descripcion": politica.descripcion,
+        "frecuencia_horas": politica.frecuencia_horas,
+        "retencion_dias": politica.retencion_dias,
+        "servidores_vinculados": servidores_vinculados
+    }
+
 # --- Asignaciones ---
 
 def asignar_politica_a_bd(db: Session, asignacion: AsignacionPoliticaBDCreate) -> AsignacionPoliticaBD:
