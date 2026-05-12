@@ -228,7 +228,23 @@ def run_integrated_file_discovery(db: Session, instancia_id: int, credencial_id:
         found_files = discovery_provider.search_files_legacy(client, ruta.path, ext) if servidor.es_legacy else discovery_provider.search_files_modern(client, ruta.path, ext)
         databases = db.query(BaseDeDatos).filter(BaseDeDatos.id_instancia == instancia_id).all()
         respaldos_creados = 0
-        for file_path, size_bytes in found_files:
+        detalles_archivos = []
+        total_size_bytes = 0
+
+        for file_info in found_files:
+            file_path = file_info["path"]
+            size_bytes = file_info["size"]
+            mtime = file_info["mtime"]
+            
+            file_name = file_path.split('/')[-1]
+            total_size_bytes += size_bytes
+            
+            detalles_archivos.append({
+                "nombre": file_name,
+                "tamano_mb": round(size_bytes / (1024 * 1024), 2),
+                "fecha_modificacion": mtime
+            })
+
             for bd in databases:
                 if bd.nombre_base.lower() in file_path.lower():
                     asignacion = db.query(AsignacionPoliticaBD).filter(AsignacionPoliticaBD.id_base_datos == bd.id_base_datos).first()
@@ -237,10 +253,20 @@ def run_integrated_file_discovery(db: Session, instancia_id: int, credencial_id:
                         db.add(nuevo_respaldo)
                         respaldos_creados += 1
                         break
+
         nueva_bitacora = Bitacora(entidad_afectada="Respaldo", id_entidad=instancia_id, descripcion_evento=f"Descubrimiento SSH en {ruta.path}. Archivos: {len(found_files)}, Registrados: {respaldos_creados}", id_usuario=user_id, id_tipo_evento=6)
         db.add(nueva_bitacora)
         db.commit()
-        return {"status": "success", "servidor": servidor.direccion_ip, "ruta": ruta.path, "archivos_fisicos": len(found_files), "registros_respaldo_creados": respaldos_creados}
+
+        return {
+            "status": "success", 
+            "servidor": servidor.direccion_ip, 
+            "ruta_respaldo": ruta.path, 
+            "archivos_fisicos_conteo": len(found_files), 
+            "total_peso_mb": round(total_size_bytes / (1024 * 1024), 2),
+            "registros_respaldo_creados": respaldos_creados,
+            "archivos": detalles_archivos
+        }
     finally:
         # No cerramos si viene del pool
         pass
@@ -288,7 +314,7 @@ def run_server_integrated_file_discovery(db: Session, servidor_id: int, credenci
         return {
             "status": "success", 
             "servidor": servidor.direccion_ip, 
-            "ruta": ruta.path, 
+            "ruta_respaldo": ruta.path, 
             "archivos_fisicos_totales": len(found_files), 
             "peso": f"{total_peso_mb} MB",
             "lista_archivos": lista_nombres

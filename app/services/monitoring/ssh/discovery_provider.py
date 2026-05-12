@@ -4,11 +4,11 @@ def execute_command(client, command: str) -> str:
 
 def search_files_modern(client, path: str, extension: str) -> list:
     """
-    Búsqueda de archivos en sistemas modernos usando find con filtro de tipo y tamaño en bytes.
-    Retorna lista de tuplas (path, size_bytes).
+    Búsqueda de archivos en sistemas modernos usando find con filtro de tipo, tamaño y fecha.
+    Retorna lista de diccionarios con {path, size_bytes, mtime}.
     """
-    # Usamos printf para obtener path y tamaño en bytes separados por |
-    cmd = f"find {path} -name '*{extension}' -type f -printf '%p|%s\\n' 2>/dev/null"
+    # %p|%s|%TY-%Tm-%Td %TH:%TM:%TS
+    cmd = f"find {path} -name '*{extension}' -type f -printf '%p|%s|%TY-%Tm-%Td %TH:%TM:%TS\\n' 2>/dev/null"
     output = execute_command(client, cmd)
     if not output:
         return []
@@ -17,29 +17,48 @@ def search_files_modern(client, path: str, extension: str) -> list:
     for line in output.split('\n'):
         if '|' in line:
             parts = line.split('|')
-            results.append((parts[0], int(parts[1])))
+            results.append({
+                "path": parts[0], 
+                "size": int(parts[1]),
+                "mtime": parts[2]
+            })
     return results
 
 def search_files_legacy(client, path: str, extension: str) -> list:
     """
-    Búsqueda de archivos en sistemas antiguos usando ls para obtener el tamaño.
-    Retorna lista de tuplas (path, size_bytes).
+    Búsqueda de archivos en sistemas antiguos usando ls para obtener el tamaño y fecha.
+    Retorna lista de diccionarios con {path, size_bytes, mtime}.
     """
-    # En legacy, find puede no tener -printf. Usamos una combinación con ls.
-    # Buscamos archivos y para cada uno ejecutamos ls -nl (n para IDs numéricos, l para formato largo)
-    cmd = f"find {path} -name '*{extension}' -type f -exec ls -nl {{}} \\; 2>/dev/null"
+    # Usamos ls -nl --time-style=long-iso si está disponible, o simplemente ls -nl
+    # Para máxima compatibilidad en legacy puro, ls -nl suele dar:
+    # -rw-r--r-- 1 1000 1000 1024 May 12 10:00 /path/file.sql
+    cmd = f"find {path} -name '*{extension}' -type f -exec ls -nl --time-style=long-iso {{}} \\; 2>/dev/null"
     output = execute_command(client, cmd)
+    
+    # Si falla por --time-style, intentamos ls -nl estándar
+    if not output:
+        cmd = f"find {path} -name '*{extension}' -type f -exec ls -nl {{}} \\; 2>/dev/null"
+        output = execute_command(client, cmd)
+
     if not output:
         return []
     
     results = []
     for line in output.split('\n'):
         parts = line.split()
-        if len(parts) >= 9:
-            # En ls -l: 1:perm 2:links 3:user 4:group 5:size 6-8:date 9:path
-            size = int(parts[4])
-            path_file = parts[8]
-            results.append((path_file, size))
+        if len(parts) >= 8:
+            # ISO Style: [0:perm, 1:links, 2:user, 3:group, 4:size, 5:date, 6:time, 7:path]
+            # Standard: [0:perm, 1:links, 2:user, 3:group, 4:size, 5:month, 6:day, 7:time/year, 8:path]
+            try:
+                size = int(parts[4])
+                if "-" in parts[5]: # Long ISO
+                    mtime = f"{parts[5]} {parts[6]}"
+                    path_file = parts[7]
+                else: # Standard
+                    mtime = f"{parts[5]} {parts[6]} {parts[7]}"
+                    path_file = parts[8]
+                results.append({"path": path_file, "size": size, "mtime": mtime})
+            except: continue
     return results
 
 def list_recent_files_modern(client, path: str, days: int = 1) -> list:
