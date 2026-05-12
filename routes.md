@@ -115,6 +115,7 @@ This document lists all active endpoints in the SGIR Backend, their HTTP methods
 | **MONITORING (OPERATIONAL)** | | |
 | GET | `/monitoring/db/health-status/{instancia_id}` | `app/routes/monitoring/db_monitoring_routes.py` |
 | POST | `/monitoring/db/run-adhoc/{instancia_id}/{credencial_id}` | `app/routes/monitoring/db_monitoring_routes.py` |
+| GET | `/monitoring/host/discover-cron/{servidor_id}/{credencial_id}` | `app/routes/monitoring/host_monitoring_routes.py` |
 | GET | `/monitoring/host/scheduler/status` | `app/routes/monitoring/host_monitoring_routes.py` |
 | POST | `/monitoring/host/scheduler/pause` | `app/routes/monitoring/host_monitoring_routes.py` |
 | POST | `/monitoring/host/scheduler/resume` | `app/routes/monitoring/host_monitoring_routes.py` |

@@ -6,6 +6,8 @@ from app.services.monitoring.ssh_service import (
     run_ssh_monitoring, 
     get_server_health_status, 
     get_global_health_summary,
+    run_cron_discovery,
+    run_filesystem_discovery,
     LIVE_METRICS_CACHE
 )
 from app.services import log_event
@@ -13,6 +15,26 @@ from app.models.user_models import User
 from app.core.scheduler_manager import pause_scheduler, resume_scheduler, get_scheduler_status
 
 router = APIRouter()
+
+@router.get("/discover-cron/{servidor_id}/{credencial_id}")
+def discover_cron(servidor_id: int, credencial_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Escanea el crontab del servidor para sugerir políticas de respaldo.
+    """
+    result = run_cron_discovery(db, servidor_id, credencial_id)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+@router.get("/discover-filesystems/{servidor_id}")
+def discover_filesystems_endpoint(servidor_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Lista los sistemas de archivos (puntos de montaje) reales del servidor.
+    """
+    result = run_filesystem_discovery(db, servidor_id)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
 
 @router.get("/scheduler/status")
 def check_scheduler_status(current_user: User = Depends(get_current_user)):
@@ -78,28 +100,13 @@ def check_health(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Consulta el estado de salud actual de un servidor basándose en la última 
+    Consulta el estado de salud actual de un servidor basándose en la última
     sesión del scheduler y los umbrales de métricas (90%).
     """
     return get_server_health_status(db, server_id)
 
-@router.get("/discover-filesystems/{servidor_id}")
-def discover_server_filesystems(
-    servidor_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Escanea el servidor vía SSH y devuelve una lista de filesystems reales.
-    Utiliza df -h internamente.
-    """
-    from app.services.monitoring.ssh_service import run_filesystem_discovery
-    result = run_filesystem_discovery(db, servidor_id)
-    if "error" in result:
-        raise HTTPException(status_code=400, detail=result["error"])
-    return result
-
 @router.get("/{server_id}/{cred_id}")
+
 def monitor_host_ssh(
     server_id: int,
     cred_id: int,

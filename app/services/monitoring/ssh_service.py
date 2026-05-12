@@ -354,3 +354,54 @@ def run_filesystem_discovery(db: Session, servidor_id: int):
         }
     except Exception as e:
         return {"error": f"Fallo en descubrimiento SSH: {str(e)}"}
+
+def run_cron_discovery(db: Session, servidor_id: int, credencial_id: int):
+    """
+    Descubre tareas en crontab y sugiere frecuencias para la creación de políticas.
+    """
+    servidor = db.query(Servidor).filter(Servidor.id_servidor == servidor_id).first()
+    credencial = db.query(CredencialAcceso).filter(CredencialAcceso.id_credencial == credencial_id).first()
+
+    if not servidor or not credencial:
+        return {"error": "Servidor o Credencial no encontrados"}
+
+    client = None
+    try:
+        client = get_ssh_connection(servidor, credencial, use_pool=True)
+        cron_tasks = discovery_provider.discover_cron_tasks(client)
+        
+        sugerencias = []
+        for task in cron_tasks:
+            sched = task["schedule"]
+            freq_sugerida = 24 # Default diario
+            
+            # Lógica simple de sugerencia de frecuencia
+            if sched == "@hourly": freq_sugerida = 1
+            elif sched == "@daily": freq_sugerida = 24
+            elif sched == "@weekly": freq_sugerida = 168
+            elif "*/" in sched: # Ej: */2 * * * * (cada 2 min) o 0 */4 * * * (cada 4 horas)
+                parts = sched.split()
+                if "*/" in parts[1]: # Horas
+                    try: freq_sugerida = int(parts[1].split("/")[1])
+                    except: pass
+                elif "*/" in parts[0]: # Minutos
+                    # Si es cada X minutos, la frecuencia en horas es < 1, pero el modelo pide INT
+                    # Sugerimos 1 hora como mínimo o lo que más se acerque
+                    freq_sugerida = 1
+
+            sugerencias.append({
+                "linea_original": task["linea_completa"],
+                "schedule": sched,
+                "comando": task["command"],
+                "frecuencia_sugerida_horas": freq_sugerida,
+                "nombre_sugerido": f"Política: {task['command'].split('/')[-1]}"
+            })
+            
+        return {
+            "servidor": servidor.nombre_servidor,
+            "ip": servidor.direccion_ip,
+            "tareas_encontradas": len(sugerencias),
+            "sugerencias": sugerencias
+        }
+    except Exception as e:
+        return {"error": f"Error en descubrimiento de cron: {str(e)}"}

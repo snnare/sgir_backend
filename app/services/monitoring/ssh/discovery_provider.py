@@ -142,3 +142,45 @@ def discover_filesystems(client) -> list:
                 "mount_point": mount_point
             })
     return results
+
+def discover_cron_tasks(client) -> list:
+    """
+    Ejecuta crontab -l y devuelve una lista de tareas activas procesadas.
+    """
+    cmd = "crontab -l"
+    output = execute_command(client, cmd)
+    
+    if not output or "no crontab for" in output.lower():
+        return []
+        
+    results = []
+    for line in output.split('\n'):
+        clean_line = line.strip()
+        
+        # Ignorar vacíos, comentarios y variables de entorno de cron
+        if not clean_line or clean_line.startswith('#'):
+            continue
+        if any(clean_line.startswith(env) for env in ['SHELL=', 'PATH=', 'MAILTO=', 'HOME=']):
+            continue
+            
+        # Intentar separar cron de comando (mínimo 5 campos de tiempo + comando)
+        parts = clean_line.split()
+        if len(parts) >= 6:
+            # Los primeros 5 campos son el cron, el resto es el comando
+            schedule = " ".join(parts[:5])
+            command = " ".join(parts[5:])
+            results.append({
+                "linea_completa": clean_line,
+                "schedule": schedule,
+                "command": command
+            })
+        elif clean_line.startswith('@'): # Soporte para alias como @daily
+            parts = clean_line.split()
+            if len(parts) >= 2:
+                results.append({
+                    "linea_completa": clean_line,
+                    "schedule": parts[0],
+                    "command": " ".join(parts[1:])
+                })
+            
+    return results
