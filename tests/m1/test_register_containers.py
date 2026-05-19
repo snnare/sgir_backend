@@ -78,9 +78,11 @@ class TestRegisterContainers(unittest.TestCase):
 
     def _get_or_create_server(self, name: str, ip: str, description: str) -> int:
         """Helper para registrar un servidor de forma segura evitando duplicidad de nombres."""
+        # Si la IP es local y estamos en un entorno dockerizado, usamos el nombre del contenedor
+        resolved_ip = name if ip in ["127.0.0.1", "localhost"] else ip
         payload = {
             "nombre_servidor": name,
-            "direccion_ip": ip,
+            "direccion_ip": resolved_ip,
             "es_legacy": False,
             "descripcion": description,
             "monitoreo_host": True,
@@ -100,6 +102,13 @@ class TestRegisterContainers(unittest.TestCase):
                 for srv in list_res.json():
                     if srv["nombre_servidor"] == name:
                         print(f"[SERVER FOUND] '{name}' (preexistente) -> ID: {srv['id_servidor']}")
+                        # Si la IP preexistente en la BD es local, la actualizamos para que funcione en Docker
+                        if srv["direccion_ip"] in ["127.0.0.1", "localhost"]:
+                            self.client.put(
+                                f"/sgir/v1/crud/servidores/{srv['id_servidor']}",
+                                json={"direccion_ip": resolved_ip},
+                                headers=self.headers
+                            )
                         return srv["id_servidor"]
             raise Exception(f"No se pudo crear ni encontrar el servidor '{name}': {res.text}")
 

@@ -105,7 +105,7 @@ class TestOracleModularMonitoring(unittest.TestCase):
         # A. Obtener o crear servidor "sgir_oracle21c"
         srv_payload = {
             "nombre_servidor": "sgir_oracle21c",
-            "direccion_ip": "127.0.0.1",
+            "direccion_ip": "sgir_oracle21c",  # Usar el nombre del contenedor en la red de docker
             "es_legacy": False,
             "descripcion": "Contenedor de Oracle para Monitoreo Modular",
             "monitoreo_host": False,
@@ -122,6 +122,13 @@ class TestOracleModularMonitoring(unittest.TestCase):
             for srv in list_res.json():
                 if srv["nombre_servidor"] == "sgir_oracle21c":
                     self.__class__.ids["id_servidor"] = srv["id_servidor"]
+                    # Si la IP preexistente es local, la actualizamos para que funcione en la red de Docker
+                    if srv["direccion_ip"] in ["127.0.0.1", "localhost"]:
+                        self.client.put(
+                            f"/sgir/v1/crud/servidores/{srv['id_servidor']}",
+                            json={"direccion_ip": "sgir_oracle21c"},
+                            headers=self.headers
+                        )
                     break
 
         self.assertIsNotNone(self.ids["id_servidor"], "Debe existir el servidor Oracle de pruebas.")
