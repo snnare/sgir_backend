@@ -116,6 +116,27 @@ Base sobre la cual corren todos los módulos.
 `cpu|ram|discos|uptime|timestamp`
 *Ejemplo:* `10.5|45.2|/:30.0,u01:80.5|12.5|1715085600`
 
+## 🗺️ Estructura de Rutas de la API (Bajo `/sgir/v1`)
+
+Las rutas de la API han sido estructuradas de forma organizada bajo el prefijo principal `/sgir/v1/` para segmentar adecuadamente el comportamiento operativo y el acceso a los datos:
+
+*   **`/crud` (Operaciones Transaccionales Básicas):** Agrupa todos los endpoints CRUD del sistema base (Seguridad, Catálogos Base, CMDB de Infraestructura, Políticas de Respaldo, Históricos de Auditoría y Métricas de Monitoreo).
+*   **`/m1` (Módulo 1 - Monitoreo Activo de Hosts):** Contiene la lógica operativa y de salud del monitoreo de hardware (CPU, RAM, Disco, estados de salud y tests de conectividad SSH / ping).
+*   **`/m2` (Módulo 2 - Sincronización de Activos):** Centraliza las tareas operativas de sincronización y auto-descubrimiento en paralelo de bases de datos para motores activos (MySQL, Oracle, MongoDB).
+*   **`/m3` (Módulo 3 - Descubrimiento y Gestión de Respaldos):** Contiene las operaciones y tareas programadas (como el Retention Manager) para rastrear archivos físicos de respaldos vía SSH en servidores remotos y purgar copias de seguridad expiradas.
+
+---
+
+## 🧪 Pruebas de Integración en Red (Targeting Docker)
+
+Para validar esta arquitectura sin emulación en memoria, las pruebas están diseñadas para conectarse directamente al contenedor activo de Docker en `http://localhost:8000` mediante peticiones HTTP reales a través de `httpx`:
+
+*   **[`tests/00_base.py`](file:///home/angel/src/titulacion/sgir_backend/tests/00_base.py):** Registra inicialmente en la base de datos de Docker al usuario administrador maestro (`admin@admin.com` / `123Nokia`) con el rol de Admin (ID=1).
+*   **[`tests/01_basic_test_api.py`](file:///home/angel/src/titulacion/sgir_backend/tests/01_basic_test_api.py):** Verifica la disponibilidad de la API, el inicio de sesión OAuth2, el estado de salud de PostgreSQL (`/m1`), y flujos de lectura CRUD sobre catálogos.
+*   **[`tests/crud/test_insert.py`](file:///home/angel/src/titulacion/sgir_backend/tests/crud/test_insert.py):** Realiza un flujo integral en cascada que valida el flujo de creación (`POST`/`INSERT`) de todas las entidades del sistema (Servidor, Partición, Credencial, Instancia DBMS, Base de Datos, Ruta de Respaldo, Políticas de Respaldo, Respaldo Histórico, Monitoreo y Alertas), satisfaciendo la integridad referencial y las claves foráneas de PostgreSQL.
+
+---
+
 ## 🛠️ Stack Tecnológico
 *   **Backend:** FastAPI (Python 3.14) + SQLAlchemy 2.0
 *   **Motor de Tareas:** APScheduler (Async + ThreadPool)
@@ -123,3 +144,4 @@ Base sobre la cual corren todos los módulos.
 *   **Gestión SSH:** Paramiko (SSH Pooling + Keep-Alive)
 *   **Gestión DB:** SQLAlchemy (Connection Pooling) + PyMongo
 *   **DevOps:** Docker (Multi-stage) + `uv`
+

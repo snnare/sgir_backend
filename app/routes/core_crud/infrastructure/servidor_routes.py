@@ -7,6 +7,7 @@ from app.services import infrastructure_crud, audit_crud
 from app.services.infrastructure.import_service import process_infrastructure_csv
 from app.core.dependencies import get_current_user
 from app.models.user_models import User
+from app.core.exceptions import AssetNotFoundException, CMDBConflictException
 from icmplib import ping
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
@@ -35,8 +36,7 @@ def create_server(servidor: ServidorCreate, db: Session = Depends(get_pg_db), cu
     new_server = infrastructure_crud.create_servidor(db, servidor)
     
     if not new_server:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+        raise CMDBConflictException(
             detail=f"Ya existe un servidor registrado con la IP: {servidor.direccion_ip}"
         )
     
@@ -59,14 +59,20 @@ def read_servers(skip: int = 0, limit: int = 100, db: Session = Depends(get_pg_d
 def read_server_by_id(servidor_id: int, db: Session = Depends(get_pg_db)):
     db_server = infrastructure_crud.get_servidor(db, servidor_id)
     if not db_server:
-        raise HTTPException(status_code=404, detail="Servidor no encontrado")
+        raise AssetNotFoundException(
+            asset_type="Servidor",
+            detail=f"Servidor no encontrado con el ID: {servidor_id}"
+        )
     return db_server
 
 @router.get("/ip/{ip}")
 def read_server_by_ip(ip: str, db: Session = Depends(get_pg_db)):
     db_server = infrastructure_crud.get_servidor_by_ip(db, ip)
     if not db_server:
-        raise HTTPException(status_code=404, detail="Servidor no encontrado")
+        raise AssetNotFoundException(
+            asset_type="Servidor",
+            detail=f"Servidor no encontrado con la IP: {ip}"
+        )
     return {"message": "Servidor registrado", "server": db_server}
 
 @router.get("/ping/{ip_server}")
@@ -87,7 +93,10 @@ def ping_server(ip_server: str):
 def update_server(servidor_id: int, servidor_update: ServidorUpdate, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
     db_server = infrastructure_crud.update_servidor(db, servidor_id, servidor_update)
     if not db_server:
-        raise HTTPException(status_code=404, detail="Servidor no encontrado")
+        raise AssetNotFoundException(
+            asset_type="Servidor",
+            detail=f"No se pudo actualizar, el servidor con ID {servidor_id} no existe"
+        )
     
     # Auditoría
     audit_crud.log_event(
@@ -103,7 +112,10 @@ def update_server(servidor_id: int, servidor_update: ServidorUpdate, db: Session
 @router.delete("/{servidor_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_server(servidor_id: int, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
     if not infrastructure_crud.delete_servidor(db, servidor_id):
-        raise HTTPException(status_code=404, detail="Servidor no encontrado")
+        raise AssetNotFoundException(
+            asset_type="Servidor",
+            detail=f"No se pudo eliminar, el servidor con ID {servidor_id} no existe"
+        )
     
     # Auditoría
     audit_crud.log_event(

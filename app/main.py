@@ -1,10 +1,16 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+
 from app.routes import core_crud_router
 from app.routes.healths import health_router
 from app.routes.monitoring import m1_router, m2_router, m3_router
 from app.core.scheduler_manager import start_scheduler, stop_scheduler, pause_scheduler
+from app.core.exceptions import SGIRBaseException
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,6 +25,135 @@ async def lifespan(app: FastAPI):
 # Aplicación FastAPI
 app = FastAPI(title="FastAPI SGIR Backend", lifespan=lifespan)
 
+# --- GLOBAL EXCEPTION HANDLERS ---
+
+@app.exception_handler(SGIRBaseException)
+async def sgir_base_exception_handler(request: Request, exc: SGIRBaseException):
+    timestamp = datetime.now(timezone.utc).isoformat()
+    content = {
+        "success": False,
+        "detail": str(exc.detail),
+        "error": {
+            "status_code": exc.status_code,
+            "error_code": exc.error_code,
+            "message": exc.message,
+            "detail": exc.detail,
+            "timestamp": timestamp
+        }
+    }
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=content,
+        headers=exc.headers
+    )
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    timestamp = datetime.now(timezone.utc).isoformat()
+    
+    # Mapeo de códigos HTTP a error_code de negocio
+    status_to_code = {
+        400: "BAD_REQUEST",
+        401: "AUTHENTICATION_ERROR",
+        403: "AUTHORIZATION_ERROR",
+        404: "NOT_FOUND",
+        409: "CONFLICT",
+        422: "VALIDATION_ERROR",
+    }
+    error_code = status_to_code.get(exc.status_code, "INTERNAL_SERVER_ERROR")
+    
+    # Determinar un mensaje amigable en español según el código de estado
+    status_to_msg = {
+        400: "Petición incorrecta o mal formada",
+        401: "No autorizado. Inicie sesión nuevamente",
+        403: "No tiene privilegios suficientes para realizar esta acción",
+        404: "El recurso solicitado no fue encontrado",
+        409: "Conflicto con un recurso existente en el sistema",
+        422: "Error de validación en los datos enviados",
+    }
+    message = status_to_msg.get(exc.status_code, "Ha ocurrido un error en el servidor")
+    
+    content = {
+        "success": False,
+        "detail": str(exc.detail),
+        "error": {
+            "status_code": exc.status_code,
+            "error_code": error_code,
+            "message": message,
+            "detail": exc.detail,
+            "timestamp": timestamp
+        }
+    }
+    
+    headers = getattr(exc, "headers", None)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=content,
+        headers=headers
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    timestamp = datetime.now(timezone.utc).isoformat()
+    
+    # Formatear los detalles de validación de manera amigable
+    errors = []
+    missing_fields = []
+    for err in exc.errors():
+        field = " -> ".join(str(loc) for loc in err.get("loc", []))
+        msg = err.get("msg", "Error de validación")
+        typ = err.get("type", "")
+        errors.append({
+            "field": field,
+            "issue": msg,
+            "type": typ
+        })
+        if typ == "missing":
+            missing_fields.append(field)
+            
+    detail = {
+        "errors": errors
+    }
+    if missing_fields:
+        detail["missing_fields"] = missing_fields
+        
+    content = {
+        "success": False,
+        "detail": str(exc.errors()),
+        "error": {
+            "status_code": 422,
+            "error_code": "VALIDATION_ERROR",
+            "message": "Los datos de entrada no cumplen con el formato requerido o son inválidos",
+            "detail": detail,
+            "timestamp": timestamp
+        }
+    }
+    
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content=content
+    )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    timestamp = datetime.now(timezone.utc).isoformat()
+    detail_msg = str(exc)
+    
+    content = {
+        "success": False,
+        "detail": detail_msg,
+        "error": {
+            "status_code": 500,
+            "error_code": "INTERNAL_SERVER_ERROR",
+            "message": "Ha ocurrido un error inesperado en el servidor",
+            "detail": detail_msg,
+            "timestamp": timestamp
+        }
+    }
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content=content
+    )
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,7 +162,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # Seccion para incluir rutas
 from fastapi import APIRouter
