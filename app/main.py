@@ -30,9 +30,14 @@ app.add_middleware(
 
 
 # Seccion para incluir rutas
-app.include_router(health_router)
-app.include_router(core_crud_router)
-app.include_router(monitoring_router, prefix="/monitoring")
+from fastapi import APIRouter
+
+api_router = APIRouter(prefix="/sgir/v1")
+api_router.include_router(health_router)
+api_router.include_router(core_crud_router)
+api_router.include_router(monitoring_router, prefix="/monitoring")
+
+app.include_router(api_router)
 
 @app.get("/")
 def read_root():
