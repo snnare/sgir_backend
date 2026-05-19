@@ -1,5 +1,7 @@
 import unittest
 import httpx
+import time
+import json
 
 class TestOracleModularMonitoring(unittest.TestCase):
     @classmethod
@@ -188,26 +190,32 @@ class TestOracleModularMonitoring(unittest.TestCase):
             headers=self.headers
         )
         self.assertEqual(upd_res.status_code, 200, "Error al actualizar criticidad a Bajo")
-        print("\n--- [PROBANDO GRUPO A: CRITICIDAD BAJA] ---")
+        print("\n--- [PROBANDO GRUPO A: CRITICIDAD BAJA (MONITOREANDO POR 5 SEGUNDOS)] ---")
 
-        # B. Invocar Endpoint de Monitoreo Modular de Oracle
-        mon_res = self.client.get(
-            f"/sgir/v1/m1/oracle/{self.ids['id_instancia']}/{self.ids['id_credencial']}",
-            headers=self.headers
-        )
-        
-        # NOTA: Si el contenedor de Oracle no está encendido o responde con error, el endpoint
-        # lanzará una excepción global estandarizada (500/503). Si está arriba, responderá 200.
-        if mon_res.status_code == 200:
-            data = mon_res.json()
-            self.assertEqual(data["nivel_criticidad"].lower(), "bajo")
-            # Comprobaciones de Grupos
-            self.assertIsNotNone(data.get("grupo_a"), "El Grupo A (Conectividad) debe estar presente.")
-            self.assertIsNone(data.get("grupo_b"), "El Grupo B (Recursos) debe ser null para criticidad Bajo.")
-            self.assertIsNone(data.get("grupo_c"), "El Grupo C (Performance) debe ser null para criticidad Bajo.")
-            print("[SUCCESS] Monitoreo Bajo exitoso. Retornó solo Grupo A (Conectividad).")
-        else:
-            print(f"[AVISO] El contenedor Oracle no está disponible para consultas dinámicas en este instante ({mon_res.status_code}).")
+        for i in range(1, 6):
+            start_time = time.time()
+            mon_res = self.client.get(
+                f"/sgir/v1/m1/oracle/{self.ids['id_instancia']}/{self.ids['id_credencial']}",
+                headers=self.headers
+            )
+            
+            if mon_res.status_code == 200:
+                data = mon_res.json()
+                print(f"\n⏱️ [Segundo {i}] Respuesta recibida (Bajo):")
+                print(json.dumps(data, indent=2, ensure_ascii=False))
+                
+                # Comprobaciones de Grupos
+                self.assertEqual(data["nivel_criticidad"].lower(), "bajo")
+                self.assertIsNotNone(data.get("grupo_a"), "El Grupo A (Conectividad) debe estar presente.")
+                self.assertIsNone(data.get("grupo_b"), "El Grupo B (Recursos) debe ser null para criticidad Bajo.")
+                self.assertIsNone(data.get("grupo_c"), "El Grupo C (Performance) debe ser null para criticidad Bajo.")
+            else:
+                self.fail(f"[ERROR] Código de estado {mon_res.status_code}: {mon_res.text}")
+                
+            elapsed = time.time() - start_time
+            sleep_time = max(0.1, 1.0 - elapsed)
+            if i < 5:
+                time.sleep(sleep_time)
 
     def test_05_monitoring_medio_criticidad(self):
         """5. Monitoreo Medio (Grupos A+B): Actualiza a Medio y verifica conectividad y recursos."""
@@ -221,24 +229,32 @@ class TestOracleModularMonitoring(unittest.TestCase):
             headers=self.headers
         )
         self.assertEqual(upd_res.status_code, 200, "Error al actualizar criticidad a Medio")
-        print("\n--- [PROBANDO GRUPOS A+B: CRITICIDAD MEDIA] ---")
+        print("\n--- [PROBANDO GRUPOS A+B: CRITICIDAD MEDIA (MONITOREANDO POR 5 SEGUNDOS)] ---")
 
-        # B. Invocar Endpoint de Monitoreo Modular
-        mon_res = self.client.get(
-            f"/sgir/v1/m1/oracle/{self.ids['id_instancia']}/{self.ids['id_credencial']}",
-            headers=self.headers
-        )
-        
-        if mon_res.status_code == 200:
-            data = mon_res.json()
-            self.assertEqual(data["nivel_criticidad"].lower(), "medio")
-            # Comprobaciones de Grupos
-            self.assertIsNotNone(data.get("grupo_a"), "El Grupo A (Conectividad) debe estar presente.")
-            self.assertIsNotNone(data.get("grupo_b"), "El Grupo B (Recursos) debe estar presente para criticidad Medio.")
-            self.assertIsNone(data.get("grupo_c"), "El Grupo C (Performance) debe ser null para criticidad Medio.")
-            print("[SUCCESS] Monitoreo Medio exitoso. Retornó Grupo A + Grupo B (Recursos).")
-        else:
-            print(f"[AVISO] El contenedor Oracle no está disponible para consultas dinámicas en este instante ({mon_res.status_code}).")
+        for i in range(1, 6):
+            start_time = time.time()
+            mon_res = self.client.get(
+                f"/sgir/v1/m1/oracle/{self.ids['id_instancia']}/{self.ids['id_credencial']}",
+                headers=self.headers
+            )
+            
+            if mon_res.status_code == 200:
+                data = mon_res.json()
+                print(f"\n⏱️ [Segundo {i}] Respuesta recibida (Medio):")
+                print(json.dumps(data, indent=2, ensure_ascii=False))
+                
+                # Comprobaciones de Grupos
+                self.assertEqual(data["nivel_criticidad"].lower(), "medio")
+                self.assertIsNotNone(data.get("grupo_a"), "El Grupo A (Conectividad) debe estar presente.")
+                self.assertIsNotNone(data.get("grupo_b"), "El Grupo B (Recursos) debe estar presente para criticidad Medio.")
+                self.assertIsNone(data.get("grupo_c"), "El Grupo C (Performance) debe ser null para criticidad Medio.")
+            else:
+                self.fail(f"[ERROR] Código de estado {mon_res.status_code}: {mon_res.text}")
+                
+            elapsed = time.time() - start_time
+            sleep_time = max(0.1, 1.0 - elapsed)
+            if i < 5:
+                time.sleep(sleep_time)
 
     def test_06_monitoring_alto_criticidad(self):
         """6. Monitoreo Alto (Grupos A+B+C): Actualiza a Alto y verifica el monitoreo completo."""
@@ -252,24 +268,32 @@ class TestOracleModularMonitoring(unittest.TestCase):
             headers=self.headers
         )
         self.assertEqual(upd_res.status_code, 200, "Error al actualizar criticidad a Alto")
-        print("\n--- [PROBANDO GRUPOS A+B+C: CRITICIDAD ALTA] ---")
+        print("\n--- [PROBANDO GRUPOS A+B+C: CRITICIDAD ALTA (MONITOREANDO POR 5 SEGUNDOS)] ---")
 
-        # B. Invocar Endpoint de Monitoreo Modular
-        mon_res = self.client.get(
-            f"/sgir/v1/m1/oracle/{self.ids['id_instancia']}/{self.ids['id_credencial']}",
-            headers=self.headers
-        )
-        
-        if mon_res.status_code == 200:
-            data = mon_res.json()
-            self.assertEqual(data["nivel_criticidad"].lower(), "alto")
-            # Comprobaciones de Grupos
-            self.assertIsNotNone(data.get("grupo_a"), "El Grupo A (Conectividad) debe estar presente.")
-            self.assertIsNotNone(data.get("grupo_b"), "El Grupo B (Recursos) debe estar presente para criticidad Alto.")
-            self.assertIsNotNone(data.get("grupo_c"), "El Grupo C (Performance) debe estar presente para criticidad Alto.")
-            print("[SUCCESS] Monitoreo Alto exitoso. Retornó Grupo A + B + C completo.")
-        else:
-            print(f"[AVISO] El contenedor Oracle no está disponible para consultas dinámicas en este instante ({mon_res.status_code}).")
+        for i in range(1, 6):
+            start_time = time.time()
+            mon_res = self.client.get(
+                f"/sgir/v1/m1/oracle/{self.ids['id_instancia']}/{self.ids['id_credencial']}",
+                headers=self.headers
+            )
+            
+            if mon_res.status_code == 200:
+                data = mon_res.json()
+                print(f"\n⏱️ [Segundo {i}] Respuesta recibida (Alto):")
+                print(json.dumps(data, indent=2, ensure_ascii=False))
+                
+                # Comprobaciones de Grupos
+                self.assertEqual(data["nivel_criticidad"].lower(), "alto")
+                self.assertIsNotNone(data.get("grupo_a"), "El Grupo A (Conectividad) debe estar presente.")
+                self.assertIsNotNone(data.get("grupo_b"), "El Grupo B (Recursos) debe estar presente para criticidad Alto.")
+                self.assertIsNotNone(data.get("grupo_c"), "El Grupo C (Performance) debe estar presente para criticidad Alto.")
+            else:
+                self.fail(f"[ERROR] Código de estado {mon_res.status_code}: {mon_res.text}")
+                
+            elapsed = time.time() - start_time
+            sleep_time = max(0.1, 1.0 - elapsed)
+            if i < 5:
+                time.sleep(sleep_time)
 
 if __name__ == "__main__":
     unittest.main()
