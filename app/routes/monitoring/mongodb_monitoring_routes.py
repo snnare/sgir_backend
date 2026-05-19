@@ -25,5 +25,3 @@ def monitor_mongodb(servidor_id: int, credencial_id: int, db: Session = Depends(
         return metrics
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if 'client' in locals(): client.close()

@@ -59,39 +59,98 @@ def run_ssh_monitoring(db_local: Session, servidor_id: int, credencial_id: int, 
         
         LIVE_METRICS_CACHE[servidor_id] = f"{cpu}|{ram}|{disks_str}|{uptime}|{timestamp}"
 
-        # 2. FILTRADO POR UMBRAL (Solo >= 90% va a la tabla 'metrica')
+        # 2. FILTRADO POR UMBRAL (Diferenciado por recurso y con alertas inteligentes)
+        # CPU >= 90%, RAM >= 85%, Disk >= 80% (Warning) / >= 90% (Critical)
         exceso_detectado = False
         detalles_exceso = []
 
         for nombre, valor in raw_metrics.items():
-            if any(key in nombre for key in ["CPU", "RAM", "Disk"]):
-                if valor >= 90:
-                    exceso_detectado = True
-                    detalles_exceso.append(f"{nombre}: {valor}%")
-                    
-                    tipo = db_local.query(TipoMetrica).filter(TipoMetrica.nombre_tipo == nombre).first()
-                    if not tipo:
-                        tipo = TipoMetrica(nombre_tipo=nombre, unidad_medida="%")
-                        db_local.add(tipo)
-                        db_local.commit()
-                        db_local.refresh(tipo)
+            excede_umbral = False
+            nivel_alerta_sugerido = 3 # Por defecto Crítico
 
-                    db_local.add(Metrica(
-                        valor=valor,
+            if "CPU" in nombre and valor >= 90:
+                excede_umbral = True
+                nivel_alerta_sugerido = 3
+                detalles_exceso.append(f"{nombre}: {valor}% (Crítico)")
+            elif "RAM" in nombre and valor >= 85:
+                excede_umbral = True
+                # Si está entre 85 y 91 es Advertencia, >= 92 es Crítico
+                nivel_alerta_sugerido = 2 if valor < 92 else 3
+                nivel_str = "Advertencia" if nivel_alerta_sugerido == 2 else "Crítico"
+                detalles_exceso.append(f"{nombre}: {valor}% ({nivel_str})")
+            elif "Disk" in nombre and valor >= 80:
+                excede_umbral = True
+                # Almacenamiento: >= 80% es Warning, >= 90% es Crítico
+                nivel_alerta_sugerido = 2 if valor < 90 else 3
+                nivel_str = "Advertencia" if nivel_alerta_sugerido == 2 else "Crítico"
+                
+                # Extraer punto de montaje de la métrica (ej: "Disk_Usage_(/)" -> "/")
+                partition_name = nombre
+                if "(" in nombre and ")" in nombre:
+                    try:
+                        partition_name = nombre.split("(")[1].split(")")[0]
+                    except Exception:
+                        pass
+                
+                # Control de spam: Verificar si ya existe una alerta ABIERTA (id_estado_alerta=6) para esta partición
+                existing_disk_alert = db_local.query(Alerta).filter(
+                    Alerta.id_servidor == servidor_id,
+                    Alerta.id_estado_alerta == 6,
+                    Alerta.descripcion.like(f"%partición {partition_name}%")
+                ).first()
+
+                if not existing_disk_alert:
+                    # Crear alerta de almacenamiento específica e independiente
+                    desc_alerta = (
+                        f"¡ALERTA!: Almacenamiento en la partición {partition_name} superó el umbral "
+                        f"con {valor}% ({nivel_str}) en el servidor {servidor.nombre_servidor}."
+                    )
+                    nueva_alerta_disco = Alerta(
+                        descripcion=desc_alerta,
+                        id_servidor=servidor_id,
                         id_monitoreo=nuevo_monitoreo.id_monitoreo,
-                        id_tipo_metrica=tipo.id_tipo_metrica
-                    ))
+                        id_nivel_alerta=nivel_alerta_sugerido,
+                        id_estado_alerta=6 # Abierta
+                    )
+                    db_local.add(nueva_alerta_disco)
 
-        # 3. ALERTAS EN DB
+            if excede_umbral:
+                # Guardar en base de datos si supera el umbral del recurso
+                tipo = db_local.query(TipoMetrica).filter(TipoMetrica.nombre_tipo == nombre).first()
+                if not tipo:
+                    tipo = TipoMetrica(nombre_tipo=nombre, unidad_medida="%")
+                    db_local.add(tipo)
+                    db_local.commit()
+                    db_local.refresh(tipo)
+
+                db_local.add(Metrica(
+                    valor=valor,
+                    id_monitoreo=nuevo_monitoreo.id_monitoreo,
+                    id_tipo_metrica=tipo.id_tipo_metrica
+                ))
+                
+                # Si no es Disk, lo agregamos para la alerta agrupada de hardware (CPU/RAM)
+                if "Disk" not in nombre:
+                    exceso_detectado = True
+
+        # 3. ALERTAS DE HARDWARE GENERAL EN DB (Para CPU/RAM)
         if exceso_detectado:
-            nueva_alerta = Alerta(
-                descripcion=f"Umbral superado en {servidor.nombre_servidor}: {', '.join(detalles_exceso)}",
-                id_servidor=servidor_id,
-                id_monitoreo=nuevo_monitoreo.id_monitoreo,
-                id_nivel_alerta=3, # Crítico
-                id_estado_alerta=6 # Abierta
-            )
-            db_local.add(nueva_alerta)
+            # Comprobar si ya existe una alerta general abierta de hardware para no duplicar
+            existing_hw_alert = db_local.query(Alerta).filter(
+                Alerta.id_servidor == servidor_id,
+                Alerta.id_estado_alerta == 6,
+                Alerta.descripcion.like("Umbral de hardware superado%")
+            ).first()
+
+            if not existing_hw_alert:
+                nueva_alerta = Alerta(
+                    descripcion=f"Umbral de hardware superado en {servidor.nombre_servidor}: {', '.join(detalles_exceso)}",
+                    id_servidor=servidor_id,
+                    id_monitoreo=nuevo_monitoreo.id_monitoreo,
+                    id_nivel_alerta=3, # Crítico
+                    id_estado_alerta=6 # Abierta
+                )
+                db_local.add(nueva_alerta)
 
         nuevo_monitoreo.fecha_fin = datetime.now()
         nuevo_monitoreo.id_estado_monitoreo = 4 # Éxito

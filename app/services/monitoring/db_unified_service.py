@@ -131,7 +131,10 @@ def run_unified_db_monitoring(db: Session, instancia_id: int, credencial_id: int
         db.commit()
         raise e
     finally:
-        if remote_session and hasattr(remote_session, 'close'): remote_session.close()
+        if remote_session and hasattr(remote_session, 'close'):
+            # Si es MongoDB (id_dbms = 5), NO cerramos el cliente para no destruir el pool global persistente.
+            if instancia.id_dbms != 5:
+                remote_session.close()
 
 def get_db_health_status(db: Session, instancia_id: int):
     """Consulta para el Frontend de la salud de la DB."""
