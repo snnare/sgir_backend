@@ -134,6 +134,8 @@ Para validar esta arquitectura sin emulación en memoria, las pruebas están dis
 *   **[`tests/00_base.py`](file:///home/angel/src/titulacion/sgir_backend/tests/00_base.py):** Registra inicialmente en la base de datos de Docker al usuario administrador maestro (`admin@admin.com` / `123Nokia`) con el rol de Admin (ID=1).
 *   **[`tests/01_basic_test_api.py`](file:///home/angel/src/titulacion/sgir_backend/tests/01_basic_test_api.py):** Verifica la disponibilidad de la API, el inicio de sesión OAuth2, el estado de salud de PostgreSQL (`/m1`), y flujos de lectura CRUD sobre catálogos.
 *   **[`tests/crud/test_insert.py`](file:///home/angel/src/titulacion/sgir_backend/tests/crud/test_insert.py):** Realiza un flujo integral en cascada que valida el flujo de creación (`POST`/`INSERT`) de todas las entidades del sistema (Servidor, Partición, Credencial, Instancia DBMS, Base de Datos, Ruta de Respaldo, Políticas de Respaldo, Respaldo Histórico, Monitoreo y Alertas), satisfaciendo la integridad referencial y las claves foráneas de PostgreSQL.
+*   **[`tests/m1/test_register_containers.py`](file:///home/angel/src/titulacion/sgir_backend/tests/m1/test_register_containers.py):** Realiza el registro y la inicialización automática de los 7 contenedores de base de datos y servidores SSH locales de tu laboratorio.
+*   **[`tests/m1/test_oracle_modular_monitoring.py`](file:///home/angel/src/titulacion/sgir_backend/tests/m1/test_oracle_modular_monitoring.py):** Valida de forma secuencial el monitoreo modular de Oracle, alternando el nivel de criticidad del servidor (Bajo, Medio, Alto) para probar de manera exclusiva cada grupo de métricas (A, B y C).
 
 ---
 
