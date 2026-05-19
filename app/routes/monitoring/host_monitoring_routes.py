@@ -14,9 +14,11 @@ from app.services import log_event
 from app.models.user_models import User
 from app.core.scheduler_manager import pause_scheduler, resume_scheduler, get_scheduler_status
 
-router = APIRouter()
+m1_router = APIRouter()
+m2_router = APIRouter()
+m3_router = APIRouter()
 
-@router.get("/discover-cron/{servidor_id}/{credencial_id}")
+@m2_router.get("/discover-cron/{servidor_id}/{credencial_id}")
 def discover_cron(servidor_id: int, credencial_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Escanea el crontab del servidor para sugerir políticas de respaldo.
@@ -26,7 +28,7 @@ def discover_cron(servidor_id: int, credencial_id: int, db: Session = Depends(ge
         raise HTTPException(status_code=400, detail=result["error"])
     return result
 
-@router.get("/discover-filesystems/{servidor_id}")
+@m2_router.get("/discover-filesystems/{servidor_id}")
 def discover_filesystems_endpoint(servidor_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Lista los sistemas de archivos (puntos de montaje) reales del servidor.
@@ -36,12 +38,12 @@ def discover_filesystems_endpoint(servidor_id: int, db: Session = Depends(get_db
         raise HTTPException(status_code=400, detail=result["error"])
     return result
 
-@router.get("/scheduler/status")
+@m1_router.get("/scheduler/status")
 def check_scheduler_status(current_user: User = Depends(get_current_user)):
     """Consulta si el scheduler está corriendo o pausado."""
     return {"status": get_scheduler_status()}
 
-@router.post("/scheduler/pause")
+@m1_router.post("/scheduler/pause")
 def pause_monitoring(current_user: User = Depends(get_current_user)):
     """Pausa el monitoreo automático. Solo Admin."""
     if current_user.id_rol != 1: # Asumiendo 1 es Admin
@@ -51,7 +53,7 @@ def pause_monitoring(current_user: User = Depends(get_current_user)):
         return {"message": "El scheduler no estaba corriendo"}
     return {"message": "Monitoreo pausado exitosamente", "status": "paused"}
 
-@router.post("/scheduler/resume")
+@m1_router.post("/scheduler/resume")
 def resume_monitoring(current_user: User = Depends(get_current_user)):
     """Reanuda el monitoreo automático. Solo Admin."""
     if current_user.id_rol != 1:
@@ -61,7 +63,7 @@ def resume_monitoring(current_user: User = Depends(get_current_user)):
         return {"message": "El scheduler ya estaba corriendo o falló la reanudación"}
     return {"message": "Monitoreo reanudado exitosamente", "status": "running"}
 
-@router.post("/scheduler/trigger-backup-retention")
+@m3_router.post("/scheduler/trigger-backup-retention")
 def trigger_backup_retention(current_user: User = Depends(get_current_user)):
     """Ejecuta manualmente la política de retención de respaldos. Solo Admin."""
     if current_user.id_rol != 1:
@@ -73,7 +75,7 @@ def trigger_backup_retention(current_user: User = Depends(get_current_user)):
     backup_retention_task()
     return {"message": "Política de retención de respaldos ejecutada exitosamente"}
 
-@router.get("/global-summary")
+@m1_router.get("/global-summary")
 
 def get_global_summary(
     db: Session = Depends(get_db),
@@ -85,7 +87,7 @@ def get_global_summary(
     """
     return get_global_health_summary(db)
 
-@router.get("/live-cache")
+@m1_router.get("/live-cache")
 def get_live_metrics(current_user: User = Depends(get_current_user)):
     """
     Devuelve las métricas en tiempo real (CPU, RAM, Disco) de todos los servidores
@@ -93,7 +95,7 @@ def get_live_metrics(current_user: User = Depends(get_current_user)):
     """
     return LIVE_METRICS_CACHE
 
-@router.get("/health-status/{server_id}")
+@m1_router.get("/health-status/{server_id}")
 def check_health(
     server_id: int,
     db: Session = Depends(get_db),
@@ -105,7 +107,7 @@ def check_health(
     """
     return get_server_health_status(db, server_id)
 
-@router.get("/{server_id}/{cred_id}")
+@m1_router.get("/{server_id}/{cred_id}")
 
 def monitor_host_ssh(
     server_id: int,

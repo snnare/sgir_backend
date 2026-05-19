@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.routes import core_crud_router
 from app.routes.healths import health_router
-from app.routes.monitoring import router as monitoring_router
+from app.routes.monitoring import m1_router, m2_router, m3_router
 from app.core.scheduler_manager import start_scheduler, stop_scheduler, pause_scheduler
 
 @asynccontextmanager
@@ -33,12 +33,34 @@ app.add_middleware(
 from fastapi import APIRouter
 
 api_router = APIRouter(prefix="/sgir/v1")
-api_router.include_router(health_router)
+
+# Módulo 1: Monitoreo & Alertas (incluye salud e ICMP ping)
+m1_root_router = APIRouter(prefix="/m1")
+m1_root_router.include_router(health_router)
+
+@m1_root_router.get("/")
+def read_root_m1():
+    return {"message": "Welcome"}
+
+@m1_root_router.get("/ping")
+def ping_m1():
+    return {"status": "ok", "message": "Backend is reachable"}
+
+api_router.include_router(m1_root_router)
+api_router.include_router(m1_router)
+
+# Módulo 2: Búsqueda de Activos (CMDB)
+api_router.include_router(m2_router)
+
+# Módulo 3: Gestión de Respaldos
+api_router.include_router(m3_router)
+
+# CRUD Completo bajo el prefijo /crud
 api_router.include_router(core_crud_router)
-api_router.include_router(monitoring_router, prefix="/monitoring")
 
 app.include_router(api_router)
 
+# Rutas de disponibilidad general en la raíz del servidor
 @app.get("/")
 def read_root():
     return {"message": "Welcome"}

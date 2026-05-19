@@ -27,7 +27,7 @@ from .catalogs.nivel_alerta_routes import router as nivel_alerta_router
 from .catalogs.alerta_routes import router as alerta_router
 from .catalogs.estado_general_routes import router as estado_general_router
 
-router = APIRouter()
+router = APIRouter(prefix="/crud")
 
 # Seguridad
 router.include_router(user_router, prefix="/users", tags=["Security - Users"])

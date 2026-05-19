@@ -11,16 +11,17 @@ from app.services import infrastructure_crud
 from app.schemas.infrastructure.infrastructure_schemas import GlobalAssetResponse
 from typing import List
 
-router = APIRouter(dependencies=[Depends(get_current_user)])
+m2_router = APIRouter(dependencies=[Depends(get_current_user)])
+m3_router = APIRouter(dependencies=[Depends(get_current_user)])
 
-@router.get("/assets", response_model=List[GlobalAssetResponse])
+@m2_router.get("/assets", response_model=List[GlobalAssetResponse])
 def get_global_assets(db: Session = Depends(get_pg_db)):
     """
     Retorna el inventario consolidado para la búsqueda de activos.
     """
     return infrastructure_crud.get_global_inventory(db)
 
-@router.post("/discover-all")
+@m2_router.post("/discover-all")
 def discover_all_databases(db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
     """
     Inicia un auto-descubrimiento masivo en todos los servidores con monitoreo_db activo.
@@ -29,7 +30,7 @@ def discover_all_databases(db: Session = Depends(get_pg_db), current_user: User 
     from app.services.infrastructure.inventory_sync_service import run_bulk_inventory_sync
     return run_bulk_inventory_sync(db)
 
-@router.post("/discover/{instancia_id}/{credencial_id}")
+@m2_router.post("/discover/{instancia_id}/{credencial_id}")
 def discover_and_sync(instancia_id: int, credencial_id: int, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
     """
     Inicia el proceso de auto-búsqueda en una instancia de base de datos.
@@ -40,7 +41,7 @@ def discover_and_sync(instancia_id: int, credencial_id: int, db: Session = Depen
         raise HTTPException(status_code=400, detail=result["error"])
     return result
 
-@router.post("/discover-backups/{instancia_id}/{credencial_id}/{ruta_id}")
+@m3_router.post("/discover-backups/{instancia_id}/{credencial_id}/{ruta_id}")
 def discover_integrated_backups(
     instancia_id: int, 
     credencial_id: int, 
@@ -57,7 +58,7 @@ def discover_integrated_backups(
         raise HTTPException(status_code=404, detail=result["error"])
     return result
 
-@router.post("/discover-backups-server/{servidor_id}/{credencial_id}/{ruta_id}")
+@m3_router.post("/discover-backups-server/{servidor_id}/{credencial_id}/{ruta_id}")
 def discover_server_backups(
     servidor_id: int,
     credencial_id: int,
@@ -74,7 +75,7 @@ def discover_server_backups(
         raise HTTPException(status_code=404, detail=result["error"])
     return result
 
-@router.get("/summary/{servidor_id}")
+@m2_router.get("/summary/{servidor_id}")
 def get_server_storage_summary(servidor_id: int, db: Session = Depends(get_pg_db)):
     """
     Consulta el estado actual del inventario local para un servidor.
