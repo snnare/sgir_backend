@@ -28,7 +28,7 @@ def discover_cron(servidor_id: int, credencial_id: int, db: Session = Depends(ge
         raise HTTPException(status_code=400, detail=result["error"])
     return result
 
-@m2_router.get("/discover-filesystems/{servidor_id}")
+@m1_router.post("/discover-filesystems/{servidor_id}")
 def discover_filesystems_endpoint(servidor_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Lista los sistemas de archivos (puntos de montaje) reales del servidor.
