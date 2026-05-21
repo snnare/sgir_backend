@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.postgres.postgres_connection import get_db as get_pg_db
-from app.services.monitoring.mongodb.mongodb_service import get_mongodb_metrics
+from app.services.monitoring.mongodb.mongodb_service import get_mongodb_metrics, run_mongodb_modular_monitoring
 from app.core.dynamic_db_core import get_dynamic_session
 from app.services import get_servidor, get_credencial
-from app.schemas import MongoDBMetrics
+from app.schemas import MongoDBMetrics, MongoModularMonitoringResponse
 from app.core.dependencies import get_current_user
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
@@ -25,3 +25,17 @@ def monitor_mongodb(servidor_id: int, credencial_id: int, db: Session = Depends(
         return metrics
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/modular/{id_instancia}/{id_credencial}", response_model=MongoModularMonitoringResponse)
+def get_mongodb_modular_metrics(id_instancia: int, id_credencial: int, db: Session = Depends(get_pg_db)):
+    """
+    Obtiene métricas de MongoDB segmentadas por módulos (A, B, C) 
+    según el nivel de criticidad del servidor registrado.
+    """
+    result = run_mongodb_modular_monitoring(db, id_instancia, id_credencial)
+    
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
+        
+    return result
+

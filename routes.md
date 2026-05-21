@@ -380,6 +380,9 @@ Endpoints para consulta de salud, estadísticas en tiempo real y ejecución de t
 *   **`GET`** `/m1/mysql8/{servidor_id}/{credencial_id}` $\rightarrow$ *Sin Body*
 *   **`GET`** `/m1/oracle/{id_instancia}/{id_credencial}` $\rightarrow$ *Sin Body*
 *   **`GET`** `/m1/mysql5/metrics/{id_instancia}` $\rightarrow$ *Sin Body*
+*   **`GET`** `/m1/mysql5/modular/{id_instancia}/{id_credencial}` $\rightarrow$ *Sin Body (Monitoreo modular por criticidad para MySQL 5)*
+*   **`GET`** `/m1/mysql8/modular/{id_instancia}/{id_credencial}` $\rightarrow$ *Sin Body (Monitoreo modular por criticidad para MySQL 8)*
+*   **`GET`** `/m1/mongodb/modular/{id_instancia}/{id_credencial}` $\rightarrow$ *Sin Body (Monitoreo modular por criticidad para MongoDB)*
 
 ---
 

@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from .mysql.mysql5 import router as mysql5_router
+from .mysql5_monitoring_routes import router as mysql5_router
 from .mysql8_monitoring_routes import router as mysql8_router
 from .mongodb_monitoring_routes import router as mongodb_router
 from .oracle_monitoring_routes import router as oracle_router

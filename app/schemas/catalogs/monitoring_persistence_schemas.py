@@ -134,3 +134,67 @@ class OracleMonitoringResponse(BaseModel):
     grupo_a: ConnectivityMetrics
     grupo_b: Optional[ResourceMetrics] = None
     grupo_c: Optional[PerformanceMetrics] = None
+
+# --- MySQL Modular Metrics (A, B, C) ---
+
+class MySQLConnectivityMetrics(BaseModel):
+    status: str
+    uptime: int
+    threads_connected: int
+    max_connections: int
+    connection_usage_percent: float
+
+class MySQLResourceMetrics(BaseModel):
+    threads_running: int
+    questions: int
+    queries_per_second: float
+    slow_queries: int
+    table_locks_waited: int
+
+class MySQLPerformanceMetrics(BaseModel):
+    innodb_row_lock_waits: int
+    innodb_row_lock_time_avg: int
+    innodb_buffer_pool_pages_dirty: int
+    innodb_buffer_pool_read_requests: int
+    innodb_buffer_pool_reads: int
+    innodb_buffer_pool_hit_ratio: float
+
+class MySQLModularMonitoringResponse(BaseModel):
+    id_instancia: int
+    id_servidor: int
+    nivel_criticidad: str
+    timestamp: datetime
+    grupo_a: MySQLConnectivityMetrics
+    grupo_b: Optional[MySQLResourceMetrics] = None
+    grupo_c: Optional[MySQLPerformanceMetrics] = None
+
+
+# --- MongoDB Modular Metrics (A, B, C) ---
+
+class MongoConnectivityMetrics(BaseModel):
+    status: str
+    uptime: int
+    ok: float
+
+class MongoResourceMetrics(BaseModel):
+    connections_current: int
+    connections_available: int
+    connections_total_created: int
+    mem_resident_mb: int
+    mem_virtual_mb: int
+
+class MongoPerformanceMetrics(BaseModel):
+    op_inserts: int
+    op_queries: int
+    op_updates: int
+    op_deletes: int
+
+class MongoModularMonitoringResponse(BaseModel):
+    id_instancia: int
+    id_servidor: int
+    nivel_criticidad: str
+    timestamp: datetime
+    grupo_a: MongoConnectivityMetrics
+    grupo_b: Optional[MongoResourceMetrics] = None
+    grupo_c: Optional[MongoPerformanceMetrics] = None
+

@@ -3,9 +3,12 @@ from app.core.security.encryption import decrypt_password
 from app.core.db_pool_manager import db_pool
 from fastapi import HTTPException
 
+import urllib.parse
+
 def get_dynamic_url(servidor: Servidor, credencial: CredencialAcceso, dbms_id: int, db_name: str = None):
     """Genera el string de conexión dinámico."""
-    password = decrypt_password(credencial.password_hash)
+    raw_password = decrypt_password(credencial.password_hash)
+    password = urllib.parse.quote_plus(raw_password)
     host = servidor.direccion_ip
     user = credencial.usuario
     

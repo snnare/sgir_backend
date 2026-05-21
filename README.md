@@ -52,6 +52,7 @@ Vigilancia en tiempo real de recursos y servicios mediante tareas programadas as
 
 ### 🚀 Capacidades
 *   **Monitoreo de Host (SSH):** Extracción de CPU, RAM, Disco y Uptime con soporte para Legacy RHEL 4/5.
+*   **Monitoreo Modular por Criticidad:** Homologación con Oracle de observabilidad por grupos para MySQL 5 (`information_schema`/`performance_schema`), MySQL 8 (`performance_schema`) y MongoDB (`ping`/`serverStatus`), recolectando información adaptada dinámicamente según la criticidad (Bajo: Grupo A; Medio: Grupos A+B; Alto/Crítico: Grupos A+B+C).
 *   **DB Connection Pooling:** Reutilización de conexiones persistentes para MySQL, Oracle y MongoDB.
 *   **Alcance Selectivo:** Configuración por servidor para monitorear solo Hardware, solo DB o ambos.
 *   **Live Cache:** Métricas en tiempo real en RAM para Dashboard sin latencia.
@@ -78,6 +79,11 @@ Vigilancia en tiempo real de recursos y servicios mediante tareas programadas as
 - **GET** `/monitoring/host/health-status/{server_id}`
 - **GET** `/monitoring/host/discover-filesystems/{servidor_id}` (df -h vía SSH)
 - **GET** `/monitoring/host/{server_id}/{cred_id}` (Ejecución ad-hoc)
+
+**Monitoreo Modular por Criticidad (MySQL & MongoDB):**
+- **GET** `/m1/mysql5/modular/{id_instancia}/{id_credencial}` (Monitoreo modular por criticidad MySQL 5)
+- **GET** `/m1/mysql8/modular/{id_instancia}/{id_credencial}` (Monitoreo modular por criticidad MySQL 8)
+- **GET** `/m1/mongodb/modular/{id_instancia}/{id_credencial}` (Monitoreo modular por criticidad MongoDB)
 
 ---
 
@@ -136,6 +142,7 @@ Para validar esta arquitectura sin emulación en memoria, las pruebas están dis
 *   **[`tests/crud/test_insert.py`](file:///home/angel/src/titulacion/sgir_backend/tests/crud/test_insert.py):** Realiza un flujo integral en cascada que valida el flujo de creación (`POST`/`INSERT`) de todas las entidades del sistema (Servidor, Partición, Credencial, Instancia DBMS, Base de Datos, Ruta de Respaldo, Políticas de Respaldo, Respaldo Histórico, Monitoreo y Alertas), satisfaciendo la integridad referencial y las claves foráneas de PostgreSQL.
 *   **[`tests/m1/test_register_containers.py`](file:///home/angel/src/titulacion/sgir_backend/tests/m1/test_register_containers.py):** Realiza el registro y la inicialización automática de los 7 contenedores de base de datos y servidores SSH locales de tu laboratorio.
 *   **[`tests/m1/test_oracle_modular_monitoring.py`](file:///home/angel/src/titulacion/sgir_backend/tests/m1/test_oracle_modular_monitoring.py):** Valida de forma secuencial el monitoreo modular de Oracle, alternando el nivel de criticidad del servidor (Bajo, Medio, Alto) para probar de manera exclusiva cada grupo de métricas (A, B y C).
+*   **[`tests/m1/test_modular_db_monitoring.py`](file:///home/angel/src/titulacion/sgir_backend/tests/m1/test_modular_db_monitoring.py):** Valida de forma secuencial e integral el monitoreo modular por criticidades en MySQL 5, MySQL 8 y MongoDB, alternando los niveles (Bajo, Medio, Alto) y verificando la consistencia en el retorno de los grupos específicos (A, B, C).
 
 ---
 

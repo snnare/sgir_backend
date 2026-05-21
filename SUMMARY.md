@@ -129,4 +129,26 @@ Hemos concluido exitosamente el desarrollo del motor core de **Observabilidad y 
 *   **Logging Profesional**: Migración de `print` a sistema de logs rotativos.
 *   **Dashboard Integration**: Consumo del Live Cache y Alertas Recientes en el frontend.
 
+---
+
+## 📅 Fecha: 21 de Mayo, 2026 (Monitoreo Modular por Criticidad para MySQL y MongoDB)
+
+### ✅ Módulos Implementados (Hitos Críticos)
+1.  **Monitoreo Modular Basado en Criticidad**:
+    *   **Homologación con Oracle**: Implementación de recolección en Grupos A (Conectividad), B (Recursos) y C (Performance) para MySQL 5, MySQL 8 y MongoDB, determinado dinámicamente por el nivel de criticidad asignado al servidor.
+    *   **Endpoints Modulares Exclusivos**:
+        *   `GET` `/sgir/v1/m1/mysql5/modular/{id_instancia}/{id_credencial}`
+        *   `GET` `/sgir/v1/m1/mysql8/modular/{id_instancia}/{id_credencial}`
+        *   `GET` `/sgir/v1/m1/mongodb/modular/{id_instancia}/{id_credencial}`
+2.  **Esquemas Pydantic Modularizados**:
+    *   Diseño de modelos específicos para cada grupo de métricas de MySQL y MongoDB bajo `app/schemas/catalogs/monitoring_persistence_schemas.py`.
+3.  **Extracción Directa y No Intrusiva**:
+    *   **MySQL 5 & 8**: Consultas adaptadas usando `information_schema` y `performance_schema` correspondientemente sin alterar servidores target.
+    *   **MongoDB**: Comandos administrativos ligeros `ping` y `serverStatus` con perfiles de permisos mínimos (`clusterMonitor`).
+4.  **Escapado de Contraseñas (URL-Encoding)**:
+    *   Corrección crítica en `app/core/dynamic_db_core.py` aplicando `urllib.parse.quote_plus` a contraseñas descifradas, permitiendo el uso de caracteres especiales como `$` de forma transparente en todas las URLs de conexión RDBMS y MongoDB.
+5.  **Suite de Pruebas de Integración**:
+    *   Creación de `tests/m1/test_modular_db_monitoring.py` para validar de principio a fin el flujo de registro, cambio de criticidades (Bajo, Medio, Alto) y payloads modulares correctos para los tres motores.
+
+
 
