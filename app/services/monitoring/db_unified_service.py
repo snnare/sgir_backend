@@ -145,14 +145,46 @@ def get_db_health_status(db: Session, instancia_id: int):
 
     if not last_session: return {"status": "unknown", "message": "Sin datos"}
     
-    # Determinación de color/status
+    # Determinación de color/status y métricas
     status = "healthy"
-    if live_data and live_data["metrics"]["ping"] == 0: status = "fatal"
-    elif live_data and live_data["metrics"]["capacity_pct"] >= 90: status = "critical"
+    engine_name = "N/A"
+    metrics = {}
+    
+    if live_data:
+        if isinstance(live_data, str):
+            # Formato piped: status|uptime|threads_conn|max_conn|conn_usage|...
+            parts = live_data.split('|')
+            status_val = parts[0]
+            conn_usage = float(parts[4]) if parts[4] != "N/A" else 0.0
+            
+            ping_val = 1 if status_val == "online" else 0
+            metrics = {
+                "ping": ping_val,
+                "capacity_pct": conn_usage,
+                "stuck_processes": int(parts[5]) if parts[5].isdigit() else 0,
+                "specific_value": float(parts[13]) if parts[13] != "N/A" else 0.0
+            }
+            if ping_val == 0:
+                status = "fatal"
+            elif conn_usage >= 90:
+                status = "critical"
+                
+            # Resolver engine desde la instancia en DB
+            inst = db.query(InstanciaDBMS).filter(InstanciaDBMS.id_instancia == instancia_id).first()
+            if inst and inst.dbms:
+                engine_name = inst.dbms.nombre_dbms
+        elif isinstance(live_data, dict):
+            metrics = live_data.get("metrics", {})
+            engine_name = live_data.get("engine", "N/A")
+            if metrics.get("ping", 1) == 0:
+                status = "fatal"
+            elif metrics.get("capacity_pct", 0.0) >= 90:
+                status = "critical"
 
     return {
         "status": status,
-        "engine": live_data["engine"] if live_data else "N/A",
-        "metrics": live_data["metrics"] if live_data else {},
+        "engine": engine_name,
+        "metrics": metrics,
         "last_check": last_session.fecha_inicio
     }
+
