@@ -143,6 +143,7 @@ Para validar esta arquitectura sin emulación en memoria, las pruebas están dis
 *   **[`tests/m1/test_register_containers.py`](file:///home/angel/src/titulacion/sgir_backend/tests/m1/test_register_containers.py):** Realiza el registro y la inicialización automática de los 7 contenedores de base de datos y servidores SSH locales de tu laboratorio.
 *   **[`tests/m1/test_oracle_modular_monitoring.py`](file:///home/angel/src/titulacion/sgir_backend/tests/m1/test_oracle_modular_monitoring.py):** Valida de forma secuencial el monitoreo modular de Oracle, alternando el nivel de criticidad del servidor (Bajo, Medio, Alto) para probar de manera exclusiva cada grupo de métricas (A, B y C).
 *   **[`tests/m1/test_modular_db_monitoring.py`](file:///home/angel/src/titulacion/sgir_backend/tests/m1/test_modular_db_monitoring.py):** Valida de forma secuencial e integral el monitoreo modular por criticidades en MySQL 5, MySQL 8 y MongoDB, alternando los niveles (Bajo, Medio, Alto) y verificando la consistencia en el retorno de los grupos específicos (A, B, C).
+*   **[`tests/m1/test_bulk_servers_monitoring.py`](file:///home/angel/src/titulacion/sgir_backend/tests/m1/test_bulk_servers_monitoring.py):** Simula una carga de escala real del inventario del laboratorio. Autentica vía OAuth2 (`admin@admin.com` / `123Nokia`), ejecuta el auto-descubrimiento en paralelo de esquemas (`discover-all`), verifica la consistencia de la caché y valida la descompresión y recuperación de datos del formato "Compact Pulse" en RAM.
 
 ---
 
