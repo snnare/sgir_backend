@@ -104,7 +104,13 @@ def run_mysql5_modular_monitoring(db: Session, id_instancia: int, id_credencial:
     remote_session = None
     try:
         # Conexión dinámica (para evitar error 1049, conectamos a 'information_schema')
-        remote_session = get_dynamic_session(servidor, credencial, dbms_id=2, db_name="information_schema")
+        remote_session = get_dynamic_session(
+            servidor, 
+            credencial, 
+            dbms_id=2, 
+            db_name="information_schema", 
+            parametros=instancia.parametros_conexion
+        )
         
         timestamp = datetime.now()
 

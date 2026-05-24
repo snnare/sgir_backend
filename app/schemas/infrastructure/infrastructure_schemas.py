@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 from decimal import Decimal
 
@@ -138,6 +138,7 @@ class InstanciaBase(BaseModel):
     id_servidor: int
     id_dbms: int
     id_estado_instancia: int
+    parametros_conexion: Optional[Dict[str, Any]] = None
 
 class InstanciaCreate(InstanciaBase):
     pass

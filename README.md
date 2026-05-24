@@ -43,6 +43,8 @@ Centraliza el registro, organización y descubrimiento de toda la infraestructur
 - **POST** `/credenciales/test-ssh/{id_servidor}/{id_credencial}`
 - **POST** `/instancias/test-db/{id_instancia}/{id_credencial}`
 - **POST** `/conexion/test/db/{motor}`
+- **POST** `/conexion/test/db/oracle/legacy` (Prueba de conexión legacy vía SSH + sqlplus local)
+- **POST** `/conexion/test/db/oracle/no-legacy` (Prueba de conexión estándar TCP thin mode)
 - **POST** `/conexion/test/ssh`
 
 ---
@@ -144,6 +146,7 @@ Para validar esta arquitectura sin emulación en memoria, las pruebas están dis
 *   **[`tests/m1/test_oracle_modular_monitoring.py`](file:///home/angel/src/titulacion/sgir_backend/tests/m1/test_oracle_modular_monitoring.py):** Valida de forma secuencial el monitoreo modular de Oracle, alternando el nivel de criticidad del servidor (Bajo, Medio, Alto) para probar de manera exclusiva cada grupo de métricas (A, B y C).
 *   **[`tests/m1/test_modular_db_monitoring.py`](file:///home/angel/src/titulacion/sgir_backend/tests/m1/test_modular_db_monitoring.py):** Valida de forma secuencial e integral el monitoreo modular por criticidades en MySQL 5, MySQL 8 y MongoDB, alternando los niveles (Bajo, Medio, Alto) y verificando la consistencia en el retorno de los grupos específicos (A, B, C).
 *   **[`tests/m1/test_bulk_servers_monitoring.py`](file:///home/angel/src/titulacion/sgir_backend/tests/m1/test_bulk_servers_monitoring.py):** Simula una carga de escala real del inventario del laboratorio. Autentica vía OAuth2 (`admin@admin.com` / `123Nokia`), ejecuta el auto-descubrimiento en paralelo de esquemas (`discover-all`), verifica la consistencia de la caché y valida la descompresión y recuperación de datos del formato "Compact Pulse" en RAM.
+*   **[`tests/m1/test_oracle_legacy_endpoint.py`](file:///home/angel/src/titulacion/sgir_backend/tests/m1/test_oracle_legacy_endpoint.py):** Valida de principio a fin el registro e invocación del endpoint de prueba de conexión legacy para Oracle 10g usando SSH, sqlplus local y variables de entorno cargadas.
 
 ---
 

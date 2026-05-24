@@ -74,6 +74,8 @@ class CredencialAcceso(Base):
     tipo = relationship("TipoAcceso")
     estado = relationship("app.models.user_models.UserStatus")
 
+from sqlalchemy.dialects.postgresql import JSONB
+
 class InstanciaDBMS(Base):
     __tablename__ = "instancia_dbms"
     id_instancia = Column(Integer, primary_key=True, index=True)
@@ -84,9 +86,11 @@ class InstanciaDBMS(Base):
     id_servidor = Column(Integer, ForeignKey("servidor.id_servidor", ondelete="CASCADE"), nullable=False)
     id_dbms = Column(Integer, ForeignKey("dbms.id_dbms"), nullable=False)
     id_estado_instancia = Column(Integer, ForeignKey("estado_general.id_estado"), nullable=False)
+    parametros_conexion = Column(JSONB, nullable=True, server_default='{}')
 
     servidor = relationship("Servidor", back_populates="instancias")
     bases_datos = relationship("BaseDeDatos", back_populates="instancia", cascade="all, delete-orphan")
+
 
 class BaseDeDatos(Base):
     __tablename__ = "base_de_datos"

@@ -32,7 +32,13 @@ def test_db_connectivity(id_instancia: int, id_credencial: int, db: Session = De
     try:
         # Intentar obtener sesión dinámica
         # Para Oracle, podríamos necesitar pasar el nombre de la instancia como db_name
-        session = get_dynamic_session(servidor, credencial, instancia.id_dbms, db_name=instancia.nombre_instancia)
+        session = get_dynamic_session(
+            servidor, 
+            credencial, 
+            instancia.id_dbms, 
+            db_name=instancia.nombre_instancia, 
+            parametros=instancia.parametros_conexion
+        )
         
         # Ejecutar consulta de validación adaptada al motor
         if instancia.id_dbms == 4:

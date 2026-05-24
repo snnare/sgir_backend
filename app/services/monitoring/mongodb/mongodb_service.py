@@ -78,7 +78,12 @@ def run_mongodb_modular_monitoring(db: Session, id_instancia: int, id_credencial
     client = None
     try:
         # Conexión dinámica (dbms_id = 5 para MongoDB)
-        client = get_dynamic_session(servidor, credencial, dbms_id=5)
+        client = get_dynamic_session(
+            servidor, 
+            credencial, 
+            dbms_id=5, 
+            parametros=instancia.parametros_conexion
+        )
         
         timestamp = datetime.now()
 

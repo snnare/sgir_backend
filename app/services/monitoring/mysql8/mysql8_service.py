@@ -42,7 +42,13 @@ def run_mysql8_modular_monitoring(db: Session, id_instancia: int, id_credencial:
     remote_session = None
     try:
         # Conexión dinámica (conectamos a 'performance_schema' en MySQL 8 para asegurar que esté en contexto)
-        remote_session = get_dynamic_session(servidor, credencial, dbms_id=3, db_name="performance_schema")
+        remote_session = get_dynamic_session(
+            servidor, 
+            credencial, 
+            dbms_id=3, 
+            db_name="performance_schema", 
+            parametros=instancia.parametros_conexion
+        )
         
         timestamp = datetime.now()
 

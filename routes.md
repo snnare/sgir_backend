@@ -416,7 +416,10 @@ Contiene las operaciones del catálogo relacional y configuraciones base. El pre
       "puerto": 3306,
       "id_servidor": 1,
       "id_dbms": 1,
-      "id_estado_instancia": 1
+      "id_estado_instancia": 1,
+      "parametros_conexion": {
+        "sid": "OptionalOracleSIDOrMongoAuthSource"
+      }
     }
     ```
 *   **Response Esperada (Status 201 - `Instancia`):**
@@ -428,6 +431,9 @@ Contiene las operaciones del catálogo relacional y configuraciones base. El pre
       "id_servidor": 1,
       "id_dbms": 1,
       "id_estado_instancia": 1,
+      "parametros_conexion": {
+        "sid": "OptionalOracleSIDOrMongoAuthSource"
+      },
       "fecha_inicio": "2026-05-22T18:00:00Z"
     }
     ```
@@ -473,6 +479,45 @@ Contiene las operaciones del catálogo relacional y configuraciones base. El pre
       "message": "Conexión exitosa con MySQL"
     }
     ```
+
+#### **`POST`** `/conexion/test/db/oracle/legacy`
+*   **Servicio Ejecutor:** [`app/routes/core_crud/infrastructure/conexion_routes.py`](file:///home/angel/src/titulacion/sgir_backend/app/routes/core_crud/infrastructure/conexion_routes.py) $\rightarrow$ `test_oracle_legacy_connection` (Usa SSH y sqlplus local leyendo el SID de la CMDB)
+*   **Body Requerido (`ConnectionTestRequest`):**
+    ```json
+    {
+      "direccion_ip": "192.168.1.100",
+      "puerto": 1521,
+      "usuario": "system",
+      "password": "Password10g"
+    }
+    ```
+*   **Response Esperada (Status 200):**
+    ```json
+    {
+      "status": "success",
+      "message": "Conexión legacy exitosa con Oracle SID 'DbEvapem' (vía SSH/sqlplus local)"
+    }
+    ```
+
+#### **`POST`** `/conexion/test/db/oracle/no-legacy`
+*   **Servicio Ejecutor:** [`app/routes/core_crud/infrastructure/conexion_routes.py`](file:///home/angel/src/titulacion/sgir_backend/app/routes/core_crud/infrastructure/conexion_routes.py) $\rightarrow$ `test_oracle_no_legacy_connection` (Usa oracledb Thin Mode leyendo el ORACLE_SID de la CMDB)
+*   **Body Requerido (`ConnectionTestRequest`):**
+    ```json
+    {
+      "direccion_ip": "192.168.1.100",
+      "puerto": 1521,
+      "usuario": "system",
+      "password": "Password19c"
+    }
+    ```
+*   **Response Esperada (Status 200):**
+    ```json
+    {
+      "status": "success",
+      "message": "Conexión TCP estándar (No-Legacy) exitosa con Oracle"
+    }
+    ```
+
 
 #### **`POST`** `/conexion/test/ssh`
 *   **Servicio Ejecutor:** [`app/routes/core_crud/infrastructure/conexion_routes.py`](file:///home/angel/src/titulacion/sgir_backend/app/routes/core_crud/infrastructure/conexion_routes.py) $\rightarrow$ `test_ssh_connection` (Usa `ssh_no_legacy`/`ssh_legacy` en caliente)
@@ -541,6 +586,17 @@ Contiene las operaciones del catálogo relacional y configuraciones base. El pre
           "etiqueta": "Disco de Datos",
           "id_servidor": 1,
           "fecha_registro": "2026-05-22T18:00:00Z"
+        }
+      ],
+      "instancias": [
+        {
+          "id_instancia": 1,
+          "nombre_instancia": "mysql_prod_01",
+          "puerto": 3306,
+          "id_servidor": 1,
+          "id_dbms": 1,
+          "id_estado_instancia": 1,
+          "parametros_conexion": null
         }
       ]
     }

@@ -139,7 +139,8 @@ CREATE TABLE Instancia_DBMS (
     fecha_inicio TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     id_servidor INT NOT NULL REFERENCES Servidor(id_servidor) ON DELETE CASCADE,
     id_dbms INT NOT NULL REFERENCES DBMS(id_dbms),
-    id_estado_instancia INT NOT NULL REFERENCES Estado_General(id_estado)
+    id_estado_instancia INT NOT NULL REFERENCES Estado_General(id_estado),
+    parametros_conexion JSONB DEFAULT '{}'::jsonb
 );
 
 -- ------------------------------------------------------------------------------

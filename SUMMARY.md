@@ -31,10 +31,6 @@
 
 ### ❌ Funcionalidades Pendientes (Backlog)
 *   **Expiración de Respaldos**: Lógica para marcar como "Expirados" los registros de backup.
-*   **SSH Tunneling**: Soporte para Jump Servers (Bastión).
-
-### 🛠️ Oportunidades de Mejora (Optimización)
-*   **Logging Profesional**: Migrar prints a un sistema de logs rotativos.
 
 ## 📅 Fecha: 6 de Mayo, 2026 (Endpoint de Ping y Estabilidad en Docker)
 
@@ -125,8 +121,6 @@ Hemos concluido exitosamente el desarrollo del motor core de **Observabilidad y 
     *   Validación de endpoints de auditoría `/audit-logs/` para el registro de acciones de usuario y eventos de sistema.
 
 ### ❌ Funcionalidades Pendientes (Backlog)
-*   **SSH Tunneling**: Soporte para Jump Servers.
-*   **Logging Profesional**: Migración de `print` a sistema de logs rotativos.
 *   **Dashboard Integration**: Consumo del Live Cache y Alertas Recientes en el frontend.
 
 ---
@@ -163,8 +157,22 @@ Hemos concluido exitosamente el desarrollo del motor core de **Observabilidad y 
     *   **Trazabilidad y Verificación**: Auditoría del flujo en `docker logs "sgir_backend"`, confirmando la respuesta asíncrona del scheduler concurrente a nivel de inventario masivo con éxito (200 OK) en menos de 1.20 segundos.
 
 ---
-**Hash de Sesión:** `084b81ae-7424-434d-8eae-febac235f434`
+
+## 📅 Fecha: 23 de Mayo, 2026 (Integración Oracle Legacy y Pruebas Independientes)
+
+### ✅ Módulos Implementados (Hitos Críticos)
+1.  **Endpoints Independientes de Oracle (`/legacy` y `/no-legacy`)**:
+    *   **Oracle Legacy vía SSH**: Creación de `/test/db/oracle/legacy` para conectarse a Oracle 10g usando SSH, accediendo a `/home/oracle`, cargando `.bash_profile` y ejecutando `sqlplus` local en el servidor con el `ORACLE_SID` recuperado dinámicamente de la CMDB.
+    *   **Oracle No-Legacy vía TCP**: Creación de `/test/db/oracle/no-legacy` para pruebas directas en Oracle 19c usando Thin Mode y el `ORACLE_SID` dinámico de la CMDB.
+    *   **Ordenamiento de Rutas**: Reorganización de las rutas en el backend para priorizar las de Oracle específicas y evitar conflictos con la genérica `/test/db/{motor}` en FastAPI.
+2.  **Sourcing Completo de Entorno SSH**:
+    *   Integración del comando de entorno `cd /home/oracle && source .bash_profile` tanto en el endpoint de prueba legacy como en la recolección automática del fallback SSH en APScheduler (`oracle_monitoring_service.py`).
+3.  **Suite de Pruebas de Integración**:
+    *   **Test Endpoint Legacy (`test_oracle_legacy_endpoint.py`)**: Implementación de un test completo en `tests/m1` para validar la autenticación de administrador, alta del servidor legacy (`148.215.1.98`), registro de credenciales SSH/DB con SID personalizado, y la invocación del endpoint `/test/db/oracle/legacy`.
+
+---
+**Hash de Sesión:** `4c36773a-26ff-4258-a0b8-12fdb8f006df`
 
 ---
 ### 🏁 ¿Dónde nos quedamos?
-Hemos completado exitosamente la capa de observabilidad avanzada para bases de datos multi-motor e inventarios a escala. La API asíncrona y paralela de descubrimiento masivo está al 100% verificada con una suite de pruebas automatizada de alta escala, lista para integrarse de forma nativa en la UI.
+Hemos implementado con éxito el soporte híbrido nativo/SSH para Oracle (10g legacy y 19c moderno) con carga de perfiles completa, reordenamiento de endpoints FastAPI y una suite de pruebas de integración completa lista para ejecutar.
