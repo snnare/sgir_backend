@@ -126,8 +126,12 @@ CREATE TABLE Politica_de_Respaldo (
     id_politica INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nombre_politica VARCHAR(100) NOT NULL,
     descripcion TEXT,
+    expression_cron VARCHAR(100),
+    hora_ejecuccion TIME,
+    dias_semana VARCHAR(50),
     frecuencia_horas INT NOT NULL,
     retencion_dias INT NOT NULL,
+    script_path VARCHAR(512),
     id_tipo_respaldo INT NOT NULL REFERENCES Tipo_Respaldo(id_tipo_respaldo),
     id_estado_politica INT NOT NULL REFERENCES Estado_General(id_estado)
 );

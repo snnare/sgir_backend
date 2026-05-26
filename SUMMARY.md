@@ -176,3 +176,22 @@ Hemos concluido exitosamente el desarrollo del motor core de **Observabilidad y 
 ---
 ### 🏁 ¿Dónde nos quedamos?
 Hemos implementado con éxito el soporte híbrido nativo/SSH para Oracle (10g legacy y 19c moderno) con carga de perfiles completa, reordenamiento de endpoints FastAPI y una suite de pruebas de integración completa lista para ejecutar.
+
+## 📅 Fecha: 25 de Mayo, 2026 (Investigación y Propuesta de Mejora para el Ciclo de Vida de Respaldos)
+
+### ✅ Módulos Investigados
+1.  **Auditoría de Políticas de Respaldo**:
+    *   **Alineación Técnica**: Identificación de la necesidad de que la tabla `Politica_de_Respaldo` refleje fielmente el Crontab y los scripts `.sh` locales.
+    *   **Propuesta de Campos**: Inclusión de `expresion_cron`, `hora_ejecucion`, `dias_semana`, `script_path` y `gestiona_retencion_local` para permitir validación cruzada vía SSH.
+2.  **Rastreo y Gestión de Archivos de Respaldo**:
+    *   **Capacidad de Transferencia**: Propuesta para que la tabla `Respaldo` soporte el seguimiento de archivos físicos para su descarga o réplica a otros servidores.
+    *   **Propuesta de Campos**: Inclusión de `nombre_archivo`, `path_fisico_actual`, `ubicacion_actual` (Origen/Descargado/Replica) y `metadata_tecnica` (JSONB) para detalles específicos por motor.
+3.  **Verificación de Retención**:
+    *   Análisis de la lógica en `retention_manager.py` para asegurar que el marcado de registros "Expirados" sea consistente con la eliminación física (ya sea por SGIR o por script local).
+
+### ❌ Funcionalidades Pendientes (Backlog)
+*   **Migración de Modelos**: Aplicar los cambios de esquema propuestos a la base de datos y modelos de SQLAlchemy.
+*   **Módulo de Transferencia**: Implementar la lógica para descargar respaldos detectados vía SSH/SFTP.
+
+---
+**Hash de Sesión:** `02aab3db-eaaf-4424-8b24-e12b73abeb16`

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Numeric, Text, BigInteger
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Numeric, Text, BigInteger, Time
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.db.postgres.postgres_connection import Base
@@ -35,8 +35,12 @@ class PoliticaRespaldo(Base):
     id_politica = Column(Integer, primary_key=True, index=True)
     nombre_politica = Column(String(100), nullable=False)
     descripcion = Column(Text)
+    expression_cron = Column(String(100), nullable=True)
+    hora_ejecuccion = Column(Time, nullable=True)
+    dias_semana = Column(String(50), nullable=True)
     frecuencia_horas = Column(Integer, nullable=False)
     retencion_dias = Column(Integer, nullable=False)
+    script_path = Column(String(512), nullable=True)
     
     id_tipo_respaldo = Column(Integer, ForeignKey("tipo_respaldo.id_tipo_respaldo"), nullable=False)
     id_estado_politica = Column(Integer, ForeignKey("estado_general.id_estado"), nullable=False)

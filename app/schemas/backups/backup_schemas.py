@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, time
 from typing import Optional, List
 from decimal import Decimal
 
@@ -56,8 +56,12 @@ class RutaRespaldoResponse(RutaRespaldoBase):
 class PoliticaRespaldoBase(BaseModel):
     nombre_politica: str
     descripcion: Optional[str] = None
+    expression_cron: Optional[str] = None
+    hora_ejecuccion: Optional[time] = None
+    dias_semana: Optional[str] = None
     frecuencia_horas: int = Field(..., ge=1, description="Frecuencia en horas (mínimo 1)")
     retencion_dias: int = Field(..., ge=1, description="Días de retención (mínimo 1)")
+    script_path: Optional[str] = None
     id_tipo_respaldo: int
     id_estado_politica: int = 1
 
@@ -67,8 +71,12 @@ class PoliticaRespaldoCreate(PoliticaRespaldoBase):
 class PoliticaRespaldoUpdate(BaseModel):
     nombre_politica: Optional[str] = None
     descripcion: Optional[str] = None
+    expression_cron: Optional[str] = None
+    hora_ejecuccion: Optional[time] = None
+    dias_semana: Optional[str] = None
     frecuencia_horas: Optional[int] = None
     retencion_dias: Optional[int] = None
+    script_path: Optional[str] = None
     id_tipo_respaldo: Optional[int] = None
     id_estado_politica: Optional[int] = None
 
