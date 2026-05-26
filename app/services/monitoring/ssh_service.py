@@ -308,7 +308,19 @@ def run_integrated_file_discovery(db: Session, instancia_id: int, credencial_id:
                 if bd.nombre_base.lower() in file_path.lower():
                     asignacion = db.query(AsignacionPoliticaBD).filter(AsignacionPoliticaBD.id_base_datos == bd.id_base_datos).first()
                     if asignacion:
-                        nuevo_respaldo = Respaldo(id_base_datos=bd.id_base_datos, id_politica=asignacion.id_politica, id_credencial=credencial_id, id_ruta_respaldo=ruta_id, id_estado_ejecucion=4, tamano_mb=Decimal(str(round(size_bytes / (1024 * 1024), 2))), fecha_fin=datetime.now())
+                        nuevo_respaldo = Respaldo(
+                            id_base_datos=bd.id_base_datos,
+                            id_politica=asignacion.id_politica,
+                            id_credencial=credencial_id,
+                            id_estado_ejecucion=4,
+                            nombre_archivo=file_name,
+                            tamano_mb=Decimal(str(round(size_bytes / (1024 * 1024), 2))),
+                            path_fisico_origen=file_path,
+                            ubicacion_actual="Origen",
+                            ip_almacenado_actual=servidor.direccion_ip,
+                            path_fisico_actual=file_path,
+                            fecha_fin=datetime.now()
+                        )
                         db.add(nuevo_respaldo)
                         respaldos_creados += 1
                         break

@@ -120,13 +120,23 @@ class AsignacionPoliticaBDCreate(BaseModel):
 class RespaldoBase(BaseModel):
     fecha_inicio: Optional[datetime] = None
     fecha_fin: Optional[datetime] = None
+    fecha_descubrimiento: Optional[datetime] = None
+    
+    nombre_archivo: Optional[str] = None
     tamano_mb: Optional[Decimal] = None
     hash_integridad: Optional[str] = None
+    
+    path_fisico_origen: Optional[str] = None
+    ubicacion_actual: Optional[str] = "Origen"
+    ip_almacenado_actual: Optional[str] = None
+    path_fisico_actual: Optional[str] = None
+    
     id_base_datos: int
     id_politica: int
-    id_credencial: int
-    id_ruta_respaldo: int
+    id_credencial: Optional[int] = None
     id_estado_ejecucion: int # 4: Éxito, 5: Fallo
+    
+    metadata_tecnica: Optional[dict] = None
 
 class RespaldoCreate(RespaldoBase):
     pass

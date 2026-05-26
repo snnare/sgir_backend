@@ -321,17 +321,20 @@ class TestCrudInsert(unittest.TestCase):
         self.assertIsNotNone(self.ids["id_base_datos"])
         self.assertIsNotNone(self.ids["id_politica"])
         self.assertIsNotNone(self.ids["id_credencial"])
-        self.assertIsNotNone(self.ids["id_ruta_respaldo"])
         
         respaldo_payload = {
             "fecha_inicio": "2026-05-19T14:00:00Z",
             "fecha_fin": "2026-05-19T14:05:00Z",
+            "nombre_archivo": "test_backup.sql",
             "tamano_mb": 185.7,
             "hash_integridad": "5d41402abc4b2a76b9719d911017c592",
+            "path_fisico_origen": "/var/backups/test_backup.sql",
+            "ubicacion_actual": "Origen",
+            "ip_almacenado_actual": "127.0.0.1",
+            "path_fisico_actual": "/var/backups/test_backup.sql",
             "id_base_datos": self.ids["id_base_datos"],
             "id_politica": self.ids["id_politica"],
             "id_credencial": self.ids["id_credencial"],
-            "id_ruta_respaldo": self.ids["id_ruta_respaldo"],
             "id_estado_ejecucion": self.ids["id_estado"]
         }
         

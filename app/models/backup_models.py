@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Numeric, Text, BigInteger, Time
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import JSONB
 from app.db.postgres.postgres_connection import Base
 
 # --- Catálogos de Backup ---
@@ -59,14 +60,24 @@ class AsignacionPoliticaBD(Base):
 
 class Respaldo(Base):
     __tablename__ = "respaldo"
+    
     id_respaldo = Column(BigInteger, primary_key=True, index=True)
     fecha_inicio = Column(DateTime(timezone=True), server_default=func.now())
     fecha_fin = Column(DateTime(timezone=True), nullable=True)
-    tamano_mb = Column(Numeric(12, 2))
-    hash_integridad = Column(String(255))
+    fecha_descubrimiento = Column(DateTime(timezone=True), server_default=func.now())
+    
+    nombre_archivo = Column(String(255), nullable=True)
+    tamano_mb = Column(Numeric(12, 2), nullable=True)
+    hash_integridad = Column(String(255), nullable=True)
+    
+    path_fisico_origen = Column(String(512), nullable=True)
+    ubicacion_actual = Column(String(50), nullable=True, default="Origen")
+    ip_almacenado_actual = Column(String(50), nullable=True)
+    path_fisico_actual = Column(String(512), nullable=True)
     
     id_base_datos = Column(Integer, ForeignKey("base_de_datos.id_base_datos"), nullable=False)
     id_politica = Column(Integer, ForeignKey("politica_de_respaldo.id_politica"), nullable=False)
-    id_credencial = Column(Integer, ForeignKey("credencial_acceso.id_credencial"), nullable=False)
-    id_ruta_respaldo = Column(Integer, ForeignKey("ruta_respaldo.id_ruta"), nullable=False)
+    id_credencial = Column(Integer, ForeignKey("credencial_acceso.id_credencial"), nullable=True)
     id_estado_ejecucion = Column(Integer, ForeignKey("estado_general.id_estado"), nullable=False)
+    
+    metadata_tecnica = Column(JSONB, nullable=True, server_default='{}')
