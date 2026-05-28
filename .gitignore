@@ -1,2 +1,6 @@
 modelo-fisico.sql
 .env
+
+# Carpetas de plantillas y datos de ejemplo
+plantilla/
+plantillas/
