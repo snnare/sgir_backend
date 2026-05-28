@@ -1,0 +1,3 @@
+direccion_ip,descripcion_ruta,path,tipo_almacenamiento,estado
+192.168.12.10,Respaldo Diario MySQL,/data/respaldos,Local,Activo
+192.168.12.20,Respaldo Oracle RMAN,/u01/app/oracle/backups,NAS,Activo

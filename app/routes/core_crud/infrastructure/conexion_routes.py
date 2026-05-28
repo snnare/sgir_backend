@@ -29,21 +29,23 @@ def test_oracle_legacy_connection(payload: ConnectionTestRequest, db: Session = 
     from app.core.ssh_orchestrator import get_ssh_connection
     from app.core.security.encryption import decrypt_password
 
-    # 1. Buscar en BD si existe la instancia para obtener parametros_conexion (SID)
-    instancia_db = db.query(InstanciaDBMS).join(Servidor).filter(
-        Servidor.direccion_ip == ip,
-        InstanciaDBMS.puerto == puerto,
-        InstanciaDBMS.id_dbms == 4
-    ).first()
-
-    if not instancia_db:
+    # 1. Obtener SID desde el payload, o buscar en BD si existe la instancia para obtener parametros_conexion (SID)
+    sid = payload.oracle_sid
+    if not sid:
         instancia_db = db.query(InstanciaDBMS).join(Servidor).filter(
             Servidor.direccion_ip == ip,
+            InstanciaDBMS.puerto == puerto,
             InstanciaDBMS.id_dbms == 4
         ).first()
 
-    params = instancia_db.parametros_conexion or {} if (instancia_db and getattr(instancia_db, "parametros_conexion", None)) else {}
-    sid = params.get("sid") or "ORCL"
+        if not instancia_db:
+            instancia_db = db.query(InstanciaDBMS).join(Servidor).filter(
+                Servidor.direccion_ip == ip,
+                InstanciaDBMS.id_dbms == 4
+            ).first()
+
+        params = instancia_db.parametros_conexion or {} if (instancia_db and getattr(instancia_db, "parametros_conexion", None)) else {}
+        sid = params.get("sid") or "ORCL"
 
     # 2. Buscar servidor y credencial SSH activa para conectarse
     srv = db.query(Servidor).filter(Servidor.direccion_ip == ip, Servidor.id_estado_servidor == 1).first()
@@ -98,21 +100,23 @@ def test_oracle_no_legacy_connection(payload: ConnectionTestRequest, db: Session
 
     from app.models.infrastructure_models import InstanciaDBMS, Servidor
 
-    # 1. Buscar en BD si existe la instancia para obtener parametros_conexion (SID)
-    instancia_db = db.query(InstanciaDBMS).join(Servidor).filter(
-        Servidor.direccion_ip == ip,
-        InstanciaDBMS.puerto == puerto,
-        InstanciaDBMS.id_dbms == 4
-    ).first()
-
-    if not instancia_db:
+    # 1. Obtener SID desde el payload, o buscar en BD si existe la instancia para obtener parametros_conexion (SID)
+    sid = payload.oracle_sid
+    if not sid:
         instancia_db = db.query(InstanciaDBMS).join(Servidor).filter(
             Servidor.direccion_ip == ip,
+            InstanciaDBMS.puerto == puerto,
             InstanciaDBMS.id_dbms == 4
         ).first()
 
-    params = instancia_db.parametros_conexion or {} if (instancia_db and getattr(instancia_db, "parametros_conexion", None)) else {}
-    sid = params.get("sid") or "ORCL"
+        if not instancia_db:
+            instancia_db = db.query(InstanciaDBMS).join(Servidor).filter(
+                Servidor.direccion_ip == ip,
+                InstanciaDBMS.id_dbms == 4
+            ).first()
+
+        params = instancia_db.parametros_conexion or {} if (instancia_db and getattr(instancia_db, "parametros_conexion", None)) else {}
+        sid = params.get("sid") or "ORCL"
 
     # 2. Generar DSN dinámico usando SID
     dsn = oracledb.makedsn(ip, puerto, sid=sid)
@@ -165,7 +169,8 @@ def test_db_connection(motor: str, payload: ConnectionTestRequest):
             
         elif motor.lower() == "oracle":
             try:
-                dsn = oracledb.makedsn(ip, puerto, sid="ORCL") # Usamos ORCL por defecto
+                sid = payload.oracle_sid or "ORCL"
+                dsn = oracledb.makedsn(ip, puerto, sid=sid)
                 conn = oracledb.connect(user=usuario, password=password, dsn=dsn)
                 conn.close()
                 return {"status": "success", "message": "Conexión exitosa con Oracle"}

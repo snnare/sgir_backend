@@ -157,3 +157,11 @@ class BackupDiscoveryResult(BaseModel):
     tamano_encontrado_mb: Optional[Decimal] = None
     timestamp_verificacion: datetime = Field(default_factory=datetime.now)
     detalle: Optional[str] = None
+
+# --- DTO para Ruta de Respaldo Enriquecida ---
+class RutaRespaldoEnriquecidaResponse(BaseModel):
+    ip: str
+    path: str
+    descripcion: str
+    estado: str
+

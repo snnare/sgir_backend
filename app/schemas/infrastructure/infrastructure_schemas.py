@@ -171,6 +171,7 @@ class ConnectionTestRequest(BaseModel):
     puerto: Optional[int] = None
     usuario: str
     password: str
+    oracle_sid: Optional[str] = None
 
 class BaseDatosSearchResult(BaseModel):
     id_base_datos: int

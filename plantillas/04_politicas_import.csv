@@ -1,0 +1,3 @@
+nombre_politica,descripcion,expression_cron,hora_ejecuccion,dias_semana,frecuencia_horas,retencion_dias,script_path,tipo_respaldo,estado
+Politica_Diaria,Respaldo completo diario,0 2 * * *,02:00:00,Lunes-Domingo,24,30,/opt/scripts/backup_diario.sh,Completo,Activo
+Politica_Semanal,Respaldo incremental semanal,0 4 * * 0,04:00:00,Domingo,168,90,/opt/scripts/backup_semanal.sh,Incremental,Activo

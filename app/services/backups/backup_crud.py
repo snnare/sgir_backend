@@ -213,3 +213,27 @@ def get_historial_respaldos(db: Session, id_base_datos: Optional[int] = None) ->
     if id_base_datos:
         query = query.filter(Respaldo.id_base_datos == id_base_datos)
     return query.order_by(Respaldo.fecha_inicio.desc()).all()
+
+def get_rutas_respaldo_detalladas(db: Session) -> List[dict]:
+    """
+    Retorna todas las rutas de respaldo detalladas con IP del servidor, path, descripción y nombre del estado.
+    """
+    from app.models.user_models import UserStatus
+    from app.models.infrastructure_models import Servidor
+    
+    results = db.query(RutaRespaldo, Servidor, UserStatus).join(
+        Servidor, RutaRespaldo.id_servidor == Servidor.id_servidor
+    ).join(
+        UserStatus, RutaRespaldo.id_estado_ruta == UserStatus.id_estado
+    ).all()
+    
+    return [
+        {
+            "ip": srv.direccion_ip,
+            "path": ruta.path,
+            "descripcion": ruta.descripcion_ruta,
+            "estado": estado.nombre_estado
+        }
+        for ruta, srv, estado in results
+    ]
+

@@ -1,0 +1,3 @@
+nombre_servidor,direccion_ip,es_legacy,descripcion,nivel_criticidad,estado,particiones,nombre_dbms,nombre_instancia,puerto_db,usuario,password,tipo_acceso
+srv-mysql-01,192.168.12.10,false,Servidor de Base de Datos MySQL Principal,Medio,Activo,"/, /var, /data",MySQL,instancia_prod,3306,root,MySQLPass123,Base de Datos
+srv-oracle-01,192.168.12.20,true,Servidor Oracle Enterprise Legacy,Crítico,Activo,"/, /u01",Oracle,ORCL,1521,oracle,OraclePass123,SSH
