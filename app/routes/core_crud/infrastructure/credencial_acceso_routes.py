@@ -98,6 +98,29 @@ def read_credentials_by_server(servidor_id: int, db: Session = Depends(get_pg_db
     return creds
 
 
+@router.get("/servidor/ip/{direccion_ip}", response_model=List[CredencialFullResponse])
+def read_credentials_by_server_ip(direccion_ip: str, db: Session = Depends(get_pg_db)):
+    """Obtiene las credenciales asociadas a un servidor mediante su dirección IP."""
+    from app.models.infrastructure_models import Servidor
+    servidor = db.query(Servidor).filter(Servidor.direccion_ip == direccion_ip).first()
+    if not servidor:
+        raise HTTPException(status_code=404, detail=f"Servidor con IP '{direccion_ip}' no encontrado")
+    
+    creds = infrastructure_crud.get_credenciales_by_servidor(db, servidor.id_servidor)
+    for c in creds:
+        c.servidor_nombre = c.servidor.nombre_servidor
+    return creds
+
+
+@router.get("/{credencial_id}", response_model=CredencialResponse)
+def read_credential_by_id(credencial_id: int, db: Session = Depends(get_pg_db)):
+    """Obtiene una credencial específica por su ID."""
+    db_cred = infrastructure_crud.get_credencial(db, credencial_id)
+    if not db_cred:
+        raise HTTPException(status_code=404, detail="Credencial no encontrada")
+    return db_cred
+
+
 @router.put("/{credencial_id}", response_model=CredencialResponse)
 def update_credential(credencial_id: int, credencial_update: CredencialUpdate, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
     db_cred = infrastructure_crud.update_credencial(db, credencial_id, credencial_update)

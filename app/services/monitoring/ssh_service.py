@@ -278,13 +278,31 @@ def run_integrated_file_discovery(db: Session, instancia_id: int, credencial_id:
         return {"error": f"La ruta {ruta.path} no pertenece al servidor {servidor.nombre_servidor}"}
 
     dbms = db.query(DBMS).filter(DBMS.id_dbms == instancia.id_dbms).first()
-    extension_map = {"PostgreSQL": ".sql", "MySQL": ".sql", "Oracle Database": ".dmp", "MongoDB": ".archive"}
-    ext = extension_map.get(dbms.nombre_dbms, ".sql")
+    # Mapeo de extensiones por motor (RDBMS) incluyendo formatos comprimidos/empaquetados
+    extension_map = {
+        "PostgreSQL": [".sql", ".sql.gz", ".tar", ".zip", ".gz"],
+        "MySQL": [".sql", ".sql.gz", ".tar", ".zip", ".gz"],
+        "Oracle Database": [".dmp", ".dmp.gz", ".tar", ".zip", ".gz"],
+        "MongoDB": [".archive", ".tar.gz", ".tar", ".zip", ".gz"]
+    }
+    exts = extension_map.get(dbms.nombre_dbms, [".sql"])
     client = None
     try:
         # Discovery suele ser una tarea puntual, pero podemos usar el pool si el servidor ya está bajo monitoreo
         client = get_ssh_connection(servidor, credencial, use_pool=True)
-        found_files = discovery_provider.search_files_legacy(client, ruta.path, ext) if servidor.es_legacy else discovery_provider.search_files_modern(client, ruta.path, ext)
+        
+        found_files_list = []
+        for ext in exts:
+            files = discovery_provider.search_files_legacy(client, ruta.path, ext) if servidor.es_legacy else discovery_provider.search_files_modern(client, ruta.path, ext)
+            found_files_list.extend(files)
+            
+        # Deduplicar archivos encontrados por su ruta física
+        seen_paths = set()
+        found_files = []
+        for f in found_files_list:
+            if f["path"] not in seen_paths:
+                seen_paths.add(f["path"])
+                found_files.append(f)
         databases = db.query(BaseDeDatos).filter(BaseDeDatos.id_instancia == instancia_id).all()
         respaldos_creados = 0
         detalles_archivos = []
@@ -476,3 +494,93 @@ def run_cron_discovery(db: Session, servidor_id: int, credencial_id: int):
         }
     except Exception as e:
         return {"error": f"Error en descubrimiento de cron: {str(e)}"}
+
+
+def run_bulk_backups_discovery(db: Session, user_id: int):
+    """
+    Auto-descubrimiento masivo de respaldos físicos.
+    Busca todas las rutas de respaldo registradas y realiza el escaneo
+    por cada servidor e instancia DBMS vinculada, registrando de forma inteligente
+    las ejecuciones encontradas.
+    """
+    rutas = db.query(RutaRespaldo).all()
+    
+    summary = {
+        "total_rutas_procesadas": 0,
+        "total_respaldos_registrados": 0,
+        "servidores_escaneados": [],
+        "errores": []
+    }
+    
+    # Tracking de servidores procesados por IP para el resumen
+    processed_servers = set()
+    
+    for ruta in rutas:
+        servidor = db.query(Servidor).filter(Servidor.id_servidor == ruta.id_servidor).first()
+        if not servidor:
+            continue
+            
+        # 1. Obtener la credencial SSH activa del servidor
+        credencial = db.query(CredencialAcceso).filter(
+            CredencialAcceso.id_servidor == servidor.id_servidor,
+            CredencialAcceso.id_tipo_acceso == 1,  # Acceso SSH
+            CredencialAcceso.id_estado_credencial == 1  # Activa
+        ).first()
+        
+        if not credencial:
+            summary["errores"].append({
+                "servidor": servidor.nombre_servidor,
+                "ruta": ruta.path,
+                "error": "No cuenta con credenciales SSH activas"
+            })
+            continue
+            
+        # 2. Buscar todas las instancias registradas en este servidor
+        instancias = db.query(InstanciaDBMS).filter(InstanciaDBMS.id_servidor == servidor.id_servidor).all()
+        if not instancias:
+            summary["errores"].append({
+                "servidor": servidor.nombre_servidor,
+                "ruta": ruta.path,
+                "error": "No se encontraron instancias DBMS registradas"
+            })
+            continue
+            
+        summary["total_rutas_procesadas"] += 1
+        if servidor.direccion_ip not in processed_servers:
+            processed_servers.add(servidor.direccion_ip)
+            summary["servidores_escaneados"].append(servidor.direccion_ip)
+            
+        # 3. Ejecutar el descubrimiento por cada instancia
+        for instancia in instancias:
+            try:
+                # Reutiliza la lógica de descubrimiento por instancia
+                res = run_integrated_file_discovery(db, instancia.id_instancia, credencial.id_credencial, ruta.id_ruta, user_id)
+                if isinstance(res, dict) and "error" in res:
+                    summary["errores"].append({
+                        "servidor": servidor.nombre_servidor,
+                        "instancia": instancia.nombre_instancia,
+                        "ruta": ruta.path,
+                        "error": res["error"]
+                    })
+                else:
+                    summary["total_respaldos_registrados"] += res.get("registros_respaldo_creados", 0)
+            except Exception as e:
+                summary["errores"].append({
+                    "servidor": servidor.nombre_servidor,
+                    "instancia": instancia.nombre_instancia,
+                    "ruta": ruta.path,
+                    "error": str(e)
+                })
+                
+    # Agregar un registro de auditoría global
+    bitacora = Bitacora(
+        entidad_afectada="Respaldo (Global Sync)",
+        id_entidad=user_id,
+        descripcion_evento=f"Sync global de respaldos finalizado. Rutas: {summary['total_rutas_procesadas']}, Respaldos creados: {summary['total_respaldos_registrados']}.",
+        id_usuario=user_id,
+        id_tipo_evento=6  # Descubrimiento / Tarea del sistema
+    )
+    db.add(bitacora)
+    db.commit()
+    
+    return summary

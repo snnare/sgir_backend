@@ -60,6 +60,9 @@ Las rutas de la API están estructuradas de forma organizada bajo el prefijo pri
   * `GET` `/bases-de-datos/servidor/{servidor_id}`
   * `GET` `/bases-de-datos/search` (Búsqueda enriquecida por nombre)
   * `GET` `/bases-de-datos/filter` (Filtrado por nombre e IP del servidor)
+* **Reportes Globales (Públicos):**
+  * `GET` `/assets/pdf` (Generar reporte PDF de inventario de bases de datos con diseño de la UAEMex)
+  * `GET` `/assets/csv` (Generar reporte CSV del inventario en formato Excel con BOM)
 * **Credenciales y Pruebas de Conexión:**
   * `POST, GET, PUT, DELETE` `/credenciales/`
   * `GET` `/credenciales/servidor/{servidor_id}`
@@ -212,3 +215,11 @@ Se reformuló la tabla de históricos de ejecución para dotar a la plataforma d
 *   **Validación de API:** Se actualizó `RespaldoBase` en `backup_schemas.py` sincronizando los nuevos campos de forma opcional y removiendo la ruta estática obsoleta.
 *   **Lógica de Descubrimiento SSH:** Se modificó la función de descubrimiento asíncrono `run_integrated_file_discovery` en `ssh_service.py` para construir e insertar las instancias de `Respaldo` mapeando automáticamente los archivos encontrados en red a este nuevo diseño dinámico.
 *   **Pruebas de Integración:** Se adaptó el payload de la suite de pruebas `test_11_insert_respaldo` en `tests/crud/test_insert.py` para garantizar retrocompatibilidad.
+
+### 3️⃣ Reportes de Inventario Global de Activos (30 de Mayo, 2026)
+Se diseñaron e implementaron endpoints públicos y no autenticados para permitir a los usuarios descargar reportes de inventario global consolidados:
+*   **Endpoint PDF (`GET /sgir/v1/assets/pdf`):** Genera dinámicamente un reporte formal en formato A4 con WeasyPrint y Jinja2, utilizando la identidad institucional de la UAEMex (colores verde y oro, celdas limpias, badges temáticos por RDBMS con MySQL en azul, MongoDB en verde y Oracle en rojo). Se eliminó la sección rígida "Tipo de Formato" del panel de metadatos, configurando un `colspan="3"` en el campo de usuario generador. Dispara sincronización en vivo (`run_bulk_inventory_sync`) en cada llamado con fallback automático.
+*   **Endpoint CSV (`GET /sgir/v1/assets/csv`):** Exporta el inventario de bases de datos completo codificado en `utf-8-sig` (con BOM) para asegurar compatibilidad instantánea y correcta visualización de acentos y caracteres especiales en Microsoft Excel.
+*   **Infraestructura y Docker:** Se añadieron y configuraron en el entorno virtual y Docker (`pyproject.toml` / `uv.lock`) las librerías `weasyprint`, `jinja2` y `markupsafe`, instalando las dependencias nativas del compilador de PDFs (Cairo, Pango, GObject) dentro de la imagen de producción `sgir-backend`.
+*   **Mapeo y Validación Relacional:** Se verificó la consistencia relacional de la tabla `Politica_de_Respaldo` (`modelo-logico.sql`) con los esquemas Pydantic y el ORM de SQLAlchemy, garantizando coincidencia absoluta en campos complejos (incluyendo el mapeo exitoso de `hora_ejecuccion`).
+

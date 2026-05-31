@@ -76,6 +76,19 @@ def discover_server_backups(
         raise HTTPException(status_code=404, detail=result["error"])
     return result
 
+
+@m3_router.post("/discover-all-backups")
+def discover_all_backups(
+    db: Session = Depends(get_pg_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Inicia un auto-descubrimiento global de respaldos en todos los servidores que tengan
+    al menos una ruta de respaldo física asociada.
+    """
+    from app.services.monitoring.ssh_service import run_bulk_backups_discovery
+    return run_bulk_backups_discovery(db, current_user.id_usuario)
+
 @m2_router.get("/summary/{servidor_id}")
 def get_server_storage_summary(servidor_id: int, db: Session = Depends(get_pg_db)):
     """

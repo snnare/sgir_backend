@@ -8,51 +8,52 @@ Este documento registra los avances, decisiones técnicas y hallazgos realizados
 *   **Backend:** FastAPI (Python 3.14) + SQLAlchemy 2.0.
 *   **Base de Datos:** PostgreSQL 16 (CMDB y Transaccional).
 *   **Seguridad:** Encriptación AES-256 para credenciales y OAuth2 para acceso.
+*   **Motor de Reportes:** WeasyPrint (PDF) + CSV dinámico con UTF-8-BOM.
 *   **DevOps:** Dockerizado, gestión de dependencias con `uv` y orquestación de tareas con APScheduler.
 
 ---
 
-## 🚀 Logros de la Sesión Actual
+## 🚀 Logros de la Sesión Actual (Reportes de Inventario & Validación de Esquemas)
 
-### 1. Migración y Adaptación de Inventario 2025
-*   **Procesamiento de Datos:** Adaptamos el archivo maestro `ListaServer2025.csv` al formato de importación masiva de SGIR.
-*   **Limpieza Inteligente:** 
-    *   Se eliminaron servidores Windows (fuera del alcance actual).
-    *   Se extrajeron credenciales exclusivas de **SSH** ignorando las de DB como se solicitó.
-    *   Se activó el flag `es_legacy` automáticamente para sistemas RHEL 4/5 y similares.
-*   **Generación de Plantillas:** Los archivos resultantes se organizaron en `plantillas/adaptados_2025/` cubriendo los 5 pasos del flujo de importación.
+### 1. Endpoints Públicos de Reportes Consolidados
+*   **PDF (`GET /sgir/v1/assets/pdf`):**
+    *   Endpoint público y sin autenticación que compila un reporte A4 estructurado.
+    *   Dispara automáticamente el auto-descubrimiento concurrente de bases de datos (`run_bulk_inventory_sync`) con fallback automático a la caché de base de datos local si no hay red, garantizando disponibilidad y frescura.
+    *   Genera e inyecta el protocolo de activos locales de la DTIC (como el logotipo y favicon corporativo usando rutas locales `file://`).
+*   **CSV (`GET /sgir/v1/assets/csv`):**
+    *   Endpoint público que devuelve el inventario en formato CSV en crudo.
+    *   Codificado en **`utf-8-sig` (con BOM)** para permitir la apertura inmediata en Microsoft Excel sin corrupciones de caracteres o acentos en nombres de bases de datos de la UAEMex.
 
-### 2. Sincronización de Documentación de API
-*   **Actualización de `routes.md`:** Se detectó que los endpoints de importación masiva (`/import-bulk`) para Rutas, Bases de Datos, Políticas y Asignaciones no estaban documentados.
-*   **Integridad:** Se agregaron las especificaciones técnicas (métodos, servicios y payloads) de estos 4 endpoints faltantes, logrando un mapa de rutas 100% fiel al código fuente.
+### 2. Diseño del Reporte Formal (Identidad UAEMex / DTIC)
+*   **Diseño Visual:** Colores forest green (`#004b36`) y dorado/oro (`#b38628`) oficiales.
+*   **Flexibilidad:**
+    *   Las direcciones IP se repiten de forma explícita para hosts con múltiples bases de datos.
+    *   Diseño responsivo de badges decorativos según el motor de base de datos: MySQL (azul pastel), MongoDB (verde suave), Oracle (rojo pastel) con bordes izquierdos vibrantes y subrayado sutil.
+    *   Remoción del metadato rígido **"Tipo de Formato: Inventario Global de Activos (A4)"** del bloque de cabecera.
+    *   Se implementó un `colspan="3"` en el campo **"Generado por Usuario"** para unificar visualmente el panel de información técnica del reporte.
 
-### 3. Fortalecimiento del Control de Versiones
-*   **Protección de Datos:** Se actualizó el archivo `.gitignore` para excluir las carpetas `plantilla/` y `plantillas/`.
-*   **Sincronización:** Se realizó el commit y push de estas reglas para evitar la exposición accidental de archivos de configuración o datos de infraestructura en el repositorio remoto.
+### 3. Stack DevOps e Infraestructura PDF
+*   **Librerías Incorporadas:** `weasyprint`, `jinja2` y `markupsafe` agregadas de forma segura mediante `uv add`, actualizando `pyproject.toml` y `uv.lock`.
+*   **Reconstrucción de Imagen Docker:** Se reconstruyó satisfactoriamente la imagen `sgir-backend` tras instalar dependencias nativas del compilador de PDF en la capa de runtime (incluyendo `libpango-1.0-0`, `libcairo2`, `libglib2.0-0`, etc.).
 
-### 4. Auditoría y Documentación de Importación Masiva y CMDB
-*   **Mapeo de Rutas de Servidores e Importaciones:** Se realizó una revisión técnica de `routes.md` enfocada en los endpoints de servidores y de importación masiva (`import-bulk`), documentando sus métodos HTTP, payloads (Body JSON/CSV) y flujos lógicos asociados.
-*   **Ingeniería Inversa de `servidores/import-bulk`:** Se auditó a nivel de código el servicio de importación en `import_service.py` (`process_infrastructure_csv`), mapeando de extremo a extremo las fases de traducción de catálogos en memoria, mitigación de duplicidad lógica, registro dinámico de particiones, creación de instancias DBMS y encriptado seguro AES-256 de credenciales.
+### 4. Mapeo Relacional de Respaldos e Integridad
+*   **Validación:** Se auditó y comprobó de extremo a extremo la concordancia de la tabla `Politica_de_Respaldo` (`modelo-logico.sql`) con los modelos ORM de SQLAlchemy (`backup_models.py`) y Pydantic (`backup_schemas.py`).
+*   **Consistencia Ortográfica:** Se validó que el campo con el nombre `hora_ejecuccion` (typo con doble "c") está perfectamente alineado entre la base física, el código del modelo y los validadores de API.
 
 ---
 
-## 🔍 Hallazgos Técnicos y Auditoría de Lógica
+## 🔍 Hallazgos Técnicos y Decisiones de Diseño
 
-### Error Crítico Detectado: Gestión de Transacciones
-*   **Problema:** Se identificó que las funciones en `import_service.py` realizan un `db.rollback()` dentro del bucle de lectura del CSV ante cualquier error de fila.
-*   **Impacto:** Un solo error en una fila (ej. fila 50 de 100) provoca la pérdida de todo el progreso anterior y aborta la transacción de PostgreSQL, impidiendo procesar las filas restantes.
-*   **Acción Requerida:** Refactorizar los importadores para usar `nested transactions` (SAVEPOINTS) y asegurar una verdadera tolerancia a fallos parciales.
+### Resoluciones en Renderizado
+*   **Rutas Locales de Recursos en Docker:** Al renderizar WeasyPrint dentro del contenedor de Docker, el uso de paths de archivos relativos o URLs web del logo fallaba. Se solucionó obteniendo la ruta física absoluta de la carpeta de assets estáticos e inyectándola con el protocolo `file://` en la plantilla de Jinja2.
+*   **Codificación UTF-8-BOM en Excel:** Los navegadores en Linux descargan CSV de forma nativa en UTF-8 puro, pero Excel en Windows a menudo corrompe caracteres acentuados. El uso explícito de `utf-8-sig` inyecta la firma en los primeros bytes del archivo, forzando a Excel a decodificar correctamente.
 
 ---
 
 ## 🛠️ Mejoras Pendientes / Próximos Pasos
 
-### 1. Corrección de Integridad (Prioridad Alta)
-*   Implementar el manejo de transacciones anidadas en `import_service.py` para permitir que el sistema guarde las filas correctas y solo reporte las fallidas sin detener el proceso.
+### 1. Robustez de Conexión
+*   Asegurar que los fallos temporales de red en el sincronizador no demoren la descarga de PDFs; ajustar el timeout de respuesta del auto-descubrimiento en el endpoint `/assets/pdf`.
 
-### 2. Evolución del Importador de Infraestructura
-*   **Flags de Monitoreo:** Modificar el CSV de servidores y la lógica de `process_infrastructure_csv` para incluir las columnas `monitoreo_host` y `monitoreo_db`, permitiendo importar activos ya activados.
-*   **Normalización de DBMS:** Implementar una lógica de búsqueda más flexible para el catálogo de motores (ej. que "MySQL" mapee automáticamente a "MySQL 8.x").
-
-### 3. Validación y Robustez
-*   Agregar pre-validación de formatos (IP, puertos, rutas) usando los esquemas Pydantic existentes antes de intentar la persistencia en base de datos.
+### 2. Paginación de Impresión (Estilos CSS Paged)
+*   Optimizar los saltos de página (`page-break-inside: avoid`) en la tabla en caso de que el inventario real crezca a cientos de bases de datos para evitar que los badges de DBMS queden cortados entre hojas.
