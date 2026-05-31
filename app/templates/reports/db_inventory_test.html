@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Reporte de Prueba (40 DBs) - Inventario de Bases de Datos - SGIR</title>
+    <link rel="shortcut icon" type="image/png" href="../../static/assets/favicon.png">
+    <style>
+        /* --- Paleta de Colores UAEMex --- */
+        :root {
+            --uaem-green: #004b36;         /* Verde Oscuro Institucional */
+            --uaem-green-medium: #0e634a;  /* Verde Medio */
+            --uaem-green-light: #f2f9f6;   /* Verde muy claro para filas cebra */
+            --uaem-green-soft: #e1efe9;    /* Verde suave para contenedores */
+            --uaem-gold: #b38628;          /* Oro/Dorado Institucional (con contraste para lectura) */
+            --uaem-gold-light: #fcf8ee;     /* Dorado muy claro */
+            --text-dark: #111827;          /* Gris oscuro casi negro */
+            --text-normal: #374151;        /* Gris principal */
+            --text-muted: #6b7280;         /* Gris atenuado */
+            --border-light: #e5e7eb;       /* Gris para bordes */
+        }
+
+        /* --- Ajuste de Impresión A4 Profesional --- */
+        @page {
+            size: A4;
+            margin: 20mm 15mm 20mm 15mm;
+            @bottom-left {
+                content: "SGIR | Sistema de Gestión de Infraestructura y Respaldos";
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                font-size: 7.5pt;
+                color: var(--text-muted);
+                border-top: 1px solid var(--border-light);
+                padding-top: 5px;
+                width: 100%;
+            }
+            @bottom-right {
+                content: "Página " counter(page) " de " counter(pages);
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                font-size: 7.5pt;
+                color: var(--text-muted);
+                border-top: 1px solid var(--border-light);
+                padding-top: 5px;
+            }
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: var(--text-normal);
+            margin: 0;
+            padding: 0;
+            font-size: 9.5pt;
+            line-height: 1.45;
+            -webkit-print-color-adjust: exact;
+        }
+
+        /* --- Estilos para previsualización interactiva en Navegador --- */
+        @media screen {
+            body {
+                background-color: #f3f4f6;
+                padding: 40px 0;
+            }
+            .page-container {
+                background-color: #ffffff;
+                width: 210mm;
+                min-height: 297mm; /* Permite crecer dinámicamente según las filas */
+                margin: 0 auto;
+                padding: 20mm 15mm;
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+                box-sizing: border-box;
+                border-radius: 6px;
+                position: relative;
+                padding-bottom: 25mm; /* Margen inferior para pie simulado */
+            }
+            .preview-banner {
+                background-color: #004b36;
+                color: #ffffff;
+                width: 210mm;
+                margin: 0 auto 15px auto;
+                padding: 12px 20px;
+                border-radius: 4px;
+                font-size: 9pt;
+                text-align: center;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                line-height: 1.5;
+                border-bottom: 3px solid #b38628;
+            }
+            .preview-footer {
+                position: absolute;
+                bottom: 10mm;
+                left: 15mm;
+                right: 15mm;
+                border-top: 1px solid var(--border-light);
+                padding-top: 8px;
+                display: flex;
+                justify-content: space-between;
+                font-size: 7.5pt;
+                color: var(--text-muted);
+            }
+        }
+
+        @media print {
+            .preview-banner {
+                display: none;
+            }
+            .preview-footer {
+                display: none; /* Se oculta para usar el pie dinámico nativo de WeasyPrint */
+            }
+        }
+
+        /* --- Encabezado UAEMex / SGIR / DTIC --- */
+        .header-section {
+            border-bottom: 4px solid var(--uaem-green);
+            padding-bottom: 12px;
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .header-decorator {
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 150px;
+            height: 4px;
+            background-color: var(--uaem-gold);
+        }
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: middle;
+        }
+
+        .title-container h1 {
+            color: var(--uaem-green);
+            font-size: 18pt;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+        }
+
+        .title-container .dtic-label {
+            color: var(--uaem-gold);
+            font-size: 9pt;
+            font-weight: 700;
+            margin: 4px 0 0 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .title-container .university-label {
+            color: var(--text-muted);
+            font-size: 8pt;
+            font-weight: 600;
+            margin: 2px 0 0 0;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+        }
+
+        .logo-container {
+            text-align: right;
+        }
+
+        .logo-img {
+            max-height: 52px;
+            vertical-align: middle;
+        }
+
+        /* --- Panel de Información del Reporte (Metadatos) --- */
+        .info-panel {
+            background-color: var(--uaem-green-light);
+            border: 1px solid var(--uaem-green-soft);
+            border-left: 5px solid var(--uaem-green);
+            border-radius: 4px;
+            padding: 12px 18px;
+            margin-bottom: 30px;
+        }
+
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .info-table td {
+            border: none;
+            padding: 3px 0;
+            font-size: 8.5pt;
+            vertical-align: middle;
+        }
+
+        .info-label {
+            font-weight: 700;
+            color: var(--uaem-green);
+            width: 18%;
+        }
+
+        .info-value {
+            color: var(--text-dark);
+            width: 32%;
+        }
+
+        /* --- Contenedor e Indicador de Resumen --- */
+        .summary-badge-container {
+            margin-bottom: 15px;
+            text-align: right;
+        }
+        
+        .summary-badge {
+            display: inline-block;
+            background-color: var(--uaem-green-soft);
+            color: var(--uaem-green);
+            font-size: 8pt;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--uaem-green-medium);
+        }
+
+        /* --- Tabla de Datos del Inventario --- */
+        .inventory-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            page-break-inside: auto;
+        }
+
+        .inventory-table tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+
+        .inventory-table th {
+            background-color: var(--uaem-green);
+            color: #ffffff;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 8pt;
+            letter-spacing: 0.8px;
+            padding: 11px 14px;
+            border: 1px solid var(--uaem-green);
+            text-align: left;
+        }
+
+        .inventory-table th.align-right,
+        .inventory-table td.align-right {
+            text-align: right;
+        }
+
+        .inventory-table td {
+            padding: 9px 14px;
+            border: 1px solid var(--border-light);
+            font-size: 8.5pt;
+            vertical-align: middle;
+        }
+
+        /* Filas Cebra */
+        .inventory-table tbody tr:nth-child(even) {
+            background-color: var(--uaem-green-light);
+        }
+
+        /* Estilo para las Direcciones IP */
+        .ip-address {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 700;
+            color: var(--text-dark);
+            letter-spacing: -0.2px;
+        }
+
+        /* --- Badges de Motores de Base de Datos --- */
+        .db-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            font-size: 7.5pt;
+            font-weight: 800;
+            border-radius: 3px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+
+        /* MySQL: Azul pastel con borde izquierdo azul vibrante */
+        .db-mysql {
+            background-color: #f0f6ff;
+            color: #1e40af;
+            border-left: 3px solid #3b82f6;
+            border-bottom: 1px solid #dbeafe;
+        }
+
+        /* MongoDB: Verde suave con borde izquierdo verde vibrante */
+        .db-mongodb {
+            background-color: #f0fdf4;
+            color: #166534;
+            border-left: 3px solid #22c55e;
+            border-bottom: 1px solid #dcfce7;
+        }
+
+        /* Oracle: Rojo pastel con borde izquierdo rojo vibrante */
+        .db-oracle {
+            background-color: #fef2f2;
+            color: #991b1b;
+            border-left: 3px solid #ef4444;
+            border-bottom: 1px solid #fee2e2;
+        }
+
+        /* Genérico */
+        .db-generic {
+            background-color: #f9fafb;
+            color: #374151;
+            border-left: 3px solid #9ca3af;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        /* --- Fila de Totales Generales --- */
+        .total-row {
+            background-color: var(--uaem-gold-light) !important;
+            font-weight: bold;
+        }
+
+        .total-row td {
+            border-top: 2px solid var(--uaem-gold);
+            border-bottom: 2px solid var(--uaem-gold);
+            color: var(--uaem-green);
+            font-size: 9pt;
+            font-weight: 700;
+            padding: 12px 14px;
+        }
+
+        .total-label {
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Banner informativo de previsualización -->
+    <div class="preview-banner">
+        🎓 <strong>Archivo de Prueba - DTIC UAEMex (A4):</strong> Este archivo simula el reporte compilado final con datos reales de la base, haciendo referencia directa al logotipo e icono de la <strong>DTIC</strong>. Presiona <code>Ctrl + P</code> para ver la fidelidad de impresión o convertir a PDF.
+    </div>
+
+    <!-- Contenedor que simula la página A4 en pantalla -->
+    <div class="page-container">
+        
+        <!-- Encabezado UAEMex / SGIR / DTIC -->
+        <div class="header-section">
+            <table class="header-table">
+                <tr>
+                    <td class="title-container">
+                        <h1>Inventario de Bases de Datos</h1>
+                        <div class="dtic-label">Dirección de Tecnologías de la Información y Comunicaciones</div>
+                        <div class="university-label">Universidad Autónoma del Estado de México</div>
+                    </td>
+                    <td class="logo-container">
+                        <img class="logo-img" src="../../static/assets/logo_uaemex.png" alt="DTIC UAEMex Logo">
+                    </td>
+                </tr>
+            </table>
+            <div class="header-decorator"></div>
+        </div>
+
+        <!-- Panel de Información del Reporte -->
+        <div class="info-panel">
+            <table class="info-table">
+                <tr>
+                    <td class="info-label">Sistema Originador:</td>
+                    <td class="info-value">SGIR Backend v1.0 (SRE Observability)</td>
+                    <td class="info-label">Fecha de Generación:</td>
+                    <td class="info-value">2026-05-30 18:45:00</td>
+                </tr>
+                <tr>
+                    <td class="info-label">Generado por Usuario:</td>
+                    <td class="info-value" colspan="3">M. en C. Ángel Ríos Pavón</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Indicador de Resumen superior -->
+        <div class="summary-badge-container">
+            <span class="summary-badge">
+                40 Bases de Datos Sincronizadas
+            </span>
+        </div>
+
+        <!-- Tabla de Datos con 40 elementos de Prueba -->
+        <table class="inventory-table">
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Dirección IP / Host</th>
+                    <th style="width: 25%;">Motor DBMS</th>
+                    <th style="width: 35%;">Nombre de Base de Datos</th>
+                    <th style="width: 15%; text-align: right;">Tamaño Físico</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Servidor 1: MySQL 8.0 (8 BDs) -->
+                <tr><td class="ip-address">192.168.2.10</td><td><span class="db-badge db-mysql">MySQL 8.0.32</span></td><td>sgir_production</td><td class="align-right" style="font-weight: 700;">350.25 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.10</td><td><span class="db-badge db-mysql">MySQL 8.0.32</span></td><td>sgir_audit</td><td class="align-right" style="font-weight: 700;">140.50 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.10</td><td><span class="db-badge db-mysql">MySQL 8.0.32</span></td><td>sgir_catalog</td><td class="align-right" style="font-weight: 700;">45.20 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.10</td><td><span class="db-badge db-mysql">MySQL 8.0.32</span></td><td>sgir_auth</td><td class="align-right" style="font-weight: 700;">12.80 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.10</td><td><span class="db-badge db-mysql">MySQL 8.0.32</span></td><td>sgir_session_store</td><td class="align-right" style="font-weight: 700;">89.15 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.10</td><td><span class="db-badge db-mysql">MySQL 8.0.32</span></td><td>sgir_metrics_cache</td><td class="align-right" style="font-weight: 700;">210.40 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.10</td><td><span class="db-badge db-mysql">MySQL 8.0.32</span></td><td>sgir_test_suite</td><td class="align-right" style="font-weight: 700;">5.30 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.10</td><td><span class="db-badge db-mysql">MySQL 8.0.32</span></td><td>sgir_backup_meta</td><td class="align-right" style="font-weight: 700;">78.90 MB</td></tr>
+
+                <!-- Servidor 2: MySQL 5.7 Legacy (5 BDs) -->
+                <tr><td class="ip-address">192.168.2.11</td><td><span class="db-badge db-mysql">MySQL 5.7.42</span></td><td>legacy_billing</td><td class="align-right" style="font-weight: 700;">412.50 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.11</td><td><span class="db-badge db-mysql">MySQL 5.7.42</span></td><td>legacy_crm</td><td class="align-right" style="font-weight: 700;">820.10 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.11</td><td><span class="db-badge db-mysql">MySQL 5.7.42</span></td><td>legacy_inventory</td><td class="align-right" style="font-weight: 700;">155.40 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.11</td><td><span class="db-badge db-mysql">MySQL 5.7.42</span></td><td>legacy_support</td><td class="align-right" style="font-weight: 700;">48.90 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.11</td><td><span class="db-badge db-mysql">MySQL 5.7.42</span></td><td>legacy_archive_2024</td><td class="align-right" style="font-weight: 700;">2,150.00 MB</td></tr>
+
+                <!-- Servidor 3: MongoDB 6.0 (8 BDs) -->
+                <tr><td class="ip-address">192.168.2.15</td><td><span class="db-badge db-mongodb">MongoDB 6.0.5</span></td><td>observability_logs</td><td class="align-right" style="font-weight: 700;">1,420.80 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.15</td><td><span class="db-badge db-mongodb">MongoDB 6.0.5</span></td><td>application_traces</td><td class="align-right" style="font-weight: 700;">3,850.50 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.15</td><td><span class="db-badge db-mongodb">MongoDB 6.0.5</span></td><td>user_profiles</td><td class="align-right" style="font-weight: 700;">512.30 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.15</td><td><span class="db-badge db-mongodb">MongoDB 6.0.5</span></td><td>config_server</td><td class="align-right" style="font-weight: 700;">8.20 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.15</td><td><span class="db-badge db-mongodb">MongoDB 6.0.5</span></td><td>notification_queue</td><td class="align-right" style="font-weight: 700;">95.40 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.15</td><td><span class="db-badge db-mongodb">MongoDB 6.0.5</span></td><td>audit_store</td><td class="align-right" style="font-weight: 700;">740.10 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.15</td><td><span class="db-badge db-mongodb">MongoDB 6.0.5</span></td><td>temp_analytics</td><td class="align-right" style="font-weight: 700;">310.25 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.15</td><td><span class="db-badge db-mongodb">MongoDB 6.0.5</span></td><td>session_tokens</td><td class="align-right" style="font-weight: 700;">18.90 MB</td></tr>
+
+                <!-- Servidor 4: Oracle 19c Enterprise (10 BDs) -->
+                <tr><td class="ip-address">192.168.2.20</td><td><span class="db-badge db-oracle">Oracle 19c</span></td><td>DBSIR_CORE</td><td class="align-right" style="font-weight: 700;">5,240.00 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.20</td><td><span class="db-badge db-oracle">Oracle 19c</span></td><td>DBSIR_HR</td><td class="align-right" style="font-weight: 700;">185.00 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.20</td><td><span class="db-badge db-oracle">Oracle 19c</span></td><td>DBSIR_FINANCE</td><td class="align-right" style="font-weight: 700;">8,450.60 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.20</td><td><span class="db-badge db-oracle">Oracle 19c</span></td><td>DBSIR_LOGISTICS</td><td class="align-right" style="font-weight: 700;">1,205.50 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.20</td><td><span class="db-badge db-oracle">Oracle 19c</span></td><td>DBSIR_ACADEMIC</td><td class="align-right" style="font-weight: 700;">9,150.20 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.20</td><td><span class="db-badge db-oracle">Oracle 19c</span></td><td>DBSIR_RESEARCH</td><td class="align-right" style="font-weight: 700;">2,400.80 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.20</td><td><span class="db-badge db-oracle">Oracle 19c</span></td><td>DBSIR_PORTAL</td><td class="align-right" style="font-weight: 700;">540.30 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.20</td><td><span class="db-badge db-oracle">Oracle 19c</span></td><td>DBSIR_ALUMNI</td><td class="align-right" style="font-weight: 700;">280.90 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.20</td><td><span class="db-badge db-oracle">Oracle 19c</span></td><td>DBSIR_LIBRARY</td><td class="align-right" style="font-weight: 700;">1,620.40 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.20</td><td><span class="db-badge db-oracle">Oracle 19c</span></td><td>DBSIR_RECOVERY_TEST</td><td class="align-right" style="font-weight: 700;">95.00 MB</td></tr>
+
+                <!-- Servidor 5: Oracle 10g Legacy (5 BDs) -->
+                <tr><td class="ip-address">192.168.2.21</td><td><span class="db-badge db-oracle">Oracle 10g</span></td><td>DBEVAPEM_LEGACY</td><td class="align-right" style="font-weight: 700;">1,450.00 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.21</td><td><span class="db-badge db-oracle">Oracle 10g</span></td><td>SYS_AUDIT_OLD</td><td class="align-right" style="font-weight: 700;">320.40 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.21</td><td><span class="db-badge db-oracle">Oracle 10g</span></td><td>HR_HISTORICAL</td><td class="align-right" style="font-weight: 700;">510.80 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.21</td><td><span class="db-badge db-oracle">Oracle 10g</span></td><td>PAYROLL_ARCHIVE</td><td class="align-right" style="font-weight: 700;">1,820.10 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.21</td><td><span class="db-badge db-oracle">Oracle 10g</span></td><td>BACKUP_SYS_2022</td><td class="align-right" style="font-weight: 700;">4,200.00 MB</td></tr>
+
+                <!-- Servidor 6: MongoDB 5.0 (4 BDs) -->
+                <tr><td class="ip-address">192.168.2.25</td><td><span class="db-badge db-mongodb">MongoDB 5.0.12</span></td><td>iot_sensor_data</td><td class="align-right" style="font-weight: 700;">3,410.20 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.25</td><td><span class="db-badge db-mongodb">MongoDB 5.0.12</span></td><td>cache_store</td><td class="align-right" style="font-weight: 700;">85.30 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.25</td><td><span class="db-badge db-mongodb">MongoDB 5.0.12</span></td><td>metrics_raw</td><td class="align-right" style="font-weight: 700;">1,120.40 MB</td></tr>
+                <tr><td class="ip-address">192.168.2.25</td><td><span class="db-badge db-mongodb">MongoDB 5.0.12</span></td><td>backup_index</td><td class="align-right" style="font-weight: 700;">24.10 MB</td></tr>
+                
+                <!-- Fila de Totales Generales -->
+                <tr class="total-row">
+                    <td colspan="2" class="total-label">Totales Generales</td>
+                    <td style="font-size: 8pt; color: var(--text-normal); font-weight: normal; text-align: right;">
+                        40 bases de datos encontradas
+                    </td>
+                    <td class="align-right">53,585.85 MB</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Pie de página simulado en pantalla -->
+        <div class="preview-footer">
+            <div>SGIR | Sistema de Gestión de Infraestructura y Respaldos</div>
+            <div>Reporte Global de Activos - DTIC UAEMex (A4)</div>
+        </div>
+
+    </div>
+
+</body>
+</html>

@@ -25,6 +25,12 @@ FROM python:3.14-slim-bookworm
 # Instalar dependencias de sistema necesarias en tiempo de ejecución
 RUN apt-get update && apt-get install -y --no-install-recommends \
     iputils-ping \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libpangocairo-1.0-0 \
+    libglib2.0-0 \
+    libcairo2 \
+    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
 # Crear un usuario de sistema sin shell y sin home para seguridad

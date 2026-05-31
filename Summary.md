@@ -30,6 +30,10 @@ Este documento registra los avances, decisiones técnicas y hallazgos realizados
 *   **Protección de Datos:** Se actualizó el archivo `.gitignore` para excluir las carpetas `plantilla/` y `plantillas/`.
 *   **Sincronización:** Se realizó el commit y push de estas reglas para evitar la exposición accidental de archivos de configuración o datos de infraestructura en el repositorio remoto.
 
+### 4. Auditoría y Documentación de Importación Masiva y CMDB
+*   **Mapeo de Rutas de Servidores e Importaciones:** Se realizó una revisión técnica de `routes.md` enfocada en los endpoints de servidores y de importación masiva (`import-bulk`), documentando sus métodos HTTP, payloads (Body JSON/CSV) y flujos lógicos asociados.
+*   **Ingeniería Inversa de `servidores/import-bulk`:** Se auditó a nivel de código el servicio de importación en `import_service.py` (`process_infrastructure_csv`), mapeando de extremo a extremo las fases de traducción de catálogos en memoria, mitigación de duplicidad lógica, registro dinámico de particiones, creación de instancias DBMS y encriptado seguro AES-256 de credenciales.
+
 ---
 
 ## 🔍 Hallazgos Técnicos y Auditoría de Lógica

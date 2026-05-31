@@ -6,7 +6,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
-from app.routes import core_crud_router
+from app.routes import core_crud_router, router as reports_router
 from app.routes.healths import health_router
 from app.routes.monitoring import m1_router, m2_router, m3_router
 from app.core.scheduler_manager import start_scheduler, stop_scheduler, pause_scheduler
@@ -191,6 +191,9 @@ api_router.include_router(m3_router)
 
 # CRUD Completo bajo el prefijo /crud
 api_router.include_router(core_crud_router)
+
+# Reporte de inventario PDF público sin autenticación
+api_router.include_router(reports_router)
 
 app.include_router(api_router)
 

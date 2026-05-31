@@ -2117,6 +2117,18 @@ Endpoints enfocados en la extracción automatizada y sincronización del inventa
     ]
     ```
 
+#### **`GET`** `/assets/pdf`
+*   **Servicio Ejecutor:** [`app/services/reports/pdf_service.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/reports/pdf_service.py) $\rightarrow$ `generate_db_inventory_pdf` (invocado por `get_assets_pdf` en `app/routes/__init__.py`)
+*   **Comportamiento Operativo:** Ejecuta una sincronización en tiempo real de toda la infraestructura activa (`run_bulk_inventory_sync`), extrae las bases de datos activas de la CMDB ordenadas por motor de BD, e inyecta los datos en la plantilla HTML A4 (con logotipos y favicons locales de la DTIC UAEMex) para generar y retornar los bytes del reporte PDF mediante WeasyPrint.
+*   **Body Requerido:** *Sin Body (Público, sin autenticación)*
+*   **Response Esperada (Status 200 - application/pdf):** Flujo binario de archivo PDF con descarga adjunta (`reporte_inventario_dbs.pdf`).
+
+#### **`GET`** `/assets/csv`
+*   **Servicio Ejecutor:** `app/routes/__init__.py` $\rightarrow$ `get_assets_csv`
+*   **Comportamiento Operativo:** Ejecuta una sincronización en tiempo real de toda la infraestructura activa (`run_bulk_inventory_sync`), extrae las bases de datos activas de la CMDB ordenadas por motor de BD, y construye e inyecta la información en un búfer de texto en memoria codificado en formato CSV (`utf-8-sig`) para compatibilidad directa con Microsoft Excel.
+*   **Body Requerido:** *Sin Body (Público, sin autenticación)*
+*   **Response Esperada (Status 200 - text/csv):** Flujo binario de archivo CSV con descarga adjunta (`reporte_inventario_dbs.csv`).
+
 #### **`POST`** `/m2/inventory/discover-all`
 *   **Servicio Ejecutor:** [`app/services/infrastructure/inventory_sync_service.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/infrastructure/inventory_sync_service.py) $\rightarrow$ `run_bulk_inventory_sync` (Auto-descubrimiento paralelo en todas las instancias)
 *   **Body Requerido:** *Sin Body*

@@ -10,6 +10,7 @@ dependencies = [
     "email-validator>=2.3.0",
     "fastapi>=0.135.2",
     "icmplib>=3.0.4",
+    "jinja2>=3.1.6",
     "motor>=3.7.1",
     "oracledb>=3.4.2",
     "paramiko>=4.0.0",
@@ -22,6 +23,7 @@ dependencies = [
     "python-multipart>=0.0.22",
     "sqlalchemy>=2.0.48",
     "uvicorn[standard]>=0.42.0",
+    "weasyprint>=68.1",
 ]
 
 [dependency-groups]

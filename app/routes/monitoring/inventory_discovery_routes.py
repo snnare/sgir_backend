@@ -21,6 +21,7 @@ def get_global_assets(db: Session = Depends(get_pg_db)):
     """
     return infrastructure_crud.get_global_inventory(db)
 
+
 @m2_router.post("/discover-all")
 def discover_all_databases(db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
     """
