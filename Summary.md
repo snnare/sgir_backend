@@ -1,59 +1,63 @@
 # Resumen de Estado del Proyecto - SGIR (Actualizado Mayo 2026)
 
-Este documento registra los avances, decisiones técnicas y hallazgos realizados durante la sesión actual para garantizar la continuidad del desarrollo del sistema **SGIR**.
+Este documento registra los avances, decisiones técnicas, lógica de negocio incorporada y estado de los repositorios durante la sesión actual para garantizar la continuidad del desarrollo del sistema **SGIR**.
 
 ---
 
 ## 🏛️ Contexto y Stack Tecnológico
 *   **Backend:** FastAPI (Python 3.14) + SQLAlchemy 2.0.
-*   **Base de Datos:** PostgreSQL 16 (CMDB y Transaccional).
-*   **Seguridad:** Encriptación AES-256 para credenciales y OAuth2 para acceso.
-*   **Motor de Reportes:** WeasyPrint (PDF) + CSV dinámico con UTF-8-BOM.
-*   **DevOps:** Dockerizado, gestión de dependencias con `uv` y orquestación de tareas con APScheduler.
+*   **Frontend:** React (Vite, TypeScript, TailwindCSS/Vanilla CSS).
+*   **Base de Datos:** PostgreSQL 16 (CMDB, Monitoreo y Transaccional).
+*   **Seguridad:** Encriptación AES-256 para contraseñas de infraestructura y OAuth2 JWT.
+*   **Orquestación SSH:** Paramiko con Connection Pooling (Keep-Alive de 30s) y soporte multiformato.
 
 ---
 
-## 🚀 Logros de la Sesión Actual (Reportes de Inventario & Validación de Esquemas)
+## 🚀 Logros y Cambios Clave de la Sesión Actual
 
-### 1. Endpoints Públicos de Reportes Consolidados
-*   **PDF (`GET /sgir/v1/assets/pdf`):**
-    *   Endpoint público y sin autenticación que compila un reporte A4 estructurado.
-    *   Dispara automáticamente el auto-descubrimiento concurrente de bases de datos (`run_bulk_inventory_sync`) con fallback automático a la caché de base de datos local si no hay red, garantizando disponibilidad y frescura.
-    *   Genera e inyecta el protocolo de activos locales de la DTIC (como el logotipo y favicon corporativo usando rutas locales `file://`).
-*   **CSV (`GET /sgir/v1/assets/csv`):**
-    *   Endpoint público que devuelve el inventario en formato CSV en crudo.
-    *   Codificado en **`utf-8-sig` (con BOM)** para permitir la apertura inmediata en Microsoft Excel sin corrupciones de caracteres o acentos en nombres de bases de datos de la UAEMex.
+### 1. Robustecimiento del Motor de Descubrimiento (Múltiples Extensiones)
+*   **Decisión de Diseño:** Para admitir respaldos empaquetados o comprimidos por los administradores de sistemas en red, se amplió la búsqueda por RDBMS.
+*   **Ampliación del `extension_map`:**
+    *   **PostgreSQL / MySQL:** `[".sql", ".sql.gz", ".tar", ".zip", ".gz"]`
+    *   **Oracle Database:** `[".dmp", ".dmp.gz", ".tar", ".zip", ".gz"]`
+    *   **MongoDB:** `[".archive", ".tar.gz", ".tar", ".zip", ".gz"]`
+*   **Lógica de Búsqueda SSH (Deduplicación):** Modificada en `run_integrated_file_discovery` dentro de [`ssh_service.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/monitoring/ssh_service.py). El sistema ahora busca concurrentemente cada extensión en la ruta configurada, consolida la lista y **deduplica los archivos por su ruta absoluta en memoria** antes de ejecutar el auto-mapeo hacia las bases de datos de la CMDB.
 
-### 2. Diseño del Reporte Formal (Identidad UAEMex / DTIC)
-*   **Diseño Visual:** Colores forest green (`#004b36`) y dorado/oro (`#b38628`) oficiales.
-*   **Flexibilidad:**
-    *   Las direcciones IP se repiten de forma explícita para hosts con múltiples bases de datos.
-    *   Diseño responsivo de badges decorativos según el motor de base de datos: MySQL (azul pastel), MongoDB (verde suave), Oracle (rojo pastel) con bordes izquierdos vibrantes y subrayado sutil.
-    *   Remoción del metadato rígido **"Tipo de Formato: Inventario Global de Activos (A4)"** del bloque de cabecera.
-    *   Se implementó un `colspan="3"` en el campo **"Generado por Usuario"** para unificar visualmente el panel de información técnica del reporte.
+### 2. Auto-Descubrimiento Global de Respaldos (Masa)
+*   **Implementación del Servicio:** Creado `run_bulk_backups_discovery` en [`ssh_service.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/monitoring/ssh_service.py).
+    *   Filtra y itera todas las `RutaRespaldo` activas que cuenten con un servidor que posea credenciales SSH vigentes.
+    *   Por cada servidor, obtiene todas sus instancias DBMS registradas.
+    *   Invoca la lógica de escaneo y mapeo por instancia de forma automatizada.
+    *   Registra una bitácora global de auditoría (`id_tipo_evento = 6`).
+*   **Endpoint API expuesto:** `POST /sgir/v1/m3/inventory/discover-all-backups` registrado en el enrutador [`inventory_discovery_routes.py`](file:///home/angel/src/titulacion/sgir_backend/app/routes/monitoring/inventory_discovery_routes.py).
 
-### 3. Stack DevOps e Infraestructura PDF
-*   **Librerías Incorporadas:** `weasyprint`, `jinja2` y `markupsafe` agregadas de forma segura mediante `uv add`, actualizando `pyproject.toml` y `uv.lock`.
-*   **Reconstrucción de Imagen Docker:** Se reconstruyó satisfactoriamente la imagen `sgir-backend` tras instalar dependencias nativas del compilador de PDF en la capa de runtime (incluyendo `libpango-1.0-0`, `libcairo2`, `libglib2.0-0`, etc.).
+### 3. Endpoint de Credenciales por Dirección IP
+*   **Lógica de Negocio:** Para facilitar y optimizar la recuperación en frontend, se implementó `read_credentials_by_server_ip` en [`credencial_acceso_routes.py`](file:///home/angel/src/titulacion/sgir_backend/app/routes/core_crud/infrastructure/credencial_acceso_routes.py).
+*   **Endpoint API:** `GET /sgir/v1/crud/credenciales/servidor/ip/{direccion_ip}`. Busca y asocia directamente el servidor IP sin requerir flujos intermedios del cliente.
 
-### 4. Mapeo Relacional de Respaldos e Integridad
-*   **Validación:** Se auditó y comprobó de extremo a extremo la concordancia de la tabla `Politica_de_Respaldo` (`modelo-logico.sql`) con los modelos ORM de SQLAlchemy (`backup_models.py`) y Pydantic (`backup_schemas.py`).
-*   **Consistencia Ortográfica:** Se validó que el campo con el nombre `hora_ejecuccion` (typo con doble "c") está perfectamente alineado entre la base física, el código del modelo y los validadores de API.
-
----
-
-## 🔍 Hallazgos Técnicos y Decisiones de Diseño
-
-### Resoluciones en Renderizado
-*   **Rutas Locales de Recursos en Docker:** Al renderizar WeasyPrint dentro del contenedor de Docker, el uso de paths de archivos relativos o URLs web del logo fallaba. Se solucionó obteniendo la ruta física absoluta de la carpeta de assets estáticos e inyectándola con el protocolo `file://` en la plantilla de Jinja2.
-*   **Codificación UTF-8-BOM en Excel:** Los navegadores en Linux descargan CSV de forma nativa en UTF-8 puro, pero Excel en Windows a menudo corrompe caracteres acentuados. El uso explícito de `utf-8-sig` inyecta la firma en los primeros bytes del archivo, forzando a Excel a decodificar correctamente.
+### 4. Corrección de Bug Crítico de Red en el Frontend (404 Prefijos Duplicados)
+*   **Diagnóstico:** Axios (`client.ts`) tiene configurado `baseURL: import.meta.env.VITE_API_URL` (que se lee como `/api/sgir/v1`). Al llamar endpoints que contenían `/sgir/v1/` hardcodeado en la cadena del path, Axios duplicaba el prefijo, provocando un error `404 Not Found` en el servidor de desarrollo de Vite.
+*   **Soluciones Aplicadas en Frontend:**
+    *   **[`monitoringService.ts`](file:///home/angel/src/titulacion/sgir_frontend/src/api/monitoringService.ts):** Cambiado `/sgir/v1/m1/db/live-cache` a `/m1/db/live-cache`.
+    *   **[`databaseService.ts`](file:///home/angel/src/titulacion/sgir_frontend/src/api/databaseService.ts):** Removidos los prefijos `/sgir/v1` en sus 4 enrutados de CMDB (`/m2/...`).
 
 ---
 
-## 🛠️ Mejoras Pendientes / Próximos Pasos
+## 🔒 Control de Cambios e Integración (Git Commit)
 
-### 1. Robustez de Conexión
-*   Asegurar que los fallos temporales de red en el sincronizador no demoren la descarga de PDFs; ajustar el timeout de respuesta del auto-descubrimiento en el endpoint `/assets/pdf`.
+Ambos repositorios se encuentran completamente limpios, sincronizados y subidos a sus respectivas ramas remotas en GitHub:
 
-### 2. Paginación de Impresión (Estilos CSS Paged)
-*   Optimizar los saltos de página (`page-break-inside: avoid`) en la tabla en caso de que el inventario real crezca a cientos de bases de datos para evitar que los badges de DBMS queden cortados entre hojas.
+1.  **Backend (`sgir_backend`):**
+    *   **Commit:** `feat(backups): extend RDBMS backup extensions (.gz, .tar, .zip) and add global backups auto-discovery endpoint, add credentials by IP route` (Exitosamente subido a `origin/master`).
+2.  **Frontend (`sgir_frontend`):**
+    *   **Commit:** `fix(api): remove duplicated /sgir/v1 API prefix from frontend services` (Exitosamente subido a `origin/master`).
+
+---
+
+## 📝 Próximos Pasos Recomendados
+
+### 1. Robustez ante Ficheros Gigantes o Rutas Inaccesibles
+*   Asegurar un timeout controlado en Paramiko cuando se buscan múltiples extensiones en directorios de red muy extensos (ej. NFS compartido saturado).
+
+### 2. Pruebas de Carga de Auto-Descubrimiento
+*   Validar el consumo de memoria del backend al ejecutar `POST /sgir/v1/m3/inventory/discover-all-backups` cuando existen decenas de servidores y cientos de bases de datos registradas en paralelo.
