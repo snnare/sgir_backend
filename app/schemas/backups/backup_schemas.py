@@ -109,6 +109,16 @@ class PoliticaDetalleAssetsResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class PoliticaResumenGlobalResponse(BaseModel):
+    politica: str
+    ip_servidor: str
+    tipo_rdbms: str
+    base_de_datos: str
+    tamano_mb: float
+
+    class Config:
+        from_attributes = True
+
 # --- Asignaciones ---
 
 class AsignacionPoliticaBDCreate(BaseModel):

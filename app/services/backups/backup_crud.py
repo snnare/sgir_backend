@@ -237,3 +237,36 @@ def get_rutas_respaldo_detalladas(db: Session) -> List[dict]:
         for ruta, srv, estado in results
     ]
 
+def get_politicas_resumen_global(db: Session) -> List[dict]:
+    """
+    Retorna un resumen global de todas las políticas de respaldo y las bases de datos / servidores asignados.
+    """
+    from app.models.infrastructure_models import BaseDeDatos, InstanciaDBMS, Servidor, DBMS
+    from sqlalchemy.sql import func
+    
+    query = db.query(
+        PoliticaRespaldo.nombre_politica.label("politica"),
+        Servidor.direccion_ip.label("ip_servidor"),
+        func.concat(DBMS.nombre_dbms, " (", DBMS.version, ")").label("tipo_rdbms"),
+        BaseDeDatos.nombre_base.label("base_de_datos"),
+        BaseDeDatos.tamano_mb
+    ).select_from(PoliticaRespaldo)\
+     .join(BaseDeDatos.politicas)\
+     .join(InstanciaDBMS, BaseDeDatos.id_instancia == InstanciaDBMS.id_instancia)\
+     .join(DBMS, InstanciaDBMS.id_dbms == DBMS.id_dbms)\
+     .join(Servidor, InstanciaDBMS.id_servidor == Servidor.id_servidor)\
+     .order_by(PoliticaRespaldo.nombre_politica, Servidor.direccion_ip, BaseDeDatos.nombre_base)
+     
+    resultados = query.all()
+    
+    return [
+        {
+            "politica": r.politica,
+            "ip_servidor": r.ip_servidor,
+            "tipo_rdbms": r.tipo_rdbms,
+            "base_de_datos": r.base_de_datos,
+            "tamano_mb": float(r.tamano_mb or 0)
+        }
+        for r in resultados
+    ]
+

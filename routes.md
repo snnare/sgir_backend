@@ -1092,6 +1092,22 @@ Contiene las operaciones del catálogo relacional y configuraciones base. El pre
     ]
     ```
 
+#### **`GET`** `/politicas-respaldo/resumen-global`
+*   **Servicio Ejecutor:** [`app/services/backups/backup_crud.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/backups/backup_crud.py) $\rightarrow$ `get_politicas_resumen_global`
+*   **Body Requerido:** *Sin Body*
+*   **Response Esperada (Status 200 - `List[PoliticaResumenGlobalResponse]`):**
+    ```json
+    [
+      {
+        "politica": "Semanal Retención 15d",
+        "ip_servidor": "192.168.1.100",
+        "tipo_rdbms": "MySQL (8.0.32)",
+        "base_de_datos": "sgir_catalog",
+        "tamano_mb": 120.50
+      }
+    ]
+    ```
+
 #### **`GET`** `/politicas-respaldo/{politica_id}/assets`
 *   **Servicio Ejecutor:** [`app/services/backups/backup_crud.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/backups/backup_crud.py) $\rightarrow$ `get_politica_assets_grouped` (Agrupa base de datos e IP por servidor)
 *   **Body Requerido:** *Sin Body*

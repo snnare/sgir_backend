@@ -4,33 +4,14 @@ from typing import List
 from app.db.postgres.postgres_connection import get_db as get_pg_db
 from app.schemas import (
     PoliticaRespaldoCreate, PoliticaRespaldoResponse, 
-    PoliticaRespaldoUpdate, PoliticaDetalleAssetsResponse
+    PoliticaRespaldoUpdate, PoliticaDetalleAssetsResponse,
+    PoliticaResumenGlobalResponse
 )
 from app.services import backup_crud, audit_crud
-from app.services.infrastructure.import_service import process_politicas_respaldo_csv
 from app.core.dependencies import get_current_user
 from app.models.user_models import User
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
-
-@router.post("/import-bulk")
-async def import_politicas_bulk(
-    file: UploadFile = File(...),
-    db: Session = Depends(get_pg_db),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Carga masiva de políticas de respaldo mediante CSV.
-    """
-    if not file.filename.endswith('.csv'):
-        raise HTTPException(status_code=400, detail="El archivo debe ser un CSV")
-    
-    contents = await file.read()
-    try:
-        summary = process_politicas_respaldo_csv(db, contents, current_user.id_usuario)
-        return summary
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{politica_id}/assets", response_model=PoliticaDetalleAssetsResponse)
 def get_politica_assets(politica_id: int, db: Session = Depends(get_pg_db)):
@@ -41,6 +22,13 @@ def get_politica_assets(politica_id: int, db: Session = Depends(get_pg_db)):
     if not result:
         raise HTTPException(status_code=404, detail="Política no encontrada")
     return result
+
+@router.get("/resumen-global", response_model=List[PoliticaResumenGlobalResponse])
+def get_politicas_resumen_global(db: Session = Depends(get_pg_db)):
+    """
+    Retorna un resumen global de todas las políticas de respaldo y las bases de datos / servidores asignados.
+    """
+    return backup_crud.get_politicas_resumen_global(db)
 
 @router.post("/", response_model=PoliticaRespaldoResponse, status_code=status.HTTP_201_CREATED)
 def create_politica(politica: PoliticaRespaldoCreate, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):

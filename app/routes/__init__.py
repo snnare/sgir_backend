@@ -181,21 +181,14 @@ def get_assets_pdf_offline(db: Session = Depends(get_pg_db)):
 @router.get("/assets/csv")
 def get_assets_csv(db: Session = Depends(get_pg_db)):
     """
-    Sincroniza en tiempo real las bases de datos de todos los servidores activos
-    y genera un reporte CSV crudo con los datos descubiertos.
-    No requiere autenticación y consulta los datos de forma global y automática.
+    Genera un reporte CSV crudo con los datos descubiertos consultando
+    directamente la CMDB en la base de datos PostgreSQL local,
+    sin conectarse en tiempo real a los servidores remotos (Offline).
+    No requiere autenticación.
     """
     import csv
     
-    # 1. Ejecutar el auto-descubrimiento en tiempo real para asegurar datos frescos
-    try:
-        from app.services.infrastructure.inventory_sync_service import run_bulk_inventory_sync
-        run_bulk_inventory_sync(db)
-    except Exception:
-        # En caso de fallo de conexión de red externa, procedemos con los datos cacheados
-        pass
-    
-    # 2. Consultar las bases de datos activas en la CMDB local ordenadas por motor de BD
+    # 1. Consultar las bases de datos activas en la CMDB local ordenadas por motor de BD
     query = db.query(
         Servidor.direccion_ip,
         DBMS.nombre_dbms,
