@@ -1,6 +1,6 @@
 -- ==============================================================================
 -- SISTEMA DE GESTIÓN DE INFRAESTRUCTURA Y RESPALDOS (SGIR)
--- MODELO FÍSICO PARA POSTGRESQL 16 - VERSIÓN 2 (Rutas Exclusivas por Servidor)
+-- MODELO FÍSICO PARA POSTGRESQL 16
 -- ==============================================================================
 
 -- ------------------------------------------------------------------------------
@@ -83,14 +83,13 @@ CREATE TABLE Servidor (
     es_legacy BOOLEAN DEFAULT FALSE,
     fecha_registro TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     descripcion TEXT,
-    -- Configuración de Alcance de Monitoreo (Selección del Usuario en Front)
-    monitoreo_host BOOLEAN DEFAULT FALSE, -- Monitoreo de Hardware (CPU, RAM, Disco)
-    monitoreo_db BOOLEAN DEFAULT FALSE,   -- Monitoreo de Motores de BD (MySQL, Oracle, etc.)
+    monitoreo_host BOOLEAN DEFAULT FALSE,
+    monitoreo_db BOOLEAN DEFAULT FALSE,
     id_nivel_criticidad INT NOT NULL REFERENCES Nivel_Criticidad(id_nivel_criticidad),
     id_estado_servidor INT NOT NULL REFERENCES Estado_General(id_estado)
 );
-
-CREATE TABLE Servidor_Particion (
+--- Se cambio de Servidor_Particion a Particion
+CREATE TABLE Particion (
     id_particion INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     id_servidor INT NOT NULL REFERENCES Servidor(id_servidor) ON DELETE CASCADE,
     path TEXT NOT NULL,
@@ -112,22 +111,22 @@ CREATE TABLE Credencial_Acceso (
     id_servidor INT NOT NULL REFERENCES Servidor(id_servidor) ON DELETE CASCADE
 );
 
--- ACTUALIZACIÓN OPCIÓN A: Ruta_Respaldo ahora depende de un Servidor
 CREATE TABLE Ruta_Respaldo (
     id_ruta INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     descripcion_ruta VARCHAR(150) NOT NULL,
     path TEXT NOT NULL,
-    id_servidor INT NOT NULL REFERENCES Servidor(id_servidor) ON DELETE CASCADE, -- <--- Cambio Clave
+    id_servidor INT NOT NULL REFERENCES Servidor(id_servidor) ON DELETE CASCADE,
     id_tipo_almacenamiento INT NOT NULL REFERENCES Tipo_Almacenamiento(id_tipo_almacenamiento),
     id_estado_ruta INT NOT NULL REFERENCES Estado_General(id_estado)
 );
 
+--- atributo hora_ejecuccion -> hora_ejecucion
 CREATE TABLE Politica_de_Respaldo (
     id_politica INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nombre_politica VARCHAR(100) NOT NULL,
     descripcion TEXT,
     expression_cron VARCHAR(100),
-    hora_ejecuccion TIME,
+    hora_ejecucion TIME,
     dias_semana VARCHAR(50),
     frecuencia_horas INT NOT NULL,
     retencion_dias INT NOT NULL,
@@ -154,14 +153,14 @@ CREATE TABLE Instancia_DBMS (
 CREATE TABLE Base_de_Datos (
     id_base_datos INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nombre_base VARCHAR(150) NOT NULL,
-    tamano_mb NUMERIC(12, 2),
+    tamano_mb NUMERIC(12, 2), -- Permite almacenar tamaños precisos
     fecha_creacion TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     id_instancia INT NOT NULL REFERENCES Instancia_DBMS(id_instancia) ON DELETE CASCADE,
     id_estado_bd INT NOT NULL REFERENCES Estado_General(id_estado)
 );
 
 CREATE TABLE Monitoreo (
-    id_monitoreo BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id_monitoreo BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, -- BIGINT por volumen
     fecha_inicio TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     fecha_fin TIMESTAMPTZ,
     id_servidor INT NOT NULL REFERENCES Servidor(id_servidor) ON DELETE CASCADE,
@@ -169,32 +168,32 @@ CREATE TABLE Monitoreo (
 );
 
 -- ------------------------------------------------------------------------------
--- 5. TABLAS TRANSACCIONALES E INTERMEDIAS
+-- 5. TABLAS TRANSACCIONALES E INTERMEDIAS (Gran volumen de datos)
 -- ------------------------------------------------------------------------------
 
 CREATE TABLE Asignacion_Politica_BD (
     id_base_datos INT NOT NULL REFERENCES Base_de_Datos(id_base_datos) ON DELETE CASCADE,
     id_politica INT NOT NULL REFERENCES Politica_de_Respaldo(id_politica) ON DELETE CASCADE,
-    PRIMARY KEY (id_base_datos, id_politica)
+    PRIMARY KEY (id_base_datos, id_politica) -- Llave primaria compuesta
 );
 
 CREATE TABLE Respaldo (
-    id_respaldo BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    fecha_inicio TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    fecha_fin TIMESTAMPTZ,
-    fecha_descubrimiento TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    nombre_archivo VARCHAR(255),
-    tamano_mb NUMERIC(12, 2),
-    hash_integridad VARCHAR(255),
-    path_fisico_origen VARCHAR(512),
-    ubicacion_actual VARCHAR(50) DEFAULT 'Origen',
-    ip_almacenado_actual VARCHAR(50),
-    path_fisico_actual VARCHAR(512),
-    id_base_datos INT NOT NULL REFERENCES Base_de_Datos(id_base_datos),
-    id_politica INT NOT NULL REFERENCES Politica_de_Respaldo(id_politica),
-    id_credencial INT REFERENCES Credencial_Acceso(id_credencial),
-    id_estado_ejecucion INT NOT NULL REFERENCES Estado_General(id_estado),
-    metadata_tecnica JSONB DEFAULT '{}'::jsonb
+  id_respaldo BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  fecha_inicio TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  fecha_fin TIMESTAMPTZ,
+  fecha_descubrimiento TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  nombre_archivo VARCHAR(255),
+  tamano_mb NUMERIC(12, 2),
+  hash_integridad VARCHAR(255),
+  path_fisico_origen VARCHAR(512),
+  ubicacion_actual VARCHAR(50) DEFAULT 'Origen',
+  ip_almacenado_actual VARCHAR(50),
+  path_fisico_actual VARCHAR(512),
+  id_base_datos INT NOT NULL REFERENCES Base_de_Datos(id_base_datos),
+  id_politica INT NOT NULL REFERENCES Politica_de_Respaldo(id_politica),
+  id_credencial INT REFERENCES Credencial_Acceso(id_credencial),
+  id_estado_ejecucion INT NOT NULL REFERENCES Estado_General(id_estado),
+  metadata_tecnica JSON DEFAULT '{}'::jsonb
 );
 
 CREATE TABLE Metrica (
@@ -210,7 +209,7 @@ CREATE TABLE Alerta (
     descripcion TEXT NOT NULL,
     fecha_alerta TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     id_servidor INT NOT NULL REFERENCES Servidor(id_servidor) ON DELETE CASCADE,
-    id_monitoreo BIGINT REFERENCES Monitoreo(id_monitoreo),
+    id_monitoreo BIGINT REFERENCES Monitoreo(id_monitoreo), -- Puede ser NULL si la alerta no viene del monitoreo directo
     id_nivel_alerta INT NOT NULL REFERENCES Nivel_Alerta(id_nivel_alerta),
     id_estado_alerta INT NOT NULL REFERENCES Estado_General(id_estado)
 );
@@ -218,7 +217,7 @@ CREATE TABLE Alerta (
 CREATE TABLE Bitacora (
     id_bitacora BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     entidad_afectada VARCHAR(100) NOT NULL,
-    id_entidad BIGINT NOT NULL,
+    id_entidad BIGINT NOT NULL, -- Sin FK por ser polimórfico, BIGINT para cubrir cualquier ID
     descripcion_evento TEXT NOT NULL,
     fecha_evento TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     id_usuario INT NOT NULL REFERENCES Usuario(id_usuario),

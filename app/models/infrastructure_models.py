@@ -48,7 +48,7 @@ class Servidor(Base):
     rutas_respaldo = relationship("RutaRespaldo", back_populates="servidor", cascade="all, delete-orphan")
 
 class ServidorParticion(Base):
-    __tablename__ = "servidor_particion"
+    __tablename__ = "particion"
     id_particion = Column(Integer, primary_key=True, index=True)
     id_servidor = Column(Integer, ForeignKey("servidor.id_servidor", ondelete="CASCADE"), nullable=False)
     path = Column(Text, nullable=False)

@@ -37,7 +37,7 @@ class PoliticaRespaldo(Base):
     nombre_politica = Column(String(100), nullable=False)
     descripcion = Column(Text)
     expression_cron = Column(String(100), nullable=True)
-    hora_ejecuccion = Column(Time, nullable=True)
+    hora_ejecucion = Column(Time, nullable=True)
     dias_semana = Column(String(50), nullable=True)
     frecuencia_horas = Column(Integer, nullable=False)
     retencion_dias = Column(Integer, nullable=False)
