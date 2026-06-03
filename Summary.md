@@ -44,17 +44,27 @@ Este documento registra los avances, decisiones técnicas, lógica de negocio in
 ### 7. Documentación en routes.md
 *   Se actualizaron y añadieron las descripciones detalladas, comportamientos operativos y estructuras de payload para los endpoints recién creados en [`routes.md`](file:///home/angel/src/titulacion/sgir_backend/routes.md).
 
+### 8. Creación de Documentación del Módulo 1 (Observabilidad y Salud)
+*   **Directorio de Documentación:** Se creó la carpeta [`documentacion`](file:///home/angel/src/titulacion/sgir_backend/documentacion/) para alojar las descripciones técnicas detalladas de la API por módulos.
+*   **Primeros Dos Endpoints:** Se documentaron técnicamente los endpoints de `/sgir/v1/m1/health/postgres` (GET) y `/sgir/v1/m1/health/ping` (POST) en tres formatos distintos:
+    *   **Formato de Texto Plano (`.txt`):** En [`modulo_uno.txt`](file:///home/angel/src/titulacion/sgir_backend/documentacion/modulo_uno.txt).
+    *   **Formato Word/Docx (`.docx`):** En [`modulo_uno.docx`](file:///home/angel/src/titulacion/sgir_backend/documentacion/modulo_uno.docx), generado mediante un script de automatización en Python (`python-docx`) con la identidad corporativa de la UAEMex (verde oscuro, gris, oro), tablas personalizadas y bloques monospaciados para JSON.
+    *   **Formato Markdown (`.md`):** En [`modulo_uno.md`](file:///home/angel/src/titulacion/sgir_backend/documentacion/modulo_uno.md) para una visualización nativa en GitHub que incluye hipervínculos a los controladores del código fuente.
+
 ---
 
 ## 🔒 Control de Cambios (Estado de Git)
 *   El backend compila y ejecuta de manera totalmente exitosa (`uv run python -m py_compile`).
 *   Los endpoints offline optimizan el rendimiento de red reduciendo el tiempo de respuesta a milisegundos.
+*   Se agregaron al repositorio y se enviaron vía `git push` todos los nuevos archivos de documentación de la sesión (`modulo_uno.txt`, `modulo_uno.docx` y `modulo_uno.md`).
 
 ---
 
 ## 📝 Próximos Pasos Recomendados
 
-1.  **Integración en Frontend (Dashboard SRE)**:
+1.  **Continuar con la Documentación del Módulo 1**:
+    *   Documentar el resto de los endpoints de observabilidad (Scheduler, Live Cache, monitores de bases de datos específicos por criticidad MySQL 5/8/MongoDB y monitoreo SSH) utilizando los mismos formatos multilingües y estructurados.
+2.  **Integración en Frontend (Dashboard SRE)**:
     *   Vincular las opciones de descarga en el Frontend (React) a las nuevas rutas offline (`/assets/pdf-offline`, `/assets/csv` y `/assets/sre-sla-pdf`).
-2.  **Pruebas de Uptime**:
+3.  **Pruebas de Uptime**:
     *   Agregar datos de monitoreo históricos de simulación para validar los porcentajes de SLA en entornos reales de producción con cargas prolongadas.
