@@ -1,0 +1,61 @@
+DOCUMENTACIÓN DEL MÓDULO 1: OBSERVABILIDAD Y MONITOREO OPERATIVO (/sgir/v1/m1)
+
+Este módulo agrupa los endpoints destinados a los chequeos de salud (health checks), estadísticas en tiempo real y el monitoreo asíncrono tanto de hardware como de bases de datos.
+
+A continuación se documentan los primeros dos endpoints de este módulo:
+
+--------------------------------------------------------------------------------
+1. Chequeo de Salud de PostgreSQL
+--------------------------------------------------------------------------------
+Método HTTP: GET
+Ruta: /sgir/v1/m1/health/postgres
+Descripción:
+  Verifica la conectividad y el correcto funcionamiento en caliente de la base de datos PostgreSQL ejecutando una consulta SQL básica ("SELECT 1 + 1 AS sum").
+
+Servicio Ejecutor:
+  Archivo: app/routes/healths/health_routes.py
+  Función: health_postgres
+
+Cuerpo de la Petición (Request Body):
+  No requiere cuerpo.
+
+Respuesta Exitosa (Status 200 OK):
+  Formato: JSON
+  Ejemplo:
+  {
+    "status": "ok",
+    "db": "PostgreSQL",
+    "result": 2
+  }
+
+Respuesta de Error (Status 500 Internal Server Error):
+  Formato: JSON
+  Ejemplo:
+  {
+    "detail": "PostgreSQL failed: <mensaje_del_error>"
+  }
+
+--------------------------------------------------------------------------------
+2. Ping a un Host/Servidor de Red
+--------------------------------------------------------------------------------
+Método HTTP: POST
+Ruta: /sgir/v1/m1/health/ping
+Descripción:
+  Realiza una comprobación de conectividad ICMP (ping) rápida a un host específico utilizando sockets UDP no privilegiados de la librería 'icmplib'. Es útil para validar de forma básica si una IP de red es alcanzable.
+
+Servicio Ejecutor:
+  Archivo: app/routes/healths/health_routes.py
+  Función: ping_host
+
+Cuerpo de la Petición (Request Body):
+  Formato: JSON
+  Esquema (PingRequest):
+  {
+    "ip": "192.168.1.1"
+  }
+
+Respuesta (Status 200 OK):
+  Formato: JSON (Booleano)
+  Ejemplo:
+  true  <- (si el host es alcanzable)
+  false <- (si el host no responde o falla la petición)

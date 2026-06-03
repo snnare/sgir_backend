@@ -1,4 +1,0 @@
-direccion_ip,puerto_db,nombre_instancia,nombre_base,tamano_mb,estado
-192.168.12.10,3306,instancia_prod,ventas_db,1024.50,Activo
-192.168.12.10,3306,instancia_prod,clientes_db,512.00,Activo
-192.168.12.20,1521,ORCL,ERP_PROD,20480.00,Activo

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Reporte Mensual de SLA e Incidentes SRE</title>
+    <style>
+        /* --- Paleta UAEMex SRE --- */
+        :root {
+            --uaem-green: #004b36;
+            --uaem-green-medium: #0e634a;
+            --uaem-green-light: #f2f9f6;
+            --uaem-green-soft: #e1efe9;
+            --uaem-gold: #b38628;
+            --uaem-gold-light: #fcf8ee;
+            --text-dark: #111827;
+            --text-normal: #374151;
+            --text-muted: #6b7280;
+            --border-light: #e5e7eb;
+            
+            /* Colores de criticidad y alertas */
+            --color-healthy: #166534;
+            --bg-healthy: #f0fdf4;
+            --color-warning: #b45309;
+            --bg-warning: #fffbeb;
+            --color-critical: #991b1b;
+            --bg-critical: #fef2f2;
+        }
+
+        @page {
+            size: A4;
+            margin: 20mm 15mm 20mm 15mm;
+            @bottom-left {
+                content: "SGIR | Reporte de SLA y Disponibilidad de Servidores - DTIC";
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                font-size: 7.5pt;
+                color: var(--text-muted);
+                border-top: 1px solid var(--border-light);
+                padding-top: 5px;
+                width: 100%;
+            }
+            @bottom-right {
+                content: "Página " counter(page) " de " counter(pages);
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                font-size: 7.5pt;
+                color: var(--text-muted);
+                border-top: 1px solid var(--border-light);
+                padding-top: 5px;
+            }
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: var(--text-normal);
+            margin: 0;
+            padding: 0;
+            font-size: 9pt;
+            line-height: 1.4;
+            -webkit-print-color-adjust: exact;
+        }
+
+        /* --- Encabezado --- */
+        .header-section {
+            border-bottom: 4px solid var(--uaem-green);
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .header-decorator {
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 150px;
+            height: 4px;
+            background-color: var(--uaem-gold);
+        }
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: middle;
+        }
+
+        .title-container h1 {
+            color: var(--uaem-green);
+            font-size: 16pt;
+            font-weight: 800;
+            margin: 0;
+            text-transform: uppercase;
+        }
+
+        .title-container .dtic-label {
+            color: var(--uaem-gold);
+            font-size: 8.5pt;
+            font-weight: 700;
+            margin: 4px 0 0 0;
+            text-transform: uppercase;
+        }
+
+        .logo-img {
+            max-height: 48px;
+        }
+
+        /* --- Panel de Metadatos --- */
+        .info-panel {
+            background-color: var(--uaem-green-light);
+            border: 1px solid var(--uaem-green-soft);
+            border-left: 5px solid var(--uaem-green);
+            border-radius: 4px;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .info-table td {
+            border: none;
+            padding: 2px 0;
+            font-size: 8pt;
+        }
+
+        .info-label {
+            font-weight: 700;
+            color: var(--uaem-green);
+            width: 18%;
+        }
+
+        .info-value {
+            color: var(--text-dark);
+            width: 32%;
+        }
+
+        .section-title {
+            color: var(--uaem-green);
+            font-size: 11pt;
+            font-weight: 800;
+            text-transform: uppercase;
+            border-bottom: 2px solid var(--uaem-green-soft);
+            padding-bottom: 4px;
+            margin-top: 25px;
+            margin-bottom: 10px;
+            page-break-after: avoid;
+        }
+
+        /* --- KPIs --- */
+        .kpi-container {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .kpi-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 10px 0;
+        }
+
+        .kpi-card {
+            background-color: #fafafa;
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            padding: 10px;
+            text-align: center;
+            width: 25%;
+        }
+
+        .kpi-value {
+            font-size: 14pt;
+            font-weight: 800;
+            color: var(--uaem-green);
+            margin: 0;
+        }
+
+        .kpi-label {
+            font-size: 7.5pt;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        /* --- Tablas --- */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .data-table th {
+            background-color: var(--uaem-green);
+            color: #ffffff;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 7.5pt;
+            padding: 8px 10px;
+            border: 1px solid var(--uaem-green);
+            text-align: left;
+        }
+
+        .data-table td {
+            padding: 7px 10px;
+            border: 1px solid var(--border-light);
+            font-size: 8pt;
+            vertical-align: middle;
+        }
+
+        .data-table tbody tr:nth-child(even) {
+            background-color: var(--uaem-green-light);
+        }
+
+        /* --- Badges --- */
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            font-size: 7pt;
+            font-weight: 800;
+            border-radius: 30px;
+            text-transform: uppercase;
+        }
+
+        .status-healthy { background-color: var(--bg-healthy); color: var(--color-healthy); border: 1px solid var(--color-healthy); }
+        .status-warning { background-color: var(--bg-warning); color: var(--color-warning); border: 1px solid var(--color-warning); }
+        .status-critical { background-color: var(--bg-critical); color: var(--color-critical); border: 1px solid var(--color-critical); }
+
+        .uptime-percent {
+            font-weight: 700;
+            font-family: monospace;
+            font-size: 9pt;
+        }
+
+        .uptime-high { color: var(--color-healthy); }
+        .uptime-med { color: var(--color-warning); }
+        .uptime-low { color: var(--color-critical); }
+
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Encabezado UAEMex -->
+    <div class="header-section">
+        <table class="header-table">
+            <tr>
+                <td class="title-container">
+                    <h1>SLA y Disponibilidad de Host</h1>
+                    <div class="dtic-label">Dirección de Tecnologías de la Información y Comunicaciones</div>
+                </td>
+                <td class="logo-container" style="text-align: right;">
+                    
+                </td>
+            </tr>
+        </table>
+        <div class="header-decorator"></div>
+    </div>
+
+    <!-- Metadatos del Reporte -->
+    <div class="info-panel">
+        <table class="info-table">
+            <tr>
+                <td class="info-label">Tipo de Reporte:</td>
+                <td class="info-value">SLA, Incidentes y Disponibilidad (SRE)</td>
+                <td class="info-label">Fecha de Generación:</td>
+                <td class="info-value">2026-06-02 14:58:37</td>
+            </tr>
+            <tr>
+                <td class="info-label">Generado por:</td>
+                <td class="info-value" colspan="3">Generador de Pruebas Automatizado (SGIR SLA/SRE)</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- KPIs de SLA -->
+    <div class="kpi-container">
+        <table class="kpi-table">
+            <tr>
+                <td class="kpi-card">
+                    <div class="kpi-value">99.06%</div>
+                    <div class="kpi-label">SLA Promedio Global</div>
+                </td>
+                <td class="kpi-card">
+                    <div class="kpi-value">14</div>
+                    <div class="kpi-label">Incidentes Registrados</div>
+                </td>
+                <td class="kpi-card">
+                    <div class="kpi-value">30</div>
+                    <div class="kpi-label">Días en Historial</div>
+                </td>
+                <td class="kpi-card">
+                    <div class="kpi-value" style="font-size: 11.5pt; font-weight: 700; color: var(--color-critical);">
+                        srv-oracle-legacy-03 (94.21%)
+                    </div>
+                    <div class="kpi-label">Menor SLA</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Resumen de SLA por Servidor -->
+    <div class="section-title">Resumen de SLA y Disponibilidad por Host</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Host / Servidor</th>
+                <th>Dirección IP</th>
+                <th>Total Chequeos</th>
+                <th>Exitosos</th>
+                <th>Fallidos / Stale</th>
+                <th>Uptime / SLA</th>
+            </tr>
+        </thead>
+        <tbody>
+            
+            <tr>
+                <td style="font-weight: 700;">srv-mysql-prod-01</td>
+                <td style="font-family: monospace;">192.168.12.10</td>
+                <td>8640</td>
+                <td>8632</td>
+                <td>8</td>
+                <td>
+                    <span class="uptime-percent uptime-high">
+                        99.91%
+                    </span>
+                </td>
+            </tr>
+            
+            <tr>
+                <td style="font-weight: 700;">srv-mongodb-test-02</td>
+                <td style="font-family: monospace;">192.168.12.11</td>
+                <td>8640</td>
+                <td>8598</td>
+                <td>42</td>
+                <td>
+                    <span class="uptime-percent uptime-high">
+                        99.51%
+                    </span>
+                </td>
+            </tr>
+            
+            <tr>
+                <td style="font-weight: 700;">srv-oracle-legacy-03</td>
+                <td style="font-family: monospace;">192.168.12.20</td>
+                <td>8640</td>
+                <td>8140</td>
+                <td>500</td>
+                <td>
+                    <span class="uptime-percent uptime-low">
+                        94.21%
+                    </span>
+                </td>
+            </tr>
+            
+            <tr>
+                <td style="font-weight: 700;">srv-oracle-prod-04</td>
+                <td style="font-family: monospace;">192.168.12.21</td>
+                <td>8640</td>
+                <td>8640</td>
+                <td>0</td>
+                <td>
+                    <span class="uptime-percent uptime-high">
+                        100.0%
+                    </span>
+                </td>
+            </tr>
+            
+            <tr>
+                <td style="font-weight: 700;">srv-web-gateway-05</td>
+                <td style="font-family: monospace;">192.168.12.30</td>
+                <td>8640</td>
+                <td>8625</td>
+                <td>15</td>
+                <td>
+                    <span class="uptime-percent uptime-high">
+                        99.83%
+                    </span>
+                </td>
+            </tr>
+            
+            <tr>
+                <td style="font-weight: 700;">srv-ssh-jumphost-06</td>
+                <td style="font-family: monospace;">192.168.12.40</td>
+                <td>8640</td>
+                <td>8638</td>
+                <td>2</td>
+                <td>
+                    <span class="uptime-percent uptime-high">
+                        99.98%
+                    </span>
+                </td>
+            </tr>
+            
+            <tr>
+                <td style="font-weight: 700;">srv-backup-vault-07</td>
+                <td style="font-family: monospace;">192.168.12.50</td>
+                <td>8640</td>
+                <td>8640</td>
+                <td>0</td>
+                <td>
+                    <span class="uptime-percent uptime-high">
+                        100.0%
+                    </span>
+                </td>
+            </tr>
+            
+        </tbody>
+    </table>
+
+    
+    <!-- Historial de Incidentes y Alertas Recientes -->
+    <div class="section-title" style="margin-top: 30px;">Historial de Incidentes y Alertas del Periodo</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Fecha Incidente</th>
+                <th>Servidor / IP</th>
+                <th>Descripción de la Alerta</th>
+                <th>Nivel</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            
+            <tr>
+                <td>2026-06-02 10:58:37</td>
+                <td>
+                    <span style="font-weight: 700;">srv-oracle-legacy-03</span><br>
+                    <span style="font-family: monospace; font-size: 7.5pt; color: var(--text-muted);">192.168.12.20</span>
+                </td>
+                <td>El uso de CPU superó el umbral crítico seguro (CPU: 95.40%)</td>
+                <td>
+                    <span class="status-badge status-critical">
+                        Critical
+                    </span>
+                </td>
+                <td>
+                    <span class="status-badge status-critical">
+                        Activo
+                    </span>
+                </td>
+            </tr>
+            
+            <tr>
+                <td>2026-05-31 14:58:37</td>
+                <td>
+                    <span style="font-weight: 700;">srv-mongodb-test-02</span><br>
+                    <span style="font-family: monospace; font-size: 7.5pt; color: var(--text-muted);">192.168.12.11</span>
+                </td>
+                <td>Fallo de conectividad SSH recurrente - Host inalcanzable (Timeout 10s)</td>
+                <td>
+                    <span class="status-badge status-warning">
+                        Warning
+                    </span>
+                </td>
+                <td>
+                    <span class="status-badge status-healthy">
+                        Resuelta
+                    </span>
+                </td>
+            </tr>
+            
+            <tr>
+                <td>2026-05-28 14:58:37</td>
+                <td>
+                    <span style="font-weight: 700;">srv-oracle-legacy-03</span><br>
+                    <span style="font-family: monospace; font-size: 7.5pt; color: var(--text-muted);">192.168.12.20</span>
+                </td>
+                <td>El espacio en disco en la partición /u01 superó el umbral (Uso: 92.50%)</td>
+                <td>
+                    <span class="status-badge status-critical">
+                        Critical
+                    </span>
+                </td>
+                <td>
+                    <span class="status-badge status-healthy">
+                        Resuelta
+                    </span>
+                </td>
+            </tr>
+            
+            <tr>
+                <td>2026-05-25 14:58:37</td>
+                <td>
+                    <span style="font-weight: 700;">srv-web-gateway-05</span><br>
+                    <span style="font-family: monospace; font-size: 7.5pt; color: var(--text-muted);">192.168.12.30</span>
+                </td>
+                <td>Consumo elevado de memoria RAM en servidor de frontend (RAM: 88.20%)</td>
+                <td>
+                    <span class="status-badge status-warning">
+                        Warning
+                    </span>
+                </td>
+                <td>
+                    <span class="status-badge status-healthy">
+                        Resuelta
+                    </span>
+                </td>
+            </tr>
+            
+            <tr>
+                <td>2026-05-21 14:58:37</td>
+                <td>
+                    <span style="font-weight: 700;">srv-oracle-legacy-03</span><br>
+                    <span style="font-family: monospace; font-size: 7.5pt; color: var(--text-muted);">192.168.12.20</span>
+                </td>
+                <td>Pérdida de conectividad con la instancia DBMS (Puerto: 1521 bloqueado)</td>
+                <td>
+                    <span class="status-badge status-critical">
+                        Critical
+                    </span>
+                </td>
+                <td>
+                    <span class="status-badge status-healthy">
+                        Resuelta
+                    </span>
+                </td>
+            </tr>
+            
+        </tbody>
+    </table>
+    
+
+</body>
+</html>

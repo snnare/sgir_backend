@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Reporte de SRE e Infraestructura Consolidado - SGIR Mockup</title>
+    <style>
+        /* --- Paleta UAEMex SRE --- */
+        :root {
+            --uaem-green: #004b36;
+            --uaem-green-medium: #0e634a;
+            --uaem-green-light: #f2f9f6;
+            --uaem-green-soft: #e1efe9;
+            --uaem-gold: #b38628;
+            --uaem-gold-light: #fcf8ee;
+            --text-dark: #111827;
+            --text-normal: #374151;
+            --text-muted: #6b7280;
+            --border-light: #e5e7eb;
+            
+            /* Colores de estado SRE */
+            --color-healthy: #166534;
+            --bg-healthy: #f0fdf4;
+            --color-stale: #b45309;
+            --bg-stale: #fffbeb;
+            --color-critical: #991b1b;
+            --bg-critical: #fef2f2;
+        }
+
+        /* --- Configuración de Impresión A4 Vertical --- */
+        @page {
+            size: A4;
+            margin: 20mm 15mm 20mm 15mm;
+            @bottom-left {
+                content: "SGIR | Sistema de Gestión SRE e Infraestructura UAEMex";
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                font-size: 7.5pt;
+                color: var(--text-muted);
+                border-top: 1px solid var(--border-light);
+                padding-top: 5px;
+                width: 100%;
+            }
+            @bottom-right {
+                content: "Página " counter(page) " de " counter(pages);
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                font-size: 7.5pt;
+                color: var(--text-muted);
+                border-top: 1px solid var(--border-light);
+                padding-top: 5px;
+            }
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: var(--text-normal);
+            margin: 0;
+            padding: 0;
+            font-size: 9pt;
+            line-height: 1.4;
+            -webkit-print-color-adjust: exact;
+        }
+
+        /* --- Encabezado --- */
+        .header-section {
+            border-bottom: 4px solid var(--uaem-green);
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .header-decorator {
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 150px;
+            height: 4px;
+            background-color: var(--uaem-gold);
+        }
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: middle;
+        }
+
+        .title-container h1 {
+            color: var(--uaem-green);
+            font-size: 16pt;
+            font-weight: 800;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: -0.5px;
+        }
+
+        .title-container .dtic-label {
+            color: var(--uaem-gold);
+            font-size: 8.5pt;
+            font-weight: 700;
+            margin: 4px 0 0 0;
+            text-transform: uppercase;
+        }
+
+        .logo-container {
+            text-align: right;
+        }
+
+        .logo-img {
+            max-height: 48px;
+            vertical-align: middle;
+        }
+
+        /* --- Panel de Metadatos --- */
+        .info-panel {
+            background-color: var(--uaem-green-light);
+            border: 1px solid var(--uaem-green-soft);
+            border-left: 5px solid var(--uaem-green);
+            border-radius: 4px;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .info-table td {
+            border: none;
+            padding: 2px 0;
+            font-size: 8pt;
+            vertical-align: middle;
+        }
+
+        .info-label {
+            font-weight: 700;
+            color: var(--uaem-green);
+            width: 18%;
+        }
+
+        .info-value {
+            color: var(--text-dark);
+            width: 32%;
+        }
+
+        /* --- Secciones Modulares (Widgets) --- */
+        .section-title {
+            color: var(--uaem-green);
+            font-size: 11pt;
+            font-weight: 800;
+            text-transform: uppercase;
+            border-bottom: 2px solid var(--uaem-green-soft);
+            padding-bottom: 4px;
+            margin-top: 25px;
+            margin-bottom: 10px;
+            page-break-after: avoid;
+        }
+
+        /* --- Resumen Numérico (Grid de Tarjetas) --- */
+        .kpi-container {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .kpi-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 10px 0;
+        }
+
+        .kpi-card {
+            background-color: #fafafa;
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            padding: 10px;
+            text-align: center;
+            width: 25%;
+        }
+
+        .kpi-value {
+            font-size: 14pt;
+            font-weight: 800;
+            color: var(--uaem-green);
+            margin: 0;
+        }
+
+        .kpi-label {
+            font-size: 7.5pt;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        /* --- Tablas de Datos --- */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .data-table th {
+            background-color: var(--uaem-green);
+            color: #ffffff;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 7.5pt;
+            padding: 8px 10px;
+            border: 1px solid var(--uaem-green);
+            text-align: left;
+        }
+
+        .data-table td {
+            padding: 7px 10px;
+            border: 1px solid var(--border-light);
+            font-size: 8pt;
+            vertical-align: middle;
+        }
+
+        .data-table tbody tr:nth-child(even) {
+            background-color: var(--uaem-green-light);
+        }
+
+        /* --- Badges de Estado --- */
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            font-size: 7pt;
+            font-weight: 800;
+            border-radius: 30px;
+            text-transform: uppercase;
+        }
+
+        .status-healthy { background-color: var(--bg-healthy); color: var(--color-healthy); border: 1px solid var(--color-healthy); }
+        .status-stale { background-color: var(--bg-stale); color: var(--color-stale); border: 1px solid var(--color-stale); }
+        .status-critical { background-color: var(--bg-critical); color: var(--color-critical); border: 1px solid var(--color-critical); }
+
+        .progress-bar-container {
+            background-color: #e5e7eb;
+            border-radius: 10px;
+            width: 80px;
+            height: 8px;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 5px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 10px;
+        }
+
+        .fill-healthy { background-color: #22c55e; }
+        .fill-warning { background-color: #eab308; }
+        .fill-critical { background-color: #ef4444; }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        .total-row {
+            background-color: var(--uaem-gold-light) !important;
+            font-weight: bold;
+        }
+
+        .total-row td {
+            border-top: 2px solid var(--uaem-gold);
+            border-bottom: 2px solid var(--uaem-gold);
+            color: var(--uaem-green);
+            font-size: 8.5pt;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Encabezado UAEMex -->
+    <div class="header-section">
+        <table class="header-table">
+            <tr>
+                <td class="title-container">
+                    <h1>Consolidado General de SRE</h1>
+                    <div class="dtic-label">Dirección de Tecnologías de la Información y Comunicaciones</div>
+                </td>
+                <td class="logo-container">
+                    <!-- Si se renderiza, Jinja2 inyectará el path. En mockup usamos un placeholder o dejamos la etiqueta -->
+                    
+                </td>
+            </tr>
+        </table>
+        <div class="header-decorator"></div>
+    </div>
+
+    <!-- Metadatos de la Sesión -->
+    <div class="info-panel">
+        <table class="info-table">
+            <tr>
+                <td class="info-label">Tipo de Reporte:</td>
+                <td class="info-value">Consolidado General SRE (Demostración / Mockup)</td>
+                <td class="info-label">Fecha de Emisión:</td>
+                <td class="info-value">2026-06-02 14:48:28</td>
+            </tr>
+            <tr>
+                <td class="info-label">Generado por:</td>
+                <td class="info-value" colspan="3">Generador de Pruebas Automatizado (SGIR SRE)</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Bloque 1: KPIs Rápidos (Totales) -->
+    <div class="kpi-container">
+        <table class="kpi-table">
+            <tr>
+                <td class="kpi-card">
+                    <div class="kpi-value">50</div>
+                    <div class="kpi-label">Servidores</div>
+                </td>
+                <td class="kpi-card">
+                    <div class="kpi-value">50</div>
+                    <div class="kpi-label">Instancias DBMS</div>
+                </td>
+                <td class="kpi-card">
+                    <div class="kpi-value">70</div>
+                    <div class="kpi-label">Bases de Datos</div>
+                </td>
+                <td class="kpi-card">
+                    <div class="kpi-value">16</div>
+                    <div class="kpi-label">Alertas Activas</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Bloque 2: Salud General de Servidores -->
+    <div class="section-title">Resumen de Salud de Servidores (Mockup)</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Nombre Servidor</th>
+                <th>Dirección IP</th>
+                <th>Uso CPU</th>
+                <th>Uso RAM</th>
+                <th>Criticidad</th>
+                <th>Estado SRE</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="font-weight: 700;">srv-mysql-prod-01</td>
+                <td style="font-family: monospace;">192.168.12.10</td>
+                <td>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill fill-healthy" style="width: 45%;"></div>
+                    </div>
+                    45.0%
+                </td>
+                <td>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill fill-healthy" style="width: 62%;"></div>
+                    </div>
+                    62.0%
+                </td>
+                <td>Crítico</td>
+                <td>
+                    <span class="status-badge status-healthy">healthy</span>
+                </td>
+            </tr>
+            <tr>
+                <td style="font-weight: 700;">srv-mongodb-test-02</td>
+                <td style="font-family: monospace;">192.168.12.11</td>
+                <td>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill fill-healthy" style="width: 15%;"></div>
+                    </div>
+                    15.0%
+                </td>
+                <td>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill fill-warning" style="style: width: 85%;"></div>
+                    </div>
+                    85.0%
+                </td>
+                <td>Medio</td>
+                <td>
+                    <span class="status-badge status-stale">stale</span>
+                </td>
+            </tr>
+            <tr>
+                <td style="font-weight: 700;">srv-oracle-legacy-03</td>
+                <td style="font-family: monospace;">192.168.12.20</td>
+                <td>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill fill-critical" style="width: 95%;"></div>
+                    </div>
+                    95.0%
+                </td>
+                <td>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill fill-critical" style="width: 92%;"></div>
+                    </div>
+                    92.0%
+                </td>
+                <td>Crítico</td>
+                <td>
+                    <span class="status-badge status-critical">critical</span>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Salto de página para el PDF -->
+    <div class="page-break"></div>
+
+    <!-- Bloque 3: Inventario de Bases de Datos -->
+    <div class="section-title">Inventario de Bases de Datos y Motores (Mockup)</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Dirección IP</th>
+                <th>Motor DBMS</th>
+                <th>Nombre Base de Datos</th>
+                <th style="text-align: right;">Tamaño</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="font-family: monospace;">192.168.12.10</td>
+                <td>MySQL 8</td>
+                <td style="font-weight: 600;">sgir_db_prod</td>
+                <td style="text-align: right; font-weight: 700;">245.50 MB</td>
+            </tr>
+            <tr>
+                <td style="font-family: monospace;">192.168.12.10</td>
+                <td>MySQL 8</td>
+                <td style="font-weight: 600;">sgir_db_audit</td>
+                <td style="text-align: right; font-weight: 700;">1,020.10 MB</td>
+            </tr>
+            <tr>
+                <td style="font-family: monospace;">192.168.12.11</td>
+                <td>MongoDB 6</td>
+                <td style="font-weight: 600;">logs_collection</td>
+                <td style="text-align: right; font-weight: 700;">512.00 MB</td>
+            </tr>
+            <tr>
+                <td style="font-family: monospace;">192.168.12.20</td>
+                <td>Oracle 21</td>
+                <td style="font-weight: 600;">XE_PROD</td>
+                <td style="text-align: right; font-weight: 700;">4,500.00 MB</td>
+            </tr>
+            <tr class="total-row">
+                <td colspan="2" style="text-transform: uppercase; letter-spacing: 0.5px;">Totales Generales</td>
+                <td style="text-align: right; font-weight: normal; font-size: 8pt; color: var(--text-normal);">4 bases de datos encontradas</td>
+                <td style="text-align: right; font-weight: 700; color: var(--uaem-green);">6,277.60 MB</td>
+            </tr>
+        </tbody>
+    </table>
+
+</body>
+</html>

@@ -2139,6 +2139,24 @@ Endpoints enfocados en la extracción automatizada y sincronización del inventa
 *   **Body Requerido:** *Sin Body (Público, sin autenticación)*
 *   **Response Esperada (Status 200 - application/pdf):** Flujo binario de archivo PDF con descarga adjunta (`reporte_inventario_dbs.pdf`).
 
+#### **`GET`** `/assets/pdf-offline`
+*   **Servicio Ejecutor:** `app/routes/__init__.py` $\rightarrow$ `get_assets_pdf_offline`
+*   **Comportamiento Operativo:** Consulta de forma directa e instantánea la CMDB en la base de datos local (PostgreSQL) y genera el reporte de inventario de bases de datos en PDF de forma offline, omitiendo la sincronización por red.
+*   **Body Requerido:** *Sin Body (Público, sin autenticación)*
+*   **Response Esperada (Status 200 - application/pdf):** Flujo binario de archivo PDF con descarga adjunta (`reporte_inventario_dbs_offline.pdf`).
+
+#### **`GET`** `/assets/sre-pdf-offline`
+*   **Servicio Ejecutor:** `app/routes/__init__.py` $\rightarrow$ `get_assets_sre_pdf_offline`
+*   **Comportamiento Operativo:** Genera un reporte PDF consolidado general de SRE (salud de hardware en base a la caché RAM de métricas en vivo, alertas activas e inventario de bases de datos local) de forma offline y sin conexiones de red.
+*   **Body Requerido:** *Sin Body (Público, sin autenticación)*
+*   **Response Esperada (Status 200 - application/pdf):** Flujo binario de archivo PDF con descarga adjunta (`reporte_general_sre.pdf`).
+
+#### **`GET`** `/assets/sre-sla-pdf`
+*   **Servicio Ejecutor:** `app/routes/__init__.py` $\rightarrow$ `get_assets_sre_sla_pdf`
+*   **Comportamiento Operativo:** Genera un reporte PDF consolidado de SLA, incidentes SRE y disponibilidad general de los servidores a partir de la información de monitoreo y alertas registrada en la base de datos local (Offline).
+*   **Body Requerido:** *Sin Body (Público, sin autenticación)*
+*   **Response Esperada (Status 200 - application/pdf):** Flujo binario de archivo PDF con descarga adjunta (`reporte_sre_sla.pdf`).
+
 #### **`GET`** `/assets/csv`
 *   **Servicio Ejecutor:** `app/routes/__init__.py` $\rightarrow$ `get_assets_csv`
 *   **Comportamiento Operativo:** Ejecuta una sincronización en tiempo real de toda la infraestructura activa (`run_bulk_inventory_sync`), extrae las bases de datos activas de la CMDB ordenadas por motor de BD, y construye e inyecta la información en un búfer de texto en memoria codificado en formato CSV (`utf-8-sig`) para compatibilidad directa con Microsoft Excel.
