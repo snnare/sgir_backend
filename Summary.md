@@ -1,6 +1,6 @@
-# Resumen de Estado del Proyecto - SGIR (Actualizado: 2 de Junio, 2026)
+# Resumen de Estado del Proyecto - SGIR (Actualizado: 3 de Junio, 2026)
 
-Este documento registra los avances, decisiones técnicas, lógica de negocio incorporada y estado de los repositorios durante la sesión actual para garantizar la continuidad del desarrollo del sistema **SGIR**.
+Este documento registra los avances, decisiones técnicas, lógica de negocio incorporada y estado de los repositorios durante las sesiones de desarrollo para garantizar la continuidad del sistema **SGIR**.
 
 ---
 
@@ -13,58 +13,60 @@ Este documento registra los avances, decisiones técnicas, lógica de negocio in
 
 ---
 
-## 🚀 Logros y Cambios Clave de la Sesión (2 de Junio, 2026)
+## 🚀 Logros y Cambios Clave de la Sesión (3 de Junio, 2026)
+
+### 1. Alineación y Corrección de Mapeo Relacional (Discrepancias)
+Comparamos el script de base de datos [`modelo-logico.sql`](file:///home/angel/src/titulacion/sgir_backend/modelo-logico.sql) contra los modelos del backend y corregimos dos discrepancias críticas:
+*   **Tabla de Particiones:** Se modificó en [`infrastructure_models.py`](file:///home/angel/src/titulacion/sgir_backend/app/models/infrastructure_models.py#L51) la tabla de la clase `ServidorParticion` de `"servidor_particion"` a `"particion"` para que coincida exactamente con la definición del DDL.
+*   **Ortografía de Columna en Políticas:** Se corrigió en el modelo [`backup_models.py`](file:///home/angel/src/titulacion/sgir_backend/app/models/backup_models.py#L40) y en los esquemas Pydantic [`backup_schemas.py`](file:///home/angel/src/titulacion/sgir_backend/app/schemas/backups/backup_schemas.py#L60-L75) el campo `hora_ejecuccion` (con doble 'c') a `hora_ejecucion` (con una sola 'c') para evitar fallos de persistencia en base de datos.
+
+### 2. Creación e Integración de Pruebas para Módulo 3
+*   **Script de Prueba Interactivo:** Se creó la carpeta [`tests/m3`](file:///home/angel/src/titulacion/sgir_backend/tests/m3) y el script [`test_discover_backups.py`](file:///home/angel/src/titulacion/sgir_backend/tests/m3/test_discover_backups.py).
+*   **Flujo del Test:** Se conecta a la API local (`localhost:8000`), inicia sesión como administrador maestro (`admin@admin.com`/`123Nokia`), pide la IP de un servidor por consola, resuelve de forma automática sus relaciones (instancias DBMS, credenciales SSH, rutas de backup) y ejecuta el endpoint de auto-descubrimiento de copias de seguridad.
+
+### 3. Diagnóstico y Corrección en Monitoreo Oracle Legacy (RHEL 4)
+*   **Análisis del Fallo ORA-01034 / SP2-0306:** Se identificó que la tarea de monitoreo de base de datos fallaba al conectarse por SSH a la base de datos `DbEvapem` (IP `148.215.1.98`) debido a que el campo `parametros_conexion` de la instancia estaba vacío (`None`), lo cual forzaba a que el backend usara por defecto el SID `"ORCL"`.
+*   **Efecto:** Al intentar conectarse a un SID inexistente en el host, `sqlplus` fallaba con `ORA-01034` y después entraba en un bucle leyendo el código SQL como datos de inicio de sesión (`SP2-0306` y `SP2-0157`).
+*   **Corrección sugerida:** Actualizar `parametros_conexion` de la instancia en PostgreSQL para registrar la clave `"sid": "DbEvapem"`. Al hacer esto, el fallback de SSH funciona correctamente sin levantar ninguna alerta y recupera las métricas de Oracle 10g en silencio.
+*   **Validación exitosa:** Se corrió el test de descubrimiento de respaldos para la IP `148.215.1.98` obteniendo un resultado `200 OK` con un conteo exitoso de 15 archivos físicos de respaldos `.dmp.gz`.
+
+---
+
+## 🚀 Logros y Cambios Clave de la Sesión Anterior (2 de Junio, 2026)
 
 ### 1. Robustecimiento y Consistencia de Reportes (RDBMS + Versión)
-*   **Decisión de Diseño**: Modificamos los endpoints `/assets/pdf` y `/assets/csv` en [`app/routes/__init__.py`](file:///home/angel/src/titulacion/sgir_backend/app/routes/__init__.py) para recuperar y normalizar el tipo de motor de base de datos junto con su versión principal (ej. `"MySQL 8"`, `"MongoDB 6"`, `"Oracle 21"`).
-*   **Compatibilidad Visual**: Esta cadena combinada se inyecta directamente bajo el campo `motor` de la plantilla HTML, de forma que el CSS del PDF renderiza los colores correctos de los badges por motor en WeasyPrint de manera retrocompatible.
+*   Modificamos los endpoints `/assets/pdf` y `/assets/csv` en [`app/routes/__init__.py`](file:///home/angel/src/titulacion/sgir_backend/app/routes/__init__.py) para recuperar y normalizar el tipo de motor de base de datos junto con su versión principal (ej. `"MySQL 8"`, `"MongoDB 6"`).
 
 ### 2. Conversión a Endpoints Offline
-*   **Reporte CSV**: Modificamos `/assets/csv` para que trabaje de forma offline por completo, eliminando la llamada a `run_bulk_inventory_sync` por red.
-*   **Reporte PDF Offline**: Se creó el endpoint `/assets/pdf-offline` para generar el PDF del inventario de bases de datos de forma instantánea a partir de la CMDB local (PostgreSQL), útil si los servidores remotos están inalcanzables.
+*   **Reporte CSV**: Modificamos `/assets/csv` para que trabaje de forma offline por completo, eliminando la llamada a sync por red.
+*   **Reporte PDF Offline**: Se creó el endpoint `/assets/pdf-offline` para generar el PDF del inventario de bases de datos de forma instantánea a partir de la CMDB local (PostgreSQL).
 
 ### 3. Resumen Global de Políticas de Respaldo
 *   **Endpoint API**: Se implementó `GET /sgir/v1/crud/politicas-respaldo/resumen-global` en [`politica_respaldo_routes.py`](file:///home/angel/src/titulacion/sgir_backend/app/routes/core_crud/backups/politica_respaldo_routes.py).
-*   **Lógica Relacional**: Realiza un join cuádruple en [`backup_crud.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/backups/backup_crud.py) (`PoliticaRespaldo` $\to$ `BaseDeDatos` $\to$ `InstanciaDBMS` $\to$ `DBMS` y `Servidor`) para devolver un resumen consolidado en formato JSON que indica qué política está asignada a qué base de datos y en qué servidor (incluyendo IP y motor formateado).
 
 ### 4. Nuevo Reporte de SLA, Incidentes SRE y Uptime
-*   **Plantilla Dinámica**: Creado [`sre_sla_uptime_template.html`](file:///home/angel/src/titulacion/sgir_backend/app/templates/reports/sre_sla_uptime_template.html) con la identidad UAEMex para reportar el porcentaje de uptime exitoso por host, días monitoreados, incidentes del periodo e histórico de alertas recientes.
-*   **Mockup de Prueba**: Creado [`sre_sla_uptime_template_test.html`](file:///home/angel/src/titulacion/sgir_backend/app/templates/reports/mockups/sre_sla_uptime_template_test.html) simulando a escala 7 servidores, SLAs variables e incidentes para validar el diseño visual.
-*   **Endpoint API**: Se implementó `GET /sgir/v1/assets/sre-sla-pdf` en [`app/routes/__init__.py`](file:///home/angel/src/titulacion/sgir_backend/app/routes/__init__.py). Extrae la disponibilidad real basándose en el conteo de chequeos de monitoreo exitosos/fallidos por servidor, y las últimas 30 alertas registradas en base de datos.
+*   **Endpoint API**: Se implementó `GET /sgir/v1/assets/sre-sla-pdf` en [`app/routes/__init__.py`](file:///home/angel/src/titulacion/sgir_backend/app/routes/__init__.py).
 
 ### 5. Depuración y Limpieza de Carga Masiva (CSV)
-*   **Eliminación de endpoints redundantes**: Se eliminaron los endpoints de `/import-bulk` de bases de datos, políticas de respaldo, rutas de respaldo y asignación de políticas.
-*   **Carga Única de Infraestructura**: El único endpoint de carga masiva CSV activo es `POST /sgir/v1/crud/servidores/import-bulk`.
-*   **Eliminación de Código Muerto**: Se reescribió y depuró [`import_service.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/infrastructure/import_service.py) eliminando todas las funciones de parsing de CSVs obsoletos y conservando solo la de infraestructura.
+*   Se eliminaron los endpoints de `/import-bulk` obsoletos y redundantes. El único endpoint activo es `POST /sgir/v1/crud/servidores/import-bulk`.
+*   Se reescribió y depuró [`import_service.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/infrastructure/import_service.py).
 
 ### 6. Ordenamiento de Plantillas de Prueba (Mockups)
-*   Se creó el directorio [`app/templates/reports/mockups`](file:///home/angel/src/titulacion/sgir_backend/app/templates/reports/mockups) para agrupar todas las previsualizaciones estáticas HTML.
-*   Se movieron a dicha subcarpeta los archivos `db_inventory_test.html`, `general_infrastructure_template_test.html` (mockup de 50 servidores/motores a escala) y `sre_sla_uptime_template_test.html`.
-
-### 7. Documentación en routes.md
-*   Se actualizaron y añadieron las descripciones detalladas, comportamientos operativos y estructuras de payload para los endpoints recién creados en [`routes.md`](file:///home/angel/src/titulacion/sgir_backend/routes.md).
-
-### 8. Creación de Documentación del Módulo 1 (Observabilidad y Salud)
-*   **Directorio de Documentación:** Se creó la carpeta [`documentacion`](file:///home/angel/src/titulacion/sgir_backend/documentacion/) para alojar las descripciones técnicas detalladas de la API por módulos.
-*   **Primeros Dos Endpoints:** Se documentaron técnicamente los endpoints de `/sgir/v1/m1/health/postgres` (GET) y `/sgir/v1/m1/health/ping` (POST) en tres formatos distintos:
-    *   **Formato de Texto Plano (`.txt`):** En [`modulo_uno.txt`](file:///home/angel/src/titulacion/sgir_backend/documentacion/modulo_uno.txt).
-    *   **Formato Word/Docx (`.docx`):** En [`modulo_uno.docx`](file:///home/angel/src/titulacion/sgir_backend/documentacion/modulo_uno.docx), generado mediante un script de automatización en Python (`python-docx`) con la identidad corporativa de la UAEMex (verde oscuro, gris, oro), tablas personalizadas y bloques monospaciados para JSON.
-    *   **Formato Markdown (`.md`):** En [`modulo_uno.md`](file:///home/angel/src/titulacion/sgir_backend/documentacion/modulo_uno.md) para una visualización nativa en GitHub que incluye hipervínculos a los controladores del código fuente.
+*   Se creó el directorio [`app/templates/reports/mockups`](file:///home/angel/src/titulacion/sgir_backend/app/templates/reports/mockups) para agrupar las vistas HTML.
 
 ---
 
 ## 🔒 Control de Cambios (Estado de Git)
-*   El backend compila y ejecuta de manera totalmente exitosa (`uv run python -m py_compile`).
-*   Los endpoints offline optimizan el rendimiento de red reduciendo el tiempo de respuesta a milisegundos.
-*   Se agregaron al repositorio y se enviaron vía `git push` todos los nuevos archivos de documentación de la sesión (`modulo_uno.txt`, `modulo_uno.docx` y `modulo_uno.md`).
+*   Se han compilado exitosamente y libre de errores de sintaxis todos los archivos modificados de la sesión.
+*   El backend y el scheduler procesan las tareas concurrentemente de forma estable.
 
 ---
 
 ## 📝 Próximos Pasos Recomendados
 
-1.  **Continuar con la Documentación del Módulo 1**:
-    *   Documentar el resto de los endpoints de observabilidad (Scheduler, Live Cache, monitores de bases de datos específicos por criticidad MySQL 5/8/MongoDB y monitoreo SSH) utilizando los mismos formatos multilingües y estructurados.
-2.  **Integración en Frontend (Dashboard SRE)**:
-    *   Vincular las opciones de descarga en el Frontend (React) a las nuevas rutas offline (`/assets/pdf-offline`, `/assets/csv` y `/assets/sre-sla-pdf`).
-3.  **Pruebas de Uptime**:
-    *   Agregar datos de monitoreo históricos de simulación para validar los porcentajes de SLA en entornos reales de producción con cargas prolongadas.
+1.  **Validación del Frontend:**
+    *   Asegurar que los formularios y esquemas del Front-end utilicen el campo corregido `hora_ejecucion` (en lugar de `hora_ejecuccion`) al crear o actualizar políticas de respaldo.
+2.  **Sincronización del SID en CMDB:**
+    *   Revisar que todas las instancias de Oracle registradas en la CMDB cuenten con el parámetro `"sid"` definido dentro del campo `parametros_conexion` para evitar fallos de fallback por SSH al usar el SID `"ORCL"`.
+3.  **Continuar con la Documentación del Módulo 1**:
+    *   Documentar el resto de los endpoints de observabilidad en formatos `.md`, `.txt` y `.docx`.

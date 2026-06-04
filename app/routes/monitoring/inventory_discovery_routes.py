@@ -2,7 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.db.postgres.postgres_connection import get_db as get_pg_db
 from app.services import sync_databases_inventory
-from app.services.monitoring.ssh_service import run_integrated_file_discovery, run_server_integrated_file_discovery
+from app.services.monitoring.ssh_service import (
+    run_integrated_file_discovery, 
+    run_server_integrated_file_discovery,
+    run_custom_server_integrated_file_discovery
+)
 from app.core.dependencies import get_current_user
 from app.models.user_models import User
 from sqlalchemy import func
@@ -55,7 +59,7 @@ def discover_integrated_backups(
     las ejecuciones en la tabla Respaldo basándose en el DBMS y las BDs existentes.
     """
     result = run_integrated_file_discovery(db, instancia_id, credencial_id, ruta_id, current_user.id_usuario)
-    if "error" in result:
+    if isinstance(result, dict) and "error" in result:
         raise HTTPException(status_code=404, detail=result["error"])
     return result
 
@@ -71,8 +75,37 @@ def discover_server_backups(
     Busca archivos físicos en TODO el servidor (todas sus instancias) y registra 
     automáticamente las ejecuciones en la tabla Respaldo.
     """
+    print(f"[DEBUG request] POST /sgir/v1/m3/inventory/discover-backups-server/{servidor_id}/{credencial_id}/{ruta_id}")
     result = run_server_integrated_file_discovery(db, servidor_id, credencial_id, ruta_id, current_user.id_usuario)
-    if "error" in result:
+    print(f"[DEBUG discover_server_backups] Resultado del descubrimiento: {result}")
+    if isinstance(result, list):
+        print(f"[DEBUG discover_server_backups] Cantidad de elementos en el listado (tamaño del array): {len(result)}")
+    if isinstance(result, dict) and "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+@m3_router.post("/discover-backups-custom/{servidor_id}/{credencial_id}/{ruta_id}")
+def discover_custom_backups(
+    servidor_id: int,
+    credencial_id: int,
+    ruta_id: int,
+    days: int = Query(0, description="Días de antigüedad. 0 para cualquier fecha."),
+    deep: bool = Query(True, description="True para búsqueda recursiva."),
+    db: Session = Depends(get_pg_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Busca archivos físicos en TODO el servidor (todas sus instancias) con filtros
+    personalizados de antigüedad (días) y búsqueda profunda (recursividad).
+    """
+    print(f"[DEBUG request] POST /sgir/v1/m3/inventory/discover-backups-custom/{servidor_id}/{credencial_id}/{ruta_id}?days={days}&deep={deep}")
+    result = run_custom_server_integrated_file_discovery(
+        db, servidor_id, credencial_id, ruta_id, current_user.id_usuario, days=days, deep=deep
+    )
+    print(f"[DEBUG discover_custom_backups] Resultado: {result}")
+    if isinstance(result, list):
+        print(f"[DEBUG discover_custom_backups] Tamaño del array: {len(result)}")
+    if isinstance(result, dict) and "error" in result:
         raise HTTPException(status_code=404, detail=result["error"])
     return result
 

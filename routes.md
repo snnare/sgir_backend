@@ -2256,4 +2256,25 @@ Endpoints para interactuar con la gestión, retención y escaneo remoto de backu
         "detalle": "Respaldo verificado con éxito"
       }
     ]
+
+#### **`POST`** `/m3/inventory/discover-backups-custom/{servidor_id}/{credencial_id}/{ruta_id}`
+*   **Servicio Ejecutor:** [`app/services/monitoring/ssh_service.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/monitoring/ssh_service.py) $\rightarrow$ `run_server_integrated_file_discovery` (Escanea backups de todas las instancias del servidor con filtros personalizados)
+*   **Query Params:**
+    *   `days: int` (default `0`): Días de antigüedad a evaluar. `0` para desactivar el límite de tiempo.
+    *   `deep: bool` (default `true`): Habilita/deshabilita la recursividad en subcarpetas.
+*   **Body Requerido:** *Sin Body*
+*   **Response Esperada (Status 200 - `List[BackupDiscoveryResult]`):**
+    ```json
+    [
+      {
+        "base_datos_id": 1,
+        "nombre_base": "sgir_catalog",
+        "politica_nombre": "Semanal Retención 15d",
+        "ruta_path": "/mnt/backups/mysql/sgir_catalog_2026-05-22.sql",
+        "archivo_encontrado": true,
+        "tamano_encontrado_mb": 420.50,
+        "timestamp_verificacion": "2026-06-04T15:13:34Z",
+        "detalle": "Respaldo verificado con éxito"
+      }
+    ]
     ```

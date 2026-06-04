@@ -305,34 +305,35 @@ def run_integrated_file_discovery(db: Session, instancia_id: int, credencial_id:
                 found_files.append(f)
         databases = db.query(BaseDeDatos).filter(BaseDeDatos.id_instancia == instancia_id).all()
         respaldos_creados = 0
-        detalles_archivos = []
-        total_size_bytes = 0
+        detalles_response = []
 
-        for file_info in found_files:
-            file_path = file_info["path"]
-            size_bytes = file_info["size"]
-            mtime = file_info["mtime"]
+        for bd in databases:
+            matching_files = [f for f in found_files if bd.nombre_base.lower() in f["path"].lower()]
             
-            file_name = file_path.split('/')[-1]
-            total_size_bytes += size_bytes
+            asignacion = db.query(AsignacionPoliticaBD).filter(AsignacionPoliticaBD.id_base_datos == bd.id_base_datos).first()
+            politica_nombre = "Sin política"
+            id_politica = None
+            if asignacion:
+                politica = db.query(PoliticaRespaldo).filter(PoliticaRespaldo.id_politica == asignacion.id_politica).first()
+                if politica:
+                    politica_nombre = politica.nombre_politica
+                    id_politica = politica.id_politica
             
-            detalles_archivos.append({
-                "nombre": file_name,
-                "tamano_mb": round(size_bytes / (1024 * 1024), 2),
-                "fecha_modificacion": mtime
-            })
-
-            for bd in databases:
-                if bd.nombre_base.lower() in file_path.lower():
-                    asignacion = db.query(AsignacionPoliticaBD).filter(AsignacionPoliticaBD.id_base_datos == bd.id_base_datos).first()
+            if matching_files:
+                for f in matching_files:
+                    file_path = f["path"]
+                    size_bytes = f["size"]
+                    file_name = file_path.split('/')[-1]
+                    tamano_mb = round(size_bytes / (1024 * 1024), 2)
+                    
                     if asignacion:
                         nuevo_respaldo = Respaldo(
                             id_base_datos=bd.id_base_datos,
-                            id_politica=asignacion.id_politica,
+                            id_politica=id_politica,
                             id_credencial=credencial_id,
                             id_estado_ejecucion=4,
                             nombre_archivo=file_name,
-                            tamano_mb=Decimal(str(round(size_bytes / (1024 * 1024), 2))),
+                            tamano_mb=Decimal(str(tamano_mb)),
                             path_fisico_origen=file_path,
                             ubicacion_actual="Origen",
                             ip_almacenado_actual=servidor.direccion_ip,
@@ -341,29 +342,44 @@ def run_integrated_file_discovery(db: Session, instancia_id: int, credencial_id:
                         )
                         db.add(nuevo_respaldo)
                         respaldos_creados += 1
-                        break
+                    
+                    detalles_response.append({
+                        "base_datos_id": bd.id_base_datos,
+                        "nombre_base": bd.nombre_base,
+                        "politica_nombre": politica_nombre,
+                        "ruta_path": file_path,
+                        "archivo_encontrado": True,
+                        "tamano_encontrado_mb": tamano_mb
+                    })
+            else:
+                detalles_response.append({
+                    "base_datos_id": bd.id_base_datos,
+                    "nombre_base": bd.nombre_base,
+                    "politica_nombre": politica_nombre,
+                    "ruta_path": None,
+                    "archivo_encontrado": False,
+                    "tamano_encontrado_mb": 0.0
+                })
 
         nueva_bitacora = Bitacora(entidad_afectada="Respaldo", id_entidad=instancia_id, descripcion_evento=f"Descubrimiento SSH en {ruta.path}. Archivos: {len(found_files)}, Registrados: {respaldos_creados}", id_usuario=user_id, id_tipo_evento=6)
         db.add(nueva_bitacora)
         db.commit()
 
         return {
-            "status": "success", 
-            "servidor": servidor.direccion_ip, 
-            "ruta_respaldo": ruta.path, 
-            "archivos_fisicos_conteo": len(found_files), 
-            "total_peso_mb": round(total_size_bytes / (1024 * 1024), 2),
-            "registros_respaldo_creados": respaldos_creados,
-            "archivos": detalles_archivos
+            "instancia_id": instancia_id,
+            "ruta_escaneada": ruta.path,
+            "archivos_procesados": len(found_files),
+            "nuevos_respaldos_registrados": respaldos_creados,
+            "detalles": detalles_response
         }
     finally:
         # No cerramos si viene del pool
         pass
 
-def run_server_integrated_file_discovery(db: Session, servidor_id: int, credencial_id: int, ruta_id: int, user_id: int):
+def run_server_integrated_file_discovery(db: Session, servidor_id: int, credencial_id: int, ruta_id: int, user_id: int, days: int = 1, deep: bool = False):
     """
-    Descubrimiento GLOBAL por servidor (RAW): Lista archivos recientes en una ruta
-    sin depender de las instancias registradas.
+    Descubrimiento GLOBAL por servidor: Escanea backups de todas las instancias del servidor
+    y retorna la verificación detallada de cada base de datos registrada.
     """
     servidor = db.query(Servidor).filter(Servidor.id_servidor == servidor_id).first()
     ruta = db.query(RutaRespaldo).filter(RutaRespaldo.id_ruta == ruta_id).first()
@@ -380,36 +396,72 @@ def run_server_integrated_file_discovery(db: Session, servidor_id: int, credenci
     try:
         client = get_ssh_connection(servidor, credencial, use_pool=True)
         
-        # Obtener archivos modificados en las últimas 24 horas (1 día)
+        # Obtener archivos según antigüedad y profundidad
         if servidor.es_legacy:
-            found_files = discovery_provider.list_recent_files_legacy(client, ruta.path, days=1)
+            found_files = discovery_provider.list_recent_files_legacy(client, ruta.path, days=days, deep=deep)
         else:
-            found_files = discovery_provider.list_recent_files_modern(client, ruta.path, days=1)
+            found_files = discovery_provider.list_recent_files_modern(client, ruta.path, days=days, deep=deep)
 
-        total_size_bytes = sum(f["size"] for f in found_files)
-        total_peso_mb = round(total_size_bytes / (1024 * 1024), 2)
-        lista_nombres = [f["name"] for f in found_files]
+        # Buscar todas las instancias de este servidor
+        from app.models.infrastructure_models import InstanciaDBMS, BaseDeDatos
+        instances = db.query(InstanciaDBMS).filter(InstanciaDBMS.id_servidor == servidor_id).all()
+        instance_ids = [inst.id_instancia for inst in instances]
+        
+        # Buscar todas las bases de datos de estas instancias
+        databases = db.query(BaseDeDatos).filter(BaseDeDatos.id_instancia.in_(instance_ids)).all() if instance_ids else []
 
+        results = []
+        for bd in databases:
+            # Buscar archivos de respaldo coincidentes
+            matching_files = [f for f in found_files if bd.nombre_base.lower() in f["name"].lower()]
+            
+            # Obtener política
+            asignacion = db.query(AsignacionPoliticaBD).filter(AsignacionPoliticaBD.id_base_datos == bd.id_base_datos).first()
+            politica_nombre = "Sin política"
+            if asignacion:
+                politica = db.query(PoliticaRespaldo).filter(PoliticaRespaldo.id_politica == asignacion.id_politica).first()
+                if politica:
+                    politica_nombre = politica.nombre_politica
+
+            if matching_files:
+                for f in matching_files:
+                    file_path = f.get("path") or f"{ruta.path}/{f['name']}"
+                    size_mb = round(f["size"] / (1024 * 1024), 2)
+                    results.append({
+                        "base_datos_id": bd.id_base_datos,
+                        "nombre_base": bd.nombre_base,
+                        "politica_nombre": politica_nombre,
+                        "ruta_path": file_path,
+                        "archivo_encontrado": True,
+                        "tamano_encontrado_mb": size_mb,
+                        "timestamp_verificacion": datetime.now().isoformat(),
+                        "detalle": "Respaldo verificado con éxito"
+                    })
+            else:
+                results.append({
+                    "base_datos_id": bd.id_base_datos,
+                    "nombre_base": bd.nombre_base,
+                    "politica_nombre": politica_nombre,
+                    "ruta_path": None,
+                    "archivo_encontrado": False,
+                    "tamano_encontrado_mb": 0.0,
+                    "timestamp_verificacion": datetime.now().isoformat(),
+                    "detalle": "No se encontró archivo de respaldo reciente"
+                })
+
+        # Auditoría
         nueva_bitacora = Bitacora(
-            entidad_afectada="Respaldo (Raw Server)", 
+            entidad_afectada="Respaldo (Server Check)", 
             id_entidad=servidor_id, 
-            descripcion_evento=f"Descubrimiento RAW SSH en {ruta.path}. Archivos detectados: {len(found_files)}", 
+            descripcion_evento=f"Verificación global de backups en {ruta.path}. Bases de datos: {len(databases)}, Encontradas: {sum(1 for r in results if r['archivo_encontrado'])}", 
             id_usuario=user_id, 
             id_tipo_evento=6
         )
         db.add(nueva_bitacora)
         db.commit()
-        
-        return {
-            "status": "success", 
-            "servidor": servidor.direccion_ip, 
-            "ruta_respaldo": ruta.path, 
-            "archivos_fisicos_totales": len(found_files), 
-            "peso": f"{total_peso_mb} MB",
-            "lista_archivos": lista_nombres
-        }
+
+        return results
     finally:
-        # No cerramos si viene del pool
         pass
 
 def run_filesystem_discovery(db: Session, servidor_id: int):
@@ -584,3 +636,128 @@ def run_bulk_backups_discovery(db: Session, user_id: int):
     db.commit()
     
     return summary
+
+def run_custom_server_integrated_file_discovery(db: Session, servidor_id: int, credencial_id: int, ruta_id: int, user_id: int, days: int = 0, deep: bool = True):
+    """
+    Descubrimiento PERSONALIZADO por servidor (Hot/Custom): Escanea backups de todas las instancias del servidor
+    con parámetros opcionales de profundidad y antigüedad de días.
+    """
+    servidor = db.query(Servidor).filter(Servidor.id_servidor == servidor_id).first()
+    ruta = db.query(RutaRespaldo).filter(RutaRespaldo.id_ruta == ruta_id).first()
+    credencial = db.query(CredencialAcceso).filter(CredencialAcceso.id_credencial == credencial_id).first()
+    
+    if not servidor or not ruta or not credencial: 
+        return {"error": "Servidor, Ruta o Credencial no encontrados"}
+    
+    # Validación de pertenencia de ruta
+    if ruta.id_servidor != servidor.id_servidor:
+        return {"error": f"La ruta {ruta.path} no pertenece al servidor {servidor.nombre_servidor}"}
+
+    client = None
+    try:
+        client = get_ssh_connection(servidor, credencial, use_pool=True)
+        
+        maxdepth_clause = "" if deep else "-maxdepth 1"
+        mtime_clause = f"-mtime -{days}" if days > 0 else ""
+        
+        found_files = []
+        if not servidor.es_legacy:
+            cmd = f"find {ruta.path} {maxdepth_clause} {mtime_clause} -type f -printf '%p|%s|%TY-%Tm-%Td %TH:%TM:%TS\\n' 2>/dev/null"
+            output = discovery_provider.execute_command(client, cmd)
+            if output:
+                for line in output.split('\n'):
+                    if '|' in line:
+                        parts = line.split('|')
+                        found_files.append({
+                            "path": parts[0], 
+                            "size": int(parts[1]),
+                            "mtime": parts[2]
+                        })
+        else:
+            cmd = f"find {ruta.path} {maxdepth_clause} {mtime_clause} -type f -exec ls -nl --time-style=long-iso {{}} \\; 2>/dev/null"
+            output = discovery_provider.execute_command(client, cmd)
+            if not output:
+                cmd = f"find {ruta.path} {maxdepth_clause} {mtime_clause} -type f -exec ls -nl {{}} \\; 2>/dev/null"
+                output = discovery_provider.execute_command(client, cmd)
+            if output:
+                for line in output.split('\n'):
+                    parts = line.split()
+                    if len(parts) >= 8:
+                        try:
+                            size = int(parts[4])
+                            if "-" in parts[5]: # Long ISO
+                                mtime = f"{parts[5]} {parts[6]}"
+                                path_file = parts[7]
+                            else: # Standard
+                                mtime = f"{parts[5]} {parts[6]} {parts[7]}"
+                                path_file = parts[8]
+                            found_files.append({"path": path_file, "size": size, "mtime": mtime})
+                        except: continue
+
+        # Deduplicar
+        seen_paths = set()
+        dedup_files = []
+        for f in found_files:
+            if f["path"] not in seen_paths:
+                seen_paths.add(f["path"])
+                dedup_files.append(f)
+
+        # Buscar todas las instancias de este servidor
+        from app.models.infrastructure_models import InstanciaDBMS, BaseDeDatos
+        instances = db.query(InstanciaDBMS).filter(InstanciaDBMS.id_servidor == servidor_id).all()
+        instance_ids = [inst.id_instancia for inst in instances]
+        databases = db.query(BaseDeDatos).filter(BaseDeDatos.id_instancia.in_(instance_ids)).all() if instance_ids else []
+
+        results = []
+        for bd in databases:
+            # Buscar archivos de respaldo coincidentes
+            matching_files = [f for f in dedup_files if bd.nombre_base.lower() in f["path"].lower()]
+            
+            # Obtener política
+            asignacion = db.query(AsignacionPoliticaBD).filter(AsignacionPoliticaBD.id_base_datos == bd.id_base_datos).first()
+            politica_nombre = "Sin política"
+            if asignacion:
+                politica = db.query(PoliticaRespaldo).filter(PoliticaRespaldo.id_politica == asignacion.id_politica).first()
+                if politica:
+                    politica_nombre = politica.nombre_politica
+
+            if matching_files:
+                for f in matching_files:
+                    file_path = f["path"]
+                    size_mb = round(f["size"] / (1024 * 1024), 2)
+                    results.append({
+                        "base_datos_id": bd.id_base_datos,
+                        "nombre_base": bd.nombre_base,
+                        "politica_nombre": politica_nombre,
+                        "ruta_path": file_path,
+                        "archivo_encontrado": True,
+                        "tamano_encontrado_mb": size_mb,
+                        "timestamp_verificacion": datetime.now().isoformat(),
+                        "detalle": "Respaldo verificado con éxito"
+                    })
+            else:
+                results.append({
+                    "base_datos_id": bd.id_base_datos,
+                    "nombre_base": bd.nombre_base,
+                    "politica_nombre": politica_nombre,
+                    "ruta_path": None,
+                    "archivo_encontrado": False,
+                    "tamano_encontrado_mb": 0.0,
+                    "timestamp_verificacion": datetime.now().isoformat(),
+                    "detalle": "No se encontró archivo de respaldo reciente"
+                })
+
+        # Auditoría
+        nueva_bitacora = Bitacora(
+            entidad_afectada="Respaldo (Server Custom Check)", 
+            id_entidad=servidor_id, 
+            descripcion_evento=f"Escaneo personalizado SSH en {ruta.path} (days={days}, deep={deep}). Bases: {len(databases)}, Encontradas: {sum(1 for r in results if r['archivo_encontrado'])}", 
+            id_usuario=user_id, 
+            id_tipo_evento=6
+        )
+        db.add(nueva_bitacora)
+        db.commit()
+
+        return results
+    finally:
+        pass
