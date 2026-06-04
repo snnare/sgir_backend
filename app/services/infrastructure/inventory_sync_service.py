@@ -129,7 +129,68 @@ def sync_databases_inventory(db: Session, instancia_id: int, credencial_id: int)
             return {"error": f"DBMS ID {instancia.id_dbms} no soportado para auto-búsqueda actualmente"}
             
     except Exception as e:
-        return {"error": f"Fallo en conexión remota: {str(e)}"}
+        if instancia.id_dbms == 4:
+            print(f"[Oracle Discovery Fallback] Conexión TCP falló ({str(e)}). Intentando fallback vía SSH/sqlplus...")
+            try:
+                from app.core.ssh_orchestrator import get_ssh_connection
+                from app.core.security.encryption import decrypt_password
+                from datetime import datetime
+                
+                # Buscar credencial SSH activa (id_tipo_acceso == 1)
+                ssh_cred = db.query(CredencialAcceso).filter(
+                    CredencialAcceso.id_servidor == servidor.id_servidor,
+                    CredencialAcceso.id_tipo_acceso == 1,
+                    CredencialAcceso.id_estado_credencial == 1
+                ).first()
+                
+                if not ssh_cred:
+                    return {"error": f"Fallo en conexión remota TCP ({str(e)}) y no se encontró credencial SSH activa para fallback."}
+                
+                ssh_client = get_ssh_connection(servidor, ssh_cred)
+                db_user = credencial.usuario
+                db_password = decrypt_password(credencial.password_hash)
+                params = instancia.parametros_conexion or {}
+                sid = params.get("sid") or instancia.nombre_instancia
+                
+                cmd = f"""cd /home/oracle && source .bash_profile
+export ORACLE_SID={sid}
+sqlplus -S '{db_user}/{db_password}' << 'EOF'
+SET HEAD OFF FEEDBACK OFF ECHO OFF PAGESIZE 0 TRIMSPOOL ON;
+SELECT username || '|' || to_char(created, 'YYYY-MM-DD HH24:MI:SS') FROM all_users
+WHERE username NOT IN (
+    'SYS', 'SYSTEM', 'DBSNMP', 'OUTLN', 'APPQOSSYS', 'CTXSYS', 'ANONYMOUS', 
+    'WMSYS', 'XDB', 'ORDDATA', 'ORDSYS', 'MDSYS', 'OLAPSYS', 'MDDATA', 
+    'SPATIAL_WFS_ADMIN_USR', 'SPATIAL_CSW_ADMIN_USR', 'APEX_040200', 
+    'GSMADMIN_INTERNAL', 'LBACSYS', 'DVSYS', 'DVF', 'AUDSYS', 'GSMUSER', 
+    'GGSYS', 'APEX_PUBLIC_USER', 'FLOWS_FILES', 'APEX_030200', 'MGMT_VIEW', 
+    'OWBSYS', 'OWBSYS_AUDIT', 'SI_INFORMTN_SCHEMA', 'ORDPLUGINS'
+)
+ORDER BY username;
+EXIT;
+EOF
+"""
+                stdin, stdout, stderr = ssh_client.exec_command(cmd)
+                output = stdout.read().decode('utf-8').strip()
+                
+                if not output or "ERROR" in output or "ORA-" in output:
+                    return {"error": f"Fallo en conexión TCP ({str(e)}) y fallback SSH sqlplus retornó error: {output}"}
+                
+                for line in output.split('\n'):
+                    if '|' in line:
+                        parts = line.split('|')
+                        try:
+                            fecha_dt = datetime.strptime(parts[1].strip(), '%Y-%m-%d %H:%M:%S')
+                        except:
+                            fecha_dt = None
+                        remote_dbs.append({
+                            "nombre": parts[0].strip(),
+                            "tamano_mb": 0.0,
+                            "fecha_creacion": fecha_dt
+                        })
+            except Exception as ssh_err:
+                return {"error": f"Fallo en conexión TCP ({str(e)}) y fallback SSH falló con error: {str(ssh_err)}"}
+        else:
+            return {"error": f"Fallo en conexión remota: {str(e)}"}
     finally:
         # En MongoDB session_remota es un MongoClient que manejamos vía pool ahora, 
         # pero get_dynamic_session devuelve la instancia del pool. 
@@ -192,7 +253,15 @@ def run_bulk_inventory_sync(db: Session):
     from app.db.postgres.postgres_connection import SessionLocal
     from concurrent.futures import as_completed
 
-    # 1. Buscar todas las instancias de servidores que tengan monitoreo_db activo
+    # Fase 1: Descubrimiento en caliente de instancias Oracle (SIDs)
+    servidores_activos = db.query(Servidor).filter(Servidor.monitoreo_db == True).all()
+    for svr in servidores_activos:
+        try:
+            discover_and_register_oracle_instances(db, svr.id_servidor)
+        except Exception as e:
+            print(f"[Oracle Bulk Discovery] Error en servidor {svr.nombre_servidor}: {str(e)}")
+
+    # Fase 2: Buscar todas las instancias de servidores que tengan monitoreo_db activo
     instancias = db.query(InstanciaDBMS).join(Servidor).filter(
         Servidor.monitoreo_db == True,
         InstanciaDBMS.id_estado_instancia == 1 # Activa
@@ -272,3 +341,76 @@ def run_bulk_inventory_sync(db: Session):
     summary["total_db_size_mb"] = float(total_size or 0)
 
     return summary
+
+
+def discover_and_register_oracle_instances(db: Session, servidor_id: int):
+    import re
+    from app.models.infrastructure_models import Servidor, InstanciaDBMS, DBMS, CredencialAcceso
+    from app.services.monitoring.ssh_service import get_ssh_connection
+
+    servidor = db.query(Servidor).filter(Servidor.id_servidor == servidor_id).first()
+    if not servidor:
+        return []
+
+    # 1. Buscar credencial SSH activa (id_tipo_acceso == 1, id_estado == 1)
+    ssh_cred = db.query(CredencialAcceso).filter(
+        CredencialAcceso.id_servidor == servidor_id,
+        CredencialAcceso.id_tipo_acceso == 1,
+        CredencialAcceso.id_estado_credencial == 1
+    ).first()
+
+    if not ssh_cred:
+        print(f"[Oracle Discovery] No se encontró credencial SSH activa para el servidor {servidor.nombre_servidor}")
+        return []
+
+    # 2. Buscar DBMS para Oracle Database
+    oracle_dbms = db.query(DBMS).filter(DBMS.nombre_dbms.ilike("%oracle%")).first()
+    if not oracle_dbms:
+        print("[Oracle Discovery] No se encontró el DBMS de tipo Oracle Database en el catálogo.")
+        return []
+
+    client = None
+    try:
+        client = get_ssh_connection(servidor, ssh_cred, use_pool=True)
+        # Ejecutar comando para buscar procesos ora_smon activos
+        stdin, stdout, stderr = client.exec_command("ps -ef | grep smon | grep -v grep")
+        output = stdout.read().decode('utf-8').strip()
+        
+        if not output:
+            return []
+
+        discovered_sids = []
+        for line in output.split('\n'):
+            match = re.search(r'ora_smon_(.+)$', line.strip())
+            if match:
+                sid = match.group(1).strip()
+                if sid not in discovered_sids:
+                    discovered_sids.append(sid)
+
+        created_instances = []
+        for sid in discovered_sids:
+            # Verificar si ya existe
+            exists = db.query(InstanciaDBMS).filter(
+                InstanciaDBMS.id_servidor == servidor_id,
+                InstanciaDBMS.nombre_instancia.ilike(sid)
+            ).first()
+
+            if not exists:
+                nueva_inst = InstanciaDBMS(
+                    nombre_instancia=sid,
+                    puerto=1521,  # Puerto Oracle estándar
+                    id_servidor=servidor_id,
+                    id_dbms=oracle_dbms.id_dbms,
+                    id_estado_instancia=1,  # Activa
+                    parametros_conexion={"sid": sid}
+                )
+                db.add(nueva_inst)
+                created_instances.append(sid)
+
+        if created_instances:
+            db.commit()
+            print(f"[Oracle Discovery] Nuevas instancias Oracle registradas para {servidor.direccion_ip}: {created_instances}")
+        return created_instances
+    except Exception as e:
+        print(f"[Oracle Discovery] Error al escanear SIDs por SSH: {str(e)}")
+        return []

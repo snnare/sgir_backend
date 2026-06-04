@@ -2176,6 +2176,27 @@ Endpoints enfocados en la extracción automatizada y sincronización del inventa
     }
     ```
 
+#### **`POST`** `/m2/inventory/discover-server/{servidor_id}`
+*   **Servicio Ejecutor:** [`app/routes/monitoring/inventory_discovery_routes.py`](file:///home/angel/src/titulacion/sgir_backend/app/routes/monitoring/inventory_discovery_routes.py) $\rightarrow$ `discover_server_assets`
+*   **Comportamiento Operativo:** Auto-descubre en caliente las instancias de Oracle mediante SSH (revisando procesos `ora_smon`) y sincroniza todas las bases de datos de las instancias de ese servidor específico.
+*   **Body Requerido:** *Sin Body*
+*   **Response Esperada (Status 200):**
+    ```json
+    {
+      "status": "success",
+      "servidor_id": 1,
+      "total_db_sincronizadas": 5,
+      "detalles": [
+        {
+          "instancia": "DbEvapem",
+          "status": "success",
+          "creadas": 3,
+          "actualizadas": 0
+        }
+      ]
+    }
+    ```
+
 #### **`POST`** `/m2/inventory/discover/{instancia_id}/{credencial_id}`
 *   **Servicio Ejecutor:** [`app/services/infrastructure/inventory_sync_service.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/infrastructure/inventory_sync_service.py) $\rightarrow$ `sync_databases_inventory` (Sincroniza bases de datos de una instancia particular en CMDB)
 *   **Body Requerido:** *Sin Body*

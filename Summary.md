@@ -4,6 +4,20 @@ Este documento registra los avances, decisiones técnicas, lógica de negocio in
 
 ---
 
+## 📋 Pendientes Críticos
+
+1.  **Resolver el Descubrimiento Vacío de Respaldos (Bases de Datos no emparejadas):**
+    *   **Problema:** Los endpoints de descubrimiento de respaldos por SSH leen exitosamente los archivos físicos en el servidor remoto, pero devuelven un arreglo vacío si las bases de datos no están registradas en la tabla `base_datos` (CMDB) asociadas a esa `id_instancia`.
+    *   **Acciones Pendientes:**
+        *   **Opción A (Operativa):** Documentar o asegurar que en el frontend se ejecute primero la sincronización del inventario de base de datos (`POST /m2/inventory/discover/...`) para registrar los esquemas.
+        *   **Opción B (Robustez Backend):** Modificar el backend para listar y reportar archivos "huérfanos" o no registrados (con `base_datos_id=0`) en lugar de ignorarlos en el listado de resultados.
+
+2.  **Auto-descubrimiento de Instancias Oracle (ORACLE_SID):**
+    *   **Problema:** A diferencia de otros motores, Oracle requiere el `ORACLE_SID` para poder conectar y sincronizar. Actualmente la creación de instancias es manual porque no se conocen los SIDs activos en el servidor remoto.
+    *   **Acciones Pendientes:** Implementar un servicio de auto-descubrimiento de SIDs vía SSH que lea `/etc/oratab` y busque procesos activos `ora_smon_<SID>` para registrar automáticamente las instancias en la CMDB.
+
+---
+
 ## 🏛️ Contexto y Stack Tecnológico
 *   **Backend:** FastAPI (Python 3.14) + SQLAlchemy 2.0.
 *   **Frontend:** React (Vite, TypeScript, TailwindCSS/Vanilla CSS).

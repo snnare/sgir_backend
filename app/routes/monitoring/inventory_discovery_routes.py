@@ -35,6 +35,67 @@ def discover_all_databases(db: Session = Depends(get_pg_db), current_user: User 
     from app.services.infrastructure.inventory_sync_service import run_bulk_inventory_sync
     return run_bulk_inventory_sync(db)
 
+@m2_router.post("/discover-server/{servidor_id}")
+def discover_server_assets(
+    servidor_id: int,
+    db: Session = Depends(get_pg_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Auto-descubre instancias de Oracle en caliente y sincroniza todas las bases de datos de este servidor.
+    """
+    from app.services.infrastructure.inventory_sync_service import discover_and_register_oracle_instances, sync_databases_inventory
+    from app.models.infrastructure_models import InstanciaDBMS, CredencialAcceso
+    
+    # 1. Ejecutar pre-escaneo de Oracle
+    discover_and_register_oracle_instances(db, servidor_id)
+    
+    # 2. Sincronizar todas las instancias activas de este servidor
+    instancias = db.query(InstanciaDBMS).filter(
+        InstanciaDBMS.id_servidor == servidor_id,
+        InstanciaDBMS.id_estado_instancia == 1
+    ).all()
+    
+    detalles = []
+    total_creadas = 0
+    for inst in instancias:
+        # Intentamos obtener la credencial nativa de la BD primero (tipo=2)
+        cred = db.query(CredencialAcceso).filter(
+            CredencialAcceso.id_servidor == servidor_id,
+            CredencialAcceso.id_tipo_acceso == 2,
+            CredencialAcceso.id_estado_credencial == 1
+        ).first()
+        
+        if cred:
+            res = sync_databases_inventory(db, inst.id_instancia, cred.id_credencial)
+            if isinstance(res, dict) and "error" not in res:
+                total_creadas += res.get("creadas", 0)
+                detalles.append({
+                    "instancia": inst.nombre_instancia,
+                    "status": "success",
+                    "creadas": res.get("creadas", 0),
+                    "actualizadas": res.get("actualizadas", 0)
+                })
+            else:
+                detalles.append({
+                    "instancia": inst.nombre_instancia,
+                    "status": "failed",
+                    "error": res.get("error") if isinstance(res, dict) else "Error desconocido"
+                })
+        else:
+            detalles.append({
+                "instancia": inst.nombre_instancia,
+                "status": "skipped",
+                "error": "No se encontró credencial DB Native activa para el servidor"
+            })
+            
+    return {
+        "status": "success",
+        "servidor_id": servidor_id,
+        "total_db_sincronizadas": total_creadas,
+        "detalles": detalles
+    }
+
 @m2_router.post("/discover/{instancia_id}/{credencial_id}")
 def discover_and_sync(instancia_id: int, credencial_id: int, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
     """
