@@ -20,7 +20,7 @@ def get_dynamic_url(servidor: Servidor, credencial: CredencialAcceso, dbms_id: i
             port = 3306
         port = params.get("port") or params.get("puerto") or port
         driver = "mysql+pymysql"
-        charset = params.get("charset") or ("utf8" if dbms_id == 2 else "utf8mb4")
+        charset = params.get("charset") or "utf8mb4"
         url = f"{driver}://{user}:{password}@{host}:{port}/{db_name if db_name else ''}?charset={charset}"
         if "ssl_ca" in params:
             url += f"&ssl_ca={params['ssl_ca']}"

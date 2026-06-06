@@ -307,6 +307,7 @@ def run_integrated_file_discovery(db: Session, instancia_id: int, credencial_id:
         respaldos_creados = 0
         detalles_response = []
 
+        matched_paths = set()
         for bd in databases:
             matching_files = [f for f in found_files if bd.nombre_base.lower() in f["path"].lower()]
             
@@ -321,6 +322,7 @@ def run_integrated_file_discovery(db: Session, instancia_id: int, credencial_id:
             
             if matching_files:
                 for f in matching_files:
+                    matched_paths.add(f["path"])
                     file_path = f["path"]
                     size_bytes = f["size"]
                     file_name = file_path.split('/')[-1]
@@ -360,6 +362,22 @@ def run_integrated_file_discovery(db: Session, instancia_id: int, credencial_id:
                     "archivo_encontrado": False,
                     "tamano_encontrado_mb": 0.0
                 })
+
+        # Agregar archivos huérfanos/no registrados
+        orphan_files = [f for f in found_files if f["path"] not in matched_paths]
+        for f in orphan_files:
+            file_path = f["path"]
+            size_bytes = f["size"]
+            file_name = file_path.split('/')[-1]
+            tamano_mb = round(size_bytes / (1024 * 1024), 2)
+            detalles_response.append({
+                "base_datos_id": 0,
+                "nombre_base": f"Desconocida ({file_name})",
+                "politica_nombre": "Sin política",
+                "ruta_path": file_path,
+                "archivo_encontrado": True,
+                "tamano_encontrado_mb": tamano_mb
+            })
 
         nueva_bitacora = Bitacora(entidad_afectada="Respaldo", id_entidad=instancia_id, descripcion_evento=f"Descubrimiento SSH en {ruta.path}. Archivos: {len(found_files)}, Registrados: {respaldos_creados}", id_usuario=user_id, id_tipo_evento=6)
         db.add(nueva_bitacora)
@@ -411,6 +429,8 @@ def run_server_integrated_file_discovery(db: Session, servidor_id: int, credenci
         databases = db.query(BaseDeDatos).filter(BaseDeDatos.id_instancia.in_(instance_ids)).all() if instance_ids else []
 
         results = []
+        matched_names = set()
+        respaldos_creados = 0
         for bd in databases:
             # Buscar archivos de respaldo coincidentes
             matching_files = [f for f in found_files if bd.nombre_base.lower() in f["name"].lower()]
@@ -418,15 +438,43 @@ def run_server_integrated_file_discovery(db: Session, servidor_id: int, credenci
             # Obtener política
             asignacion = db.query(AsignacionPoliticaBD).filter(AsignacionPoliticaBD.id_base_datos == bd.id_base_datos).first()
             politica_nombre = "Sin política"
+            id_politica = None
             if asignacion:
                 politica = db.query(PoliticaRespaldo).filter(PoliticaRespaldo.id_politica == asignacion.id_politica).first()
                 if politica:
                     politica_nombre = politica.nombre_politica
+                    id_politica = politica.id_politica
 
             if matching_files:
                 for f in matching_files:
+                    matched_names.add(f["name"])
                     file_path = f.get("path") or f"{ruta.path}/{f['name']}"
                     size_mb = round(f["size"] / (1024 * 1024), 2)
+                    
+                    if asignacion and id_politica:
+                        # Evitar duplicados
+                        existe = db.query(Respaldo).filter(
+                            Respaldo.id_base_datos == bd.id_base_datos,
+                            Respaldo.nombre_archivo == f["name"],
+                            Respaldo.path_fisico_actual == file_path
+                        ).first()
+                        if not existe:
+                            nuevo_respaldo = Respaldo(
+                                id_base_datos=bd.id_base_datos,
+                                id_politica=id_politica,
+                                id_credencial=credencial_id,
+                                id_estado_ejecucion=4, # 4: Ejecutado/Exitoso
+                                nombre_archivo=f["name"],
+                                tamano_mb=Decimal(str(size_mb)),
+                                path_fisico_origen=file_path,
+                                ubicacion_actual="Origen",
+                                ip_almacenado_actual=servidor.direccion_ip,
+                                path_fisico_actual=file_path,
+                                fecha_fin=datetime.now()
+                            )
+                            db.add(nuevo_respaldo)
+                            respaldos_creados += 1
+
                     results.append({
                         "base_datos_id": bd.id_base_datos,
                         "nombre_base": bd.nombre_base,
@@ -448,6 +496,22 @@ def run_server_integrated_file_discovery(db: Session, servidor_id: int, credenci
                     "timestamp_verificacion": datetime.now().isoformat(),
                     "detalle": "No se encontró archivo de respaldo reciente"
                 })
+
+        # Agregar archivos huérfanos/no registrados
+        orphan_files = [f for f in found_files if f["name"] not in matched_names]
+        for f in orphan_files:
+            file_path = f.get("path") or f"{ruta.path}/{f['name']}"
+            size_mb = round(f["size"] / (1024 * 1024), 2)
+            results.append({
+                "base_datos_id": 0,
+                "nombre_base": f"Desconocida ({f['name']})",
+                "politica_nombre": "Sin política",
+                "ruta_path": file_path,
+                "archivo_encontrado": True,
+                "tamano_encontrado_mb": size_mb,
+                "timestamp_verificacion": datetime.now().isoformat(),
+                "detalle": "Archivo físico encontrado, pero la base de datos no está en la CMDB"
+            })
 
         # Auditoría
         nueva_bitacora = Bitacora(
@@ -709,6 +773,7 @@ def run_custom_server_integrated_file_discovery(db: Session, servidor_id: int, c
         databases = db.query(BaseDeDatos).filter(BaseDeDatos.id_instancia.in_(instance_ids)).all() if instance_ids else []
 
         results = []
+        respaldos_creados = 0
         for bd in databases:
             # Buscar archivos de respaldo coincidentes
             matching_files = [f for f in dedup_files if bd.nombre_base.lower() in f["path"].lower()]
@@ -716,15 +781,43 @@ def run_custom_server_integrated_file_discovery(db: Session, servidor_id: int, c
             # Obtener política
             asignacion = db.query(AsignacionPoliticaBD).filter(AsignacionPoliticaBD.id_base_datos == bd.id_base_datos).first()
             politica_nombre = "Sin política"
+            id_politica = None
             if asignacion:
                 politica = db.query(PoliticaRespaldo).filter(PoliticaRespaldo.id_politica == asignacion.id_politica).first()
                 if politica:
                     politica_nombre = politica.nombre_politica
+                    id_politica = politica.id_politica
 
             if matching_files:
                 for f in matching_files:
                     file_path = f["path"]
                     size_mb = round(f["size"] / (1024 * 1024), 2)
+                    file_name = file_path.split('/')[-1]
+                    
+                    if asignacion and id_politica:
+                        # Evitar duplicados
+                        existe = db.query(Respaldo).filter(
+                            Respaldo.id_base_datos == bd.id_base_datos,
+                            Respaldo.nombre_archivo == file_name,
+                            Respaldo.path_fisico_actual == file_path
+                        ).first()
+                        if not existe:
+                            nuevo_respaldo = Respaldo(
+                                id_base_datos=bd.id_base_datos,
+                                id_politica=id_politica,
+                                id_credencial=credencial_id,
+                                id_estado_ejecucion=4, # 4: Ejecutado/Exitoso
+                                nombre_archivo=file_name,
+                                tamano_mb=Decimal(str(size_mb)),
+                                path_fisico_origen=file_path,
+                                ubicacion_actual="Origen",
+                                ip_almacenado_actual=servidor.direccion_ip,
+                                path_fisico_actual=file_path,
+                                fecha_fin=datetime.now()
+                            )
+                            db.add(nuevo_respaldo)
+                            respaldos_creados += 1
+
                     results.append({
                         "base_datos_id": bd.id_base_datos,
                         "nombre_base": bd.nombre_base,

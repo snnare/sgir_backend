@@ -1,20 +1,42 @@
-# Resumen de Estado del Proyecto - SGIR (Actualizado: 3 de Junio, 2026)
+# Resumen de Estado del Proyecto - SGIR (Actualizado: 4 de Junio, 2026)
 
 Este documento registra los avances, decisiones técnicas, lógica de negocio incorporada y estado de los repositorios durante las sesiones de desarrollo para garantizar la continuidad del sistema **SGIR**.
 
 ---
 
+## 🚀 Logros y Cambios Clave de la Sesión (4 de Junio, 2026)
+
+### 1. Auto-descubrimiento en Caliente de Instancias Oracle (`ORACLE_SID`)
+*   **Comandos en Caliente:** Implementamos la ejecución de `ps -ef | grep smon | grep -v grep` vía SSH para descubrir dinámicamente los SIDs activos en servidores Oracle remotos.
+*   **Registro Automático en CMDB:** Creamos la función `discover_and_register_oracle_instances` para crear y dar de alta de forma desatendida las instancias encontradas en PostgreSQL con sus respectivos `parametros_conexion = {"sid": sid}`.
+*   **Nuevos Endpoints:**
+    *   Integrado en el escaneo masivo `/m2/inventory/discover-all` para ejecutarse en la Fase 1.
+    *   Nuevo endpoint individual por servidor: `POST /sgir/v1/m2/inventory/discover-server/{servidor_id}`.
+
+### 2. Robustez y Fallback SSH para Sincronización Oracle
+*   **Resolución del Error `DPY-4027`:** Al intentar sincronizar bases de datos en Oracle 10g/legacy, la librería del modo Thin fallaba. Implementamos un bypass o **fallback vía SSH** en `sync_databases_inventory` que abre una conexión SSH y ejecuta `sqlplus` de forma interna en el servidor para recuperar los esquemas locales usando el `ORACLE_SID` dinámico.
+*   **Seguridad de Caracteres:** Envolvimos las credenciales ejecutadas en comillas simples (`'{db_user}/{db_password}'`) para proteger contraseñas que tengan caracteres especiales (como `$`) de ser evaluados por Bash.
+
+### 3. Enriquecimiento del Historial de Auditoría (Audit Logs)
+*   **Mapeo Relacional de Usuario:** Añadimos la relación `usuario = relationship("User")` al ORM de `Bitacora`.
+*   **Esquema de Respuesta Enriquecido:** Modificamos `BitacoraResponse` en `audit_schemas.py` para devolver un objeto de usuario anidado (`usuario: Optional[UserMinResponse]`) que contiene el **`email`**, **`nombres`** y **`apellidos`** de quien realizó la acción, en lugar de solo su ID numérico.
+
+### 4. Soporte para Respaldos Huérfanos/Desconocidos
+*   **Listado Completo de Archivos:** Modificamos `run_integrated_file_discovery` y `run_server_integrated_file_discovery` en `ssh_service.py` para que los archivos encontrados en disco que no coincidan con bases de datos registradas en la CMDB se listen con `base_datos_id=0` y `nombre_base="Desconocida (<nombre_archivo>)"`. Esto evita que el frontend reciba listas vacías confusas cuando los archivos sí existen físicamente.
+
+---
+
 ## 📋 Pendientes Críticos
 
-1.  **Resolver el Descubrimiento Vacío de Respaldos (Bases de Datos no emparejadas):**
-    *   **Problema:** Los endpoints de descubrimiento de respaldos por SSH leen exitosamente los archivos físicos en el servidor remoto, pero devuelven un arreglo vacío si las bases de datos no están registradas en la tabla `base_datos` (CMDB) asociadas a esa `id_instancia`.
+1.  **[x] Resolver el Descubrimiento Vacío de Respaldos (Bases de Datos no emparejadas):**
+    *   *Resuelto:* Modificamos los endpoints de escaneo a nivel instancia y servidor en [`ssh_service.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/monitoring/ssh_service.py) para que, en caso de detectar archivos físicos en el servidor remoto que no coincidan con bases de datos registradas en la CMDB local, los listen como "Desconocidos/Huérfanos" (con `base_datos_id=0`) en lugar de ignorarlos.
+2.  **[x] Auto-descubrimiento de Instancias Oracle (ORACLE_SID):**
+    *   *Resuelto:* Implementamos la lógica para descubrir instancias activas mediante procesos `ora_smon` e insertarlas dinámicamente en la CMDB antes de la sincronización masiva y en el nuevo endpoint `/discover-server/{servidor_id}`.
+3.  **Diagnosticar y resolver el error 500 al probar conexión con MySQL 5.x:**
+    *   **Problema:** Al probar conexión a base de datos MySQL 5.x (`POST /conexion/test/db/mysql`), el backend retorna un HTTP 500 genérico.
     *   **Acciones Pendientes:**
-        *   **Opción A (Operativa):** Documentar o asegurar que en el frontend se ejecute primero la sincronización del inventario de base de datos (`POST /m2/inventory/discover/...`) para registrar los esquemas.
-        *   **Opción B (Robustez Backend):** Modificar el backend para listar y reportar archivos "huérfanos" o no registrados (con `base_datos_id=0`) en lugar de ignorarlos en el listado de resultados.
-
-2.  **Auto-descubrimiento de Instancias Oracle (ORACLE_SID):**
-    *   **Problema:** A diferencia de otros motores, Oracle requiere el `ORACLE_SID` para poder conectar y sincronizar. Actualmente la creación de instancias es manual porque no se conocen los SIDs activos en el servidor remoto.
-    *   **Acciones Pendientes:** Implementar un servicio de auto-descubrimiento de SIDs vía SSH que lea `/etc/oratab` y busque procesos activos `ora_smon_<SID>` para registrar automáticamente las instancias en la CMDB.
+        *   Revisar los logs del contenedor para identificar la causa raíz (timeout, credenciales, red o incompatibilidad de hash de contraseñas de MySQL 5.x antiguos).
+        *   Refactorizar el controlador para capturar la excepción específica y retornar un mensaje HTTP controlado o descriptivo al frontend en vez de lanzar un error 500.
 
 ---
 

@@ -1619,7 +1619,12 @@ Contiene las operaciones del catálogo relacional y configuraciones base. El pre
         "descripcion_evento": "Se registró el servidor Svr-Linux-01",
         "id_usuario": 1,
         "id_tipo_evento": 1,
-        "fecha_evento": "2026-05-22T18:00:00Z"
+        "fecha_evento": "2026-05-22T18:00:00Z",
+        "usuario": {
+          "email": "admin@admin.com",
+          "nombres": "Admin",
+          "apellidos": "Sgir"
+        }
       }
     ]
     ```
@@ -1636,7 +1641,12 @@ Contiene las operaciones del catálogo relacional y configuraciones base. El pre
       "descripcion_evento": "Se registró el servidor Svr-Linux-01",
       "id_usuario": 1,
       "id_tipo_evento": 1,
-      "fecha_evento": "2026-05-22T18:00:00Z"
+      "fecha_evento": "2026-05-22T18:00:00Z",
+      "usuario": {
+        "email": "admin@admin.com",
+        "nombres": "Admin",
+        "apellidos": "Sgir"
+      }
     }
     ```
 

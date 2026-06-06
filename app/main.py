@@ -5,6 +5,8 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+import traceback
+import time
 
 from app.routes import core_crud_router, router as reports_router
 from app.routes.healths import health_router
@@ -25,10 +27,32 @@ async def lifespan(app: FastAPI):
 # Aplicación FastAPI
 app = FastAPI(title="FastAPI SGIR Backend", lifespan=lifespan)
 
+# --- REQUEST LOGGING MIDDLEWARE ---
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    path = request.url.path
+    query = request.url.query
+    query_str = f"?{query}" if query else ""
+    print(f"--> [REQ] {request.method} {path}{query_str}")
+    
+    try:
+        response = await call_next(request)
+        duration = (time.time() - start_time) * 1000
+        print(f"<-- [RES] {request.method} {path}{query_str} - Status: {response.status_code} ({duration:.2f}ms)")
+        return response
+    except Exception as exc:
+        duration = (time.time() - start_time) * 1000
+        print(f"<!- [ERR] {request.method} {path}{query_str} - Error: {str(exc)} ({duration:.2f}ms)")
+        traceback.print_exc()
+        raise exc
+
 # --- GLOBAL EXCEPTION HANDLERS ---
 
 @app.exception_handler(SGIRBaseException)
 async def sgir_base_exception_handler(request: Request, exc: SGIRBaseException):
+    print(f"[EXC] SGIRBaseException caught during {request.method} {request.url.path}: {exc.message} (status: {exc.status_code})")
     timestamp = datetime.now(timezone.utc).isoformat()
     content = {
         "success": False,
@@ -49,6 +73,7 @@ async def sgir_base_exception_handler(request: Request, exc: SGIRBaseException):
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    print(f"[EXC] StarletteHTTPException caught during {request.method} {request.url.path}: {exc.detail} (status: {exc.status_code})")
     timestamp = datetime.now(timezone.utc).isoformat()
     
     # Mapeo de códigos HTTP a error_code de negocio
@@ -94,6 +119,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    print(f"[EXC] RequestValidationError caught during {request.method} {request.url.path}: {str(exc.errors())}")
     timestamp = datetime.now(timezone.utc).isoformat()
     
     # Formatear los detalles de validación de manera amigable
@@ -136,6 +162,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
+    print(f"[EXC] General exception caught during {request.method} {request.url.path}: {str(exc)}")
+    traceback.print_exc()
     timestamp = datetime.now(timezone.utc).isoformat()
     detail_msg = str(exc)
     
@@ -154,6 +182,7 @@ async def general_exception_handler(request: Request, exc: Exception):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=content
     )
+
 
 app.add_middleware(
     CORSMiddleware,

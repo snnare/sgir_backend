@@ -150,8 +150,34 @@ def test_db_connection(motor: str, payload: ConnectionTestRequest):
 
     try:
         if motor.lower() == "mysql":
-            conn = pymysql.connect(host=ip, port=puerto, user=usuario, password=password, connect_timeout=5)
-            conn.close()
+            try:
+                # Intentamos con utf8mb4 primero (por defecto de PyMySQL)
+                conn = pymysql.connect(
+                    host=ip, port=puerto, user=usuario, password=password,
+                    connect_timeout=5, charset='utf8mb4'
+                )
+                conn.close()
+            except pymysql.err.OperationalError as e:
+                # Si el error es 1115 (Unknown character set: 'utf8mb4'), intentamos con utf8
+                if len(e.args) > 0 and e.args[0] == 1115:
+                    try:
+                        conn = pymysql.connect(
+                            host=ip, port=puerto, user=usuario, password=password,
+                            connect_timeout=5, charset='utf8'
+                        )
+                        conn.close()
+                    except pymysql.err.OperationalError as e2:
+                        # Si sigue fallando por charset, probamos latin1
+                        if len(e2.args) > 0 and e2.args[0] == 1115:
+                            conn = pymysql.connect(
+                                host=ip, port=puerto, user=usuario, password=password,
+                                connect_timeout=5, charset='latin1'
+                            )
+                            conn.close()
+                        else:
+                            raise e2
+                else:
+                    raise e
             return {"status": "success", "message": "Conexión exitosa con MySQL"}
             
         elif motor.lower() == "postgresql":

@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, BigInteger
 from sqlalchemy.sql import func
 from app.db.postgres.postgres_connection import Base
+from sqlalchemy.orm import relationship
 
 class TipoEventoAuditoria(Base):
     __tablename__ = "tipo_evento_auditoria"
@@ -17,3 +18,5 @@ class Bitacora(Base):
     
     id_usuario = Column(Integer, ForeignKey("usuario.id_usuario"), nullable=False)
     id_tipo_evento = Column(Integer, ForeignKey("tipo_evento_auditoria.id_tipo_evento"), nullable=False)
+
+    usuario = relationship("User")

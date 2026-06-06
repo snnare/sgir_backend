@@ -25,3 +25,7 @@ def registrar_ejecucion_respaldo(respaldo: RespaldoCreate, db: Session = Depends
 @router.get("/historial", response_model=List[RespaldoResponse])
 def read_historial_respaldos(id_base_datos: Optional[int] = None, db: Session = Depends(get_pg_db)):
     return backup_crud.get_historial_respaldos(db, id_base_datos)
+
+@router.get("/", response_model=List[RespaldoResponse])
+def read_respaldos(id_base_datos: Optional[int] = None, db: Session = Depends(get_pg_db)):
+    return backup_crud.get_historial_respaldos(db, id_base_datos)

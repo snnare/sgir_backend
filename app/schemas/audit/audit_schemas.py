@@ -15,6 +15,14 @@ class TipoEventoResponse(TipoEventoBase):
     class Config:
         from_attributes = True
 
+class UserMinResponse(BaseModel):
+    email: str
+    nombres: str
+    apellidos: str
+
+    class Config:
+        from_attributes = True
+
 # Schemas para Bitácora
 class BitacoraBase(BaseModel):
     entidad_afectada: str
@@ -29,6 +37,7 @@ class BitacoraCreate(BitacoraBase):
 class BitacoraResponse(BitacoraBase):
     id_bitacora: int
     fecha_evento: datetime
+    usuario: Optional[UserMinResponse] = None
 
     class Config:
         from_attributes = True
