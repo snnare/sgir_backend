@@ -501,8 +501,108 @@ def get_assets_sre_sla_pdf(db: Session = Depends(get_pg_db)):
         }
     )
 
+@router.get("/backups/pdf")
+def get_backups_pdf(db: Session = Depends(get_pg_db)):
+    """
+    Sincroniza en tiempo real las bases de datos de todos los servidores activos,
+    descubre/verifica respaldos y genera un reporte PDF profesional en formato A4 landscape.
+    """
+    try:
+        from app.services.infrastructure.inventory_sync_service import run_bulk_inventory_sync
+        run_bulk_inventory_sync(db)
+    except Exception:
+        pass
+
+    from app.services.backups.backup_crud import get_historial_respaldos_enriquecido
+    backups_data = get_historial_respaldos_enriquecido(db)
+    
+    total_size = sum(float(b.get("tamano_mb") or 0.0) for b in backups_data)
+
+    try:
+        from app.services.reports.pdf_service import generate_backup_report_pdf
+        pdf_bytes = generate_backup_report_pdf(backups_data, total_size, "Administrador de Sistemas (DTIC)")
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al generar el reporte PDF de respaldos: {str(e)}"
+        )
+        
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": "attachment; filename=reporte_respaldos_dbs.pdf"
+        }
+    )
+
+@router.get("/backups/pdf-offline")
+def get_backups_pdf_offline(db: Session = Depends(get_pg_db)):
+    """
+    Genera un reporte PDF profesional de respaldos en formato A4 landscape,
+    consultando directamente los datos persistidos en PostgreSQL local (Offline).
+    """
+    from app.services.backups.backup_crud import get_historial_respaldos_enriquecido
+    backups_data = get_historial_respaldos_enriquecido(db)
+    
+    total_size = sum(float(b.get("tamano_mb") or 0.0) for b in backups_data)
+
+    try:
+        from app.services.reports.pdf_service import generate_backup_report_pdf
+        pdf_bytes = generate_backup_report_pdf(backups_data, total_size, "Administrador de Sistemas (DTIC) - Reporte Offline")
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al generar el reporte PDF offline de respaldos: {str(e)}"
+        )
+        
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": "attachment; filename=reporte_respaldos_dbs_offline.pdf"
+        }
+    )
+
+@router.get("/backups/csv")
+def get_backups_csv(db: Session = Depends(get_pg_db)):
+    """
+    Genera un reporte CSV con el historial enriquecido de respaldos físicos.
+    """
+    import csv
+    from app.services.backups.backup_crud import get_historial_respaldos_enriquecido
+    backups_data = get_historial_respaldos_enriquecido(db)
+    
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+    
+    # Escribir encabezados
+    writer.writerow(["Servidor", "Direccion IP", "Motor DBMS", "Archivo de Respaldo", "Tamano (MB)", "Estado Ejecucion", "Fecha Descubrimiento"])
+    
+    # Escribir registros
+    for b in backups_data:
+        writer.writerow([
+            b.get("servidor"),
+            b.get("ip"),
+            b.get("motor"),
+            b.get("nombre_archivo"),
+            f"{float(b.get('tamano_mb') or 0.0):.2f}",
+            b.get("estado_ejecucion"),
+            b.get("fecha_descubrimiento")
+        ])
+        
+    output.seek(0)
+    
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode('utf-8-sig')),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=reporte_respaldos_dbs.csv"
+        }
+    )
+
 __all__ = [
     "core_crud_router",
     "router"
 ]
+
 

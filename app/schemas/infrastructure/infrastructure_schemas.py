@@ -143,6 +143,14 @@ class InstanciaBase(BaseModel):
 class InstanciaCreate(InstanciaBase):
     pass
 
+class InstanciaUpdate(BaseModel):
+    nombre_instancia: Optional[str] = None
+    puerto: Optional[int] = None
+    id_servidor: Optional[int] = None
+    id_dbms: Optional[int] = None
+    id_estado_instancia: Optional[int] = None
+    parametros_conexion: Optional[Dict[str, Any]] = None
+
 class Instancia(InstanciaBase):
     id_instancia: int
     fecha_inicio: datetime

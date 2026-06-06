@@ -747,6 +747,51 @@ Contiene las operaciones del catálogo relacional y configuraciones base. El pre
     ]
     ```
 
+#### **`GET`** `/instancias/`
+*   **Servicio Ejecutor:** [`app/services/infrastructure/infrastructure_crud.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/infrastructure/infrastructure_crud.py) $\rightarrow$ `get_instancias_all`
+*   **Body Requerido:** *Sin Body*
+*   **Response Esperada (Status 200 - `List[Instancia]`):**
+    ```json
+    [
+      {
+        "id_instancia": 1,
+        "nombre_instancia": "mysql_prod_01",
+        "puerto": 3306,
+        "id_servidor": 1,
+        "id_dbms": 1,
+        "id_estado_instancia": 1,
+        "fecha_inicio": "2026-05-22T18:00:00Z"
+      }
+    ]
+    ```
+
+#### **`PUT`** `/instancias/{id_instancia}`
+*   **Servicio Ejecutor:** [`app/services/infrastructure/infrastructure_crud.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/infrastructure/infrastructure_crud.py) $\rightarrow$ `update_instancia`
+*   **Body Requerido (`InstanciaUpdate`):**
+    ```json
+    {
+      "nombre_instancia": "mysql_prod_01_modificada",
+      "puerto": 3307
+    }
+    ```
+*   **Response Esperada (Status 200 - `Instancia`):**
+    ```json
+    {
+      "id_instancia": 1,
+      "nombre_instancia": "mysql_prod_01_modificada",
+      "puerto": 3307,
+      "id_servidor": 1,
+      "id_dbms": 1,
+      "id_estado_instancia": 1,
+      "fecha_inicio": "2026-05-22T18:00:00Z"
+    }
+    ```
+
+#### **`DELETE`** `/instancias/{id_instancia}`
+*   **Servicio Ejecutor:** [`app/services/infrastructure/infrastructure_crud.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/infrastructure/infrastructure_crud.py) $\rightarrow$ `delete_instancia`
+*   **Body Requerido:** *Sin Body*
+*   **Response Esperada (Status 204):** *Sin contenido*
+
 #### **`POST`** `/instancias/test-db/{id_instancia}/{id_credencial}`
 *   **Servicio Ejecutor:** [`app/routes/core_crud/infrastructure/instancia_routes.py`](file:///home/angel/src/titulacion/sgir_backend/app/routes/core_crud/infrastructure/instancia_routes.py) $\rightarrow$ `test_db_connectivity` (Orquesta la conexión al motor de base de datos)
 *   **Body Requerido:** *Sin Body*
@@ -960,6 +1005,31 @@ Contiene las operaciones del catálogo relacional y configuraciones base. El pre
       "message": "Política 1 asignada correctamente a la base de datos 1"
     }
     ```
+
+#### **`POST`** `/asignacion-politica/auto-asociar`
+*   **Servicio Ejecutor:** [`app/services/backups/backup_crud.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/backups/backup_crud.py) $\rightarrow$ `auto_associate_policy_to_databases`
+*   **Body Requerido (`AutoAsignarPoliticaRequest`):**
+    ```json
+    {
+      "id_politica": 1,
+      "id_servidor": 3,
+      "bases_datos_raw": "bdtesteo, dbceneval,\nmarmol, jejesalu2"
+    }
+    ```
+*   **Response Esperada (Status 200 - `AutoAsignarPoliticaResponse`):**
+    ```json
+    {
+      "success": true,
+      "message": "Asociación masiva exitosa. Se asignó la política a 4 bases de datos.",
+      "asociadas": [
+        "bdtesteo",
+        "dbceneval",
+        "marmol",
+        "jejesalu2"
+      ]
+    }
+    ```
+
 
 #### **`POST`** `/respaldos/`
 *   **Servicio Ejecutor:** [`app/services/backups/backup_crud.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/backups/backup_crud.py) $\rightarrow$ `create_registro_respaldo`

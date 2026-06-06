@@ -122,3 +122,62 @@ def generate_sre_sla_pdf(servidores_sla: list, incidentes: list, average_sla: fl
     
     pdf_bytes = HTML(string=html_content).write_pdf()
     return pdf_bytes
+
+
+def generate_backup_report_pdf(backups: list, peso_total: float, usuario_nombre: str) -> bytes:
+    """
+    Renderiza la plantilla HTML de respaldos con Jinja2 e inyecta
+    los datos y recursos para generar el PDF con WeasyPrint.
+    """
+    logo_path = os.path.join(STATIC_ASSETS_DIR, "logo_uaemex.png")
+    favicon_path = os.path.join(STATIC_ASSETS_DIR, "favicon.png")
+    
+    logo_url = f"file://{logo_path}" if os.path.exists(logo_path) else None
+    favicon_url = f"file://{favicon_path}" if os.path.exists(favicon_path) else None
+
+    template = env.get_template("backup_report_template.html")
+    
+    fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    peso_total_formatted = f"{peso_total:,.2f}"
+    
+    backups_formatted = []
+    for b in backups:
+        tamano = float(b.get("tamano_mb") or 0)
+        fd = b.get("fecha_descubrimiento")
+        if fd:
+            try:
+                # Si viene con T o Z
+                cleaned_fd = fd.replace('Z', '+00:00')
+                if 'T' in cleaned_fd:
+                    fd_dt = datetime.fromisoformat(cleaned_fd)
+                    fd_str = fd_dt.strftime("%Y-%m-%d %H:%M:%S")
+                else:
+                    fd_str = fd
+            except Exception:
+                fd_str = fd
+        else:
+            fd_str = "N/D"
+
+        backups_formatted.append({
+            "ip": b.get("ip", "N/D"),
+            "servidor": b.get("servidor", "N/D"),
+            "motor": b.get("motor", "N/D"),
+            "nombre_archivo": b.get("nombre_archivo", "N/D"),
+            "tamano_mb": f"{tamano:,.2f}",
+            "estado_ejecucion": b.get("estado_ejecucion", "Fallo"),
+            "id_estado_ejecucion": b.get("id_estado_ejecucion"),
+            "fecha_descubrimiento": fd_str
+        })
+    
+    html_content = template.render(
+        fecha=fecha_actual,
+        usuario_generador=usuario_nombre,
+        backups=backups_formatted,
+        peso_total=peso_total_formatted,
+        logo_url=logo_url,
+        favicon_url=favicon_url
+    )
+    
+    pdf_bytes = HTML(string=html_content).write_pdf()
+    return pdf_bytes
+

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.db.postgres.postgres_connection import get_db as get_pg_db
-from app.schemas import InstanciaCreate, Instancia as InstanciaResponse
+from app.schemas import InstanciaCreate, InstanciaUpdate, Instancia as InstanciaResponse
 from app.services import infrastructure_crud, audit_crud
 from app.core.dependencies import get_current_user
 from app.models.user_models import User
@@ -101,3 +101,45 @@ def create_instancia(instancia: InstanciaCreate, db: Session = Depends(get_pg_db
 @router.get("/servidor/{servidor_id}", response_model=List[InstanciaResponse])
 def read_instancias_by_server(servidor_id: int, db: Session = Depends(get_pg_db)):
     return infrastructure_crud.get_instancias_by_servidor(db, servidor_id)
+
+@router.get("/", response_model=List[InstanciaResponse])
+def read_instancias_all(db: Session = Depends(get_pg_db)):
+    """
+    Recupera todas las instancias DBMS registradas.
+    """
+    return infrastructure_crud.get_instancias_all(db)
+
+@router.put("/{id_instancia}", response_model=InstanciaResponse)
+def update_instancia(id_instancia: int, payload: InstanciaUpdate, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
+    """
+    Actualiza los datos de una instancia DBMS registrada.
+    """
+    updated_inst = infrastructure_crud.update_instancia(db, id_instancia, payload)
+    if not updated_inst:
+        raise HTTPException(status_code=404, detail="Instancia no encontrada")
+    audit_crud.log_event(
+        db=db,
+        user_id=current_user.id_usuario,
+        entidad="InstanciaDBMS",
+        entidad_id=id_instancia,
+        descripcion=f"Instancia ID {id_instancia} actualizada",
+        tipo_evento_id=3 # Modificación
+    )
+    return updated_inst
+
+@router.delete("/{id_instancia}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_instancia(id_instancia: int, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
+    """
+    Elimina una instancia DBMS de la base de datos.
+    """
+    if not infrastructure_crud.delete_instancia(db, id_instancia):
+        raise HTTPException(status_code=404, detail="Instancia no encontrada")
+    audit_crud.log_event(
+        db=db,
+        user_id=current_user.id_usuario,
+        entidad="InstanciaDBMS",
+        entidad_id=id_instancia,
+        descripcion=f"Instancia ID {id_instancia} eliminada",
+        tipo_evento_id=4 # Eliminación
+    )
+    return None

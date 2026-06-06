@@ -270,3 +270,149 @@ def get_politicas_resumen_global(db: Session) -> List[dict]:
         for r in resultados
     ]
 
+
+def auto_associate_policy_to_databases(db: Session, payload: "AutoAsignarPoliticaRequest", user_id: int):
+    from fastapi import HTTPException
+    import re
+    from app.models.infrastructure_models import Servidor, InstanciaDBMS, BaseDeDatos
+    from app.models.audit_model import Bitacora
+    from app.schemas import AutoAsignarPoliticaRequest
+
+    # 1. Validar que la política exista
+    politica = db.query(PoliticaRespaldo).filter(PoliticaRespaldo.id_politica == payload.id_politica).first()
+    if not politica:
+        raise HTTPException(status_code=404, detail="La política de respaldo especificada no existe.")
+
+    # 2. Validar que el servidor exista
+    servidor = db.query(Servidor).filter(Servidor.id_servidor == payload.id_servidor).first()
+    if not servidor:
+        raise HTTPException(status_code=404, detail="El servidor especificado no existe.")
+
+    # 3. Procesar y normalizar el listado de bases de datos
+    db_names_requested = [
+        name.strip() for name in re.split(r'[,\n\r]+', payload.bases_datos_raw) 
+        if name.strip()
+    ]
+    
+    if not db_names_requested:
+        raise HTTPException(status_code=400, detail="El listado de bases de datos está vacío.")
+
+    # 4. Obtener todas las BDs reales asociadas al servidor
+    dbs_in_server = db.query(BaseDeDatos).join(
+        InstanciaDBMS, BaseDeDatos.id_instancia == InstanciaDBMS.id_instancia
+    ).filter(
+        InstanciaDBMS.id_servidor == payload.id_servidor
+    ).all()
+
+    # Mapeamos a minúsculas
+    server_dbs_map = {bd.nombre_base.lower(): bd for bd in dbs_in_server}
+
+    # 5. Validar pertenencia y existencia
+    missing_dbs = []
+    valid_db_ids = []
+    
+    for name in db_names_requested:
+        name_lower = name.lower()
+        if name_lower in server_dbs_map:
+            valid_db_ids.append(server_dbs_map[name_lower].id_base_datos)
+        else:
+            missing_dbs.append(name)
+
+    if missing_dbs:
+        raise HTTPException(
+            status_code=400, 
+            detail={
+                "message": "Algunas bases de datos no existen o no están registradas en este servidor.",
+                "missing_databases": missing_dbs
+            }
+        )
+
+    # 6. Guardar relaciones (limpiando asignaciones anteriores de estas BDs)
+    db.query(AsignacionPoliticaBD).filter(
+        AsignacionPoliticaBD.id_base_datos.in_(valid_db_ids)
+    ).delete(synchronize_session=False)
+
+    # Crear nuevas asignaciones
+    for db_id in valid_db_ids:
+        nueva_asignacion = AsignacionPoliticaBD(
+            id_base_datos=db_id,
+            id_politica=payload.id_politica
+        )
+        db.add(nueva_asignacion)
+
+    # 7. Registrar en bitácora de auditoría
+    nueva_bitacora = Bitacora(
+        entidad_afectada="AsignacionPoliticaBD (Auto)",
+        id_entidad=payload.id_politica,
+        descripcion_evento=f"Asignación masiva automática de política '{politica.nombre_politica}' a {len(valid_db_ids)} BDs del servidor '{servidor.nombre_servidor}'.",
+        id_usuario=user_id,
+        id_tipo_evento=5  # Tipo de evento de ejecución/asignación
+    )
+    db.add(nueva_bitacora)
+    
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"Asociación masiva exitosa. Se asignó la política a {len(valid_db_ids)} bases de datos.",
+        "asociadas": db_names_requested
+    }
+
+
+def get_historial_respaldos_enriquecido(db: Session, id_base_datos: Optional[int] = None) -> List[dict]:
+    """
+    Retorna el historial de ejecuciones de respaldos enriquecido con
+    detalles de servidor, IP, DBMS, bases de datos y criticidades.
+    """
+    from app.models.infrastructure_models import BaseDeDatos, InstanciaDBMS, Servidor, DBMS, NivelCriticidad
+    from app.models.user_models import UserStatus
+
+    query = db.query(
+        Respaldo,
+        BaseDeDatos,
+        InstanciaDBMS,
+        Servidor,
+        DBMS,
+        NivelCriticidad,
+        PoliticaRespaldo,
+        UserStatus
+    ).join(BaseDeDatos, Respaldo.id_base_datos == BaseDeDatos.id_base_datos)\
+     .join(InstanciaDBMS, BaseDeDatos.id_instancia == InstanciaDBMS.id_instancia)\
+     .join(Servidor, InstanciaDBMS.id_servidor == Servidor.id_servidor)\
+     .join(DBMS, InstanciaDBMS.id_dbms == DBMS.id_dbms)\
+     .join(NivelCriticidad, Servidor.id_nivel_criticidad == NivelCriticidad.id_nivel_criticidad)\
+     .join(PoliticaRespaldo, Respaldo.id_politica == PoliticaRespaldo.id_politica)\
+     .join(UserStatus, Respaldo.id_estado_ejecucion == UserStatus.id_estado)
+
+    if id_base_datos:
+        query = query.filter(Respaldo.id_base_datos == id_base_datos)
+
+    results = query.order_by(Respaldo.fecha_inicio.desc()).all()
+
+    enriched = []
+    for resp, db_obj, inst, srv, dbms, crit, pol, status in results:
+        enriched.append({
+            "id_respaldo": resp.id_respaldo,
+            "id_base_datos": resp.id_base_datos,
+            "nombre_base": db_obj.nombre_base,
+            "instancia": inst.nombre_instancia,
+            "motor": f"{dbms.nombre_dbms} {dbms.version}",
+            "servidor": srv.nombre_servidor,
+            "ip": srv.direccion_ip,
+            "criticidad": crit.nombre_nivel,
+            "id_politica": resp.id_politica,
+            "nombre_politica": pol.nombre_politica,
+            "frecuencia_horas": pol.frecuencia_horas,
+            "id_estado_ejecucion": resp.id_estado_ejecucion,
+            "estado_ejecucion": status.nombre_estado,
+            "nombre_archivo": resp.nombre_archivo or f"backup_db_{db_obj.nombre_base}_{inst.nombre_instancia}.sql.gz",
+            "path_fisico_actual": resp.path_fisico_actual,
+            "tamano_mb": float(resp.tamano_mb) if resp.tamano_mb is not None else 0.0,
+            "fecha_inicio": resp.fecha_inicio.isoformat() if resp.fecha_inicio else None,
+            "fecha_fin": resp.fecha_fin.isoformat() if resp.fecha_fin else None,
+            "fecha_descubrimiento": resp.fecha_descubrimiento.isoformat() if resp.fecha_descubrimiento else None,
+        })
+    return enriched
+
+
+

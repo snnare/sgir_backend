@@ -1,6 +1,31 @@
-# Resumen de Estado del Proyecto - SGIR (Actualizado: 4 de Junio, 2026)
+# Resumen de Estado del Proyecto - SGIR (Actualizado: 5 de Junio, 2026)
 
 Este documento registra los avances, decisiones técnicas, lógica de negocio incorporada y estado de los repositorios durante las sesiones de desarrollo para garantizar la continuidad del sistema **SGIR**.
+
+---
+
+## 🚀 Logros y Cambios Clave de la Sesión (5 de Junio, 2026)
+
+### 1. Robustez en Conexiones MySQL Legacy y Charset Fallback
+*   **Problema de Charset (Error 1115):** Servidores MySQL antiguos (como 5.1) no soportan el charset `utf8mb4` por defecto del cliente PyMySQL, lo que lanzaba un error 500 genérico en las pruebas de conexión.
+*   **Solución Híbrida Automática:**
+    *   **Prueba de Conexión (`test_db_connection`):** Implementamos un bucle de fallback automático. Intenta primero conectar con `utf8mb4`, si falla con el código `1115`, reintenta automáticamente con `utf8` (y si este falla, con `latin1`), de forma completamente transparente.
+    *   **Pool de Conexiones de SQLAlchemy (`get_rdbms_session`):** Aplicamos el mismo patrón en la inicialización del Engine de SQLAlchemy en el Connection Pool, permitiendo que las tareas del scheduler de monitoreo y sincronización de inventario conecten a cualquier MySQL antiguo de manera automática sin fallar.
+    *   **Configuración por Defecto:** Se modificó `get_dynamic_url` para inicializar por defecto todas las conexiones MySQL con `utf8mb4`, permitiendo que la auto-detección y el fallback hagan el downgrade solo cuando sea estrictamente necesario.
+
+### 2. Persistencia en la Detección Global de Respaldos (Módulo 3)
+*   **Registro Automático en DB:** Modificamos los endpoints de descubrimiento de respaldos a nivel servidor (`run_server_integrated_file_discovery` y `run_custom_server_integrated_file_discovery`) para que persistan de forma automática los respaldos exitosos encontrados en disco dentro de la tabla `Respaldo` (siempre que tengan una política asignada).
+*   **Prevención de Duplicados:** Añadimos una validación previa a la inserción en la base de datos para comprobar si el archivo de respaldo ya fue registrado, evitando registros redundantes al correr escaneos repetitivos.
+
+### 3. Exposición de Endpoints CRUD para Instancias
+*   **Nuevos Endpoints de Instancia:** Expusimos y completamos el CRUD del controlador de instancias (`instancia_routes.py` y `infrastructure_crud.py`):
+    *   `GET /sgir/v1/crud/instancias/` (Listar todas las instancias del sistema).
+    *   `PUT /sgir/v1/crud/instancias/{id_instancia}` (Actualización parcial de campos de instancia mediante `InstanciaUpdate`).
+    *   `DELETE /sgir/v1/crud/instancias/{id_instancia}` (Eliminación lógica/física).
+*   **Documentación de API:** Registramos y documentamos los nuevos endpoints del catálogo en el mapa de rutas general (`routes.md`).
+
+### 4. Diagnóstico y Monitoreo del Servidor (Middleware Logs)
+*   **Middleware de Logs:** Agregamos temporalmente un middleware HTTP y traceback logger a `app/main.py` para visualizar en caliente cada petición y ver exactamente la traza del error en caso de HTTP 500.
 
 ---
 

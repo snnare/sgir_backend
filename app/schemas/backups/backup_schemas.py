@@ -175,3 +175,41 @@ class RutaRespaldoEnriquecidaResponse(BaseModel):
     descripcion: str
     estado: str
 
+# --- Auto Asignacion ---
+class AutoAsignarPoliticaRequest(BaseModel):
+    id_politica: int
+    id_servidor: int
+    bases_datos_raw: str
+
+class AutoAsignarPoliticaResponse(BaseModel):
+    success: bool
+    message: str
+    asociadas: List[str]
+
+
+class BackupHistoryEnrichedResponse(BaseModel):
+    id_respaldo: int
+    id_base_datos: int
+    nombre_base: str
+    instancia: str
+    motor: str
+    servidor: str
+    ip: str
+    criticidad: str
+    id_politica: int
+    nombre_politica: str
+    frecuencia_horas: int
+    id_estado_ejecucion: int
+    estado_ejecucion: str
+    nombre_archivo: Optional[str] = None
+    path_fisico_actual: Optional[str] = None
+    tamano_mb: Optional[float] = None
+    fecha_inicio: Optional[str] = None
+    fecha_fin: Optional[str] = None
+    fecha_descubrimiento: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+

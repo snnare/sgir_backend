@@ -90,6 +90,8 @@ class InstanciaDBMS(Base):
 
     servidor = relationship("Servidor", back_populates="instancias")
     bases_datos = relationship("BaseDeDatos", back_populates="instancia", cascade="all, delete-orphan")
+    dbms = relationship("DBMS")
+
 
 
 class BaseDeDatos(Base):

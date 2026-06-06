@@ -5,7 +5,7 @@ from app.models.user_models import UserStatus
 from app.schemas  import (
     ServidorCreate, ServidorUpdate, 
     CredencialCreate, CredencialUpdate,
-    InstanciaCreate, BaseDatosCreate,
+    InstanciaCreate, InstanciaUpdate, BaseDatosCreate,
     NivelCriticidadCreate, TipoAccesoCreate, DBMSCreate,
     ServidorParticionCreate
 )
@@ -153,6 +153,9 @@ def register_partition_upsert(db: Session, particion: ServidorParticionCreate) -
 def get_instancia(db: Session, id_instancia: int) -> InstanciaDBMS | None:
     return db.query(InstanciaDBMS).filter(InstanciaDBMS.id_instancia == id_instancia).first()
 
+def get_instancias_all(db: Session) -> list[InstanciaDBMS]:
+    return db.query(InstanciaDBMS).all()
+
 def get_instancias_by_servidor(db: Session, servidor_id: int) -> list[InstanciaDBMS]:
     return db.query(InstanciaDBMS).filter(InstanciaDBMS.id_servidor == servidor_id).all()
 
@@ -162,6 +165,17 @@ def create_instancia(db: Session, instancia: InstanciaCreate) -> InstanciaDBMS:
     db.commit()
     db.refresh(db_instancia)
     return db_instancia
+
+def update_instancia(db: Session, id_instancia: int, instancia_update: InstanciaUpdate) -> InstanciaDBMS | None:
+    db_inst = get_instancia(db, id_instancia)
+    if not db_inst:
+        return None
+    update_data = instancia_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_inst, key, value)
+    db.commit()
+    db.refresh(db_inst)
+    return db_inst
 
 def delete_instancia(db: Session, id_instancia: int) -> bool:
     db_inst = get_instancia(db, id_instancia)

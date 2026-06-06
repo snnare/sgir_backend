@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Reporte de Respaldos Físicos de Bases de Datos - SGIR</title>
+    <link rel="shortcut icon" type="image/png" href="{{ favicon_url }}">
+    <style>
+        /* --- Paleta de Colores UAEMex --- */
+        :root {
+            --uaem-green: #004b36;         /* Verde Oscuro Institucional */
+            --uaem-green-medium: #0e634a;  /* Verde Medio */
+            --uaem-green-light: #f2f9f6;   /* Verde muy claro para filas cebra */
+            --uaem-green-soft: #e1efe9;    /* Verde suave para contenedores */
+            --uaem-gold: #b38628;          /* Oro/Dorado Institucional */
+            --uaem-gold-light: #fcf8ee;     /* Dorado muy claro */
+            --text-dark: #111827;          /* Gris oscuro casi negro */
+            --text-normal: #374151;        /* Gris principal */
+            --text-muted: #6b7280;         /* Gris atenuado */
+            --border-light: #e5e7eb;       /* Gris para bordes */
+        }
+
+        /* --- Ajuste de Impresión A4 Profesional --- */
+        @page {
+            size: A4 landscape;
+            margin: 15mm 15mm 15mm 15mm;
+            @bottom-left {
+                content: "SGIR | Sistema de Gestión de Infraestructura y Respaldos";
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                font-size: 7.5pt;
+                color: var(--text-muted);
+                border-top: 1px solid var(--border-light);
+                padding-top: 5px;
+                width: 100%;
+            }
+            @bottom-right {
+                content: "Página " counter(page) " de " counter(pages);
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                font-size: 7.5pt;
+                color: var(--text-muted);
+                border-top: 1px solid var(--border-light);
+                padding-top: 5px;
+            }
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: var(--text-normal);
+            margin: 0;
+            padding: 0;
+            font-size: 9pt;
+            line-height: 1.4;
+            -webkit-print-color-adjust: exact;
+        }
+
+        /* --- Encabezado UAEMex --- */
+        .header-section {
+            border-bottom: 4px solid var(--uaem-green);
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .header-decorator {
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 150px;
+            height: 4px;
+            background-color: var(--uaem-gold);
+        }
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: middle;
+        }
+
+        .title-container h1 {
+            color: var(--uaem-green);
+            font-size: 16pt;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+        }
+
+        .title-container .dtic-label {
+            color: var(--uaem-gold);
+            font-size: 9pt;
+            font-weight: 700;
+            margin: 4px 0 0 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .title-container .university-label {
+            color: var(--text-muted);
+            font-size: 8pt;
+            font-weight: 600;
+            margin: 2px 0 0 0;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+        }
+
+        .logo-container {
+            text-align: right;
+        }
+
+        .logo-img {
+            max-height: 48px;
+            vertical-align: middle;
+        }
+
+        /* --- Panel de Información --- */
+        .info-panel {
+            background-color: var(--uaem-green-light);
+            border: 1px solid var(--uaem-green-soft);
+            border-left: 5px solid var(--uaem-green);
+            border-radius: 4px;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .info-table td {
+            border: none;
+            padding: 2px 0;
+            font-size: 8pt;
+            vertical-align: middle;
+        }
+
+        .info-label {
+            font-weight: 700;
+            color: var(--uaem-green);
+            width: 15%;
+        }
+
+        .info-value {
+            color: var(--text-dark);
+            width: 35%;
+        }
+
+        .summary-badge-container {
+            margin-bottom: 12px;
+            text-align: right;
+        }
+        
+        .summary-badge {
+            display: inline-block;
+            background-color: var(--uaem-green-soft);
+            color: var(--uaem-green);
+            font-size: 8pt;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--uaem-green-medium);
+        }
+
+        /* --- Tabla de Datos --- */
+        .inventory-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+            page-break-inside: auto;
+        }
+
+        .inventory-table tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+
+        .inventory-table th {
+            background-color: var(--uaem-green);
+            color: #ffffff;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 7.5pt;
+            letter-spacing: 0.8px;
+            padding: 9px 12px;
+            border: 1px solid var(--uaem-green);
+            text-align: left;
+        }
+
+        .inventory-table th.align-right,
+        .inventory-table td.align-right {
+            text-align: right;
+        }
+
+        .inventory-table td {
+            padding: 8px 12px;
+            border: 1px solid var(--border-light);
+            font-size: 8pt;
+            vertical-align: middle;
+        }
+
+        /* Filas Cebra */
+        .inventory-table tbody tr:nth-child(even) {
+            background-color: var(--uaem-green-light);
+        }
+
+        .ip-address {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 700;
+            color: var(--text-dark);
+            letter-spacing: -0.2px;
+        }
+
+        .file-name {
+            font-family: monospace;
+            font-weight: 600;
+            color: var(--uaem-green-medium);
+        }
+
+        .db-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            font-size: 7pt;
+            font-weight: 800;
+            border-radius: 3px;
+            letter-spacing: 0.5px;
+        }
+
+        .db-mysql {
+            background-color: #f0f6ff;
+            color: #1e40af;
+            border-left: 2px solid #3b82f6;
+        }
+
+        .db-mongodb {
+            background-color: #f0fdf4;
+            color: #166534;
+            border-left: 2px solid #22c55e;
+        }
+
+        .db-oracle {
+            background-color: #fef2f2;
+            color: #991b1b;
+            border-left: 2px solid #ef4444;
+        }
+
+        .db-generic {
+            background-color: #f9fafb;
+            color: #374151;
+            border-left: 2px solid #9ca3af;
+        }
+
+        /* Badges de Estado de Ejecución */
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            font-size: 7pt;
+            font-weight: 800;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .status-success {
+            background-color: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .status-failed {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .total-row {
+            background-color: var(--uaem-gold-light) !important;
+            font-weight: bold;
+        }
+
+        .total-row td {
+            border-top: 2px solid var(--uaem-gold);
+            border-bottom: 2px solid var(--uaem-gold);
+            color: var(--uaem-green);
+            font-size: 8.5pt;
+            font-weight: 700;
+            padding: 10px 12px;
+        }
+
+        .total-label {
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Encabezado UAEMex / SGIR / DTIC -->
+    <div class="header-section">
+        <table class="header-table">
+            <tr>
+                <td class="title-container">
+                    <h1>Reporte de Respaldos Físicos Descubiertos</h1>
+                    <div class="dtic-label">Dirección de Tecnologías de la Información y Comunicaciones</div>
+                    <div class="university-label">Universidad Autónoma del Estado de México</div>
+                </td>
+                <td class="logo-container">
+                    {% if logo_url %}
+                        <img class="logo-img" src="{{ logo_url }}" alt="DTIC UAEMex Logo">
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+        <div class="header-decorator"></div>
+    </div>
+
+    <!-- Panel de Información del Reporte -->
+    <div class="info-panel">
+        <table class="info-table">
+            <tr>
+                <td class="info-label">Sistema Originador:</td>
+                <td class="info-value">SGIR Backend v1.0 (Backup Observability)</td>
+                <td class="info-label">Fecha de Generación:</td>
+                <td class="info-value">{{ fecha }}</td>
+            </tr>
+            <tr>
+                <td class="info-label">Generado por Usuario:</td>
+                <td class="info-value" colspan="3">{{ usuario_generador }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Indicador de Resumen superior -->
+    <div class="summary-badge-container">
+        <span class="summary-badge">
+            {{ backups|length }} Archivos de Respaldo Verificados
+        </span>
+    </div>
+
+    <!-- Tabla de Datos del Inventario -->
+    <table class="inventory-table">
+        <thead>
+            <tr>
+                <th style="width: 20%;">Servidor / IP</th>
+                <th style="width: 15%;">Motor DBMS</th>
+                <th style="width: 28%;">Archivo de Respaldo</th>
+                <th style="width: 12%; text-align: right;">Tamaño Físico</th>
+                <th style="width: 10%; text-align: center;">Ejecución</th>
+                <th style="width: 15%;">Fecha Descubrimiento</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for backup in backups %}
+            <tr>
+                <td>
+                    <span class="ip-address">{{ backup.ip }}</span>
+                    <div style="font-size: 7pt; color: var(--text-muted);">{{ backup.servidor }}</div>
+                </td>
+                <td>
+                    {% if 'mysql' in backup.motor|lower %}
+                        <span class="db-badge db-mysql">{{ backup.motor }}</span>
+                    {% elif 'mongo' in backup.motor|lower %}
+                        <span class="db-badge db-mongodb">{{ backup.motor }}</span>
+                    {% elif 'oracle' in backup.motor|lower %}
+                        <span class="db-badge db-oracle">{{ backup.motor }}</span>
+                    {% else %}
+                        <span class="db-badge db-generic">{{ backup.motor }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="file-name">{{ backup.nombre_archivo }}</span>
+                </td>
+                <td class="align-right" style="font-weight: 700;">{{ backup.tamano_mb }} MB</td>
+                <td style="text-align: center;">
+                    {% if backup.estado_ejecucion|lower == 'exito' or backup.estado_ejecucion|lower == 'éxito' or backup.id_estado_ejecucion == 4 %}
+                        <span class="status-badge status-success">Éxito</span>
+                    {% else %}
+                        <span class="status-badge status-failed">Fallo</span>
+                    {% endif %}
+                </td>
+                <td style="color: var(--text-muted); font-size: 7.5pt;">{{ backup.fecha_descubrimiento }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                    No se han registrado o descubierto archivos de respaldo en el sistema.
+                </td>
+            </tr>
+            {% endfor %}
+            
+            {% if backups %}
+            <!-- Fila de Totales -->
+            <tr class="total-row">
+                <td colspan="3" class="total-label">Totales Generales</td>
+                <td class="align-right">{{ peso_total }} MB</td>
+                <td colspan="2" style="font-size: 8pt; color: var(--text-normal); font-weight: normal; text-align: right;">
+                    {{ backups|length }} archivos procesados
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+</body>
+</html>
