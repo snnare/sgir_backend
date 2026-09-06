@@ -4,3 +4,5 @@ modelo-fisico.sql
 # Carpetas de plantillas y datos de ejemplo
 plantilla/
 plantillas/
+
+.agents/

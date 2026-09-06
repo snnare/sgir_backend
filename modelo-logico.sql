@@ -223,3 +223,4 @@ CREATE TABLE Bitacora (
     id_usuario INT NOT NULL REFERENCES Usuario(id_usuario),
     id_tipo_evento INT NOT NULL REFERENCES Tipo_Evento_Auditoria(id_tipo_evento)
 );
+

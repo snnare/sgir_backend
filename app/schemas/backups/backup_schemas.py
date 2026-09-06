@@ -212,4 +212,13 @@ class BackupHistoryEnrichedResponse(BaseModel):
         from_attributes = True
 
 
+class ReplicacionRespaldoRequest(BaseModel):
+    destino_ruta_id: Optional[int] = None
+    remote_path: Optional[str] = None
+    servidor_id: Optional[int] = None
+    credencial_id: Optional[int] = None
+
+
+
+
 

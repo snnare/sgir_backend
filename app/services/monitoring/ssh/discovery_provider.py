@@ -197,3 +197,57 @@ def discover_cron_tasks(client) -> list:
                 })
             
     return results
+
+def calculate_file_hash(client, file_path: str, es_legacy: bool):
+    """
+    Calcula el hash de integridad de un archivo remoto por SSH.
+    Si el OS es legado (es_legacy=True), calcula usando md5sum/md5/csum.
+    Si el OS es moderno (es_legacy=False), calcula usando sha256sum/shasum.
+    Si el intento moderno falla, realiza un fallback automático a la versión legada.
+    """
+    import shlex
+    escaped_path = shlex.quote(file_path)
+    
+    if es_legacy:
+        # Intento 1: md5sum (Linux legacy estándar)
+        cmd = f"md5sum {escaped_path} 2>/dev/null"
+        output = execute_command(client, cmd)
+        if output and len(output.split()) >= 1:
+            return output.split()[0]
+            
+        # Intento 2: md5 (Solaris / BSD / macOS)
+        cmd = f"md5 {escaped_path} 2>/dev/null"
+        output = execute_command(client, cmd)
+        if output and len(output.split()) >= 1:
+            parts = output.split()
+            if len(parts[-1]) == 32:
+                return parts[-1]
+            return parts[0]
+            
+        # Intento 3: csum MD5 (AIX)
+        cmd = f"csum -h MD5 {escaped_path} 2>/dev/null"
+        output = execute_command(client, cmd)
+        if output and len(output.split()) >= 1:
+            return output.split()[0]
+            
+        return None
+    else:
+        # Intento 1: sha256sum (Linux moderno estándar)
+        cmd = f"sha256sum {escaped_path} 2>/dev/null"
+        output = execute_command(client, cmd)
+        if output and len(output.split()) >= 1:
+            token = output.split()[0]
+            if len(token) == 64:
+                return token
+                
+        # Intento 2: shasum -a 256 (sistemas Unix con Perl / macOS)
+        cmd = f"shasum -a 256 {escaped_path} 2>/dev/null"
+        output = execute_command(client, cmd)
+        if output and len(output.split()) >= 1:
+            token = output.split()[0]
+            if len(token) == 64:
+                return token
+                
+        # Fallback a legado si los intentos modernos fallan
+        return calculate_file_hash(client, file_path, es_legacy=True)
+

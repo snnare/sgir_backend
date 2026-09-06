@@ -1,6 +1,19 @@
-# Resumen de Estado del Proyecto - SGIR (Actualizado: 5 de Junio, 2026)
+# Resumen de Estado del Proyecto - SGIR (Actualizado: 7 de Junio, 2026)
 
 Este documento registra los avances, decisiones técnicas, lógica de negocio incorporada y estado de los repositorios durante las sesiones de desarrollo para garantizar la continuidad del sistema **SGIR**.
+
+---
+
+## 🚀 Logros y Cambios Clave de la Sesión (7 de Junio, 2026)
+
+### 1. Documentación de Rutas de Instancias DBMS
+*   Se recopilaron y mapearon todas las rutas del Módulo CRUD relacionadas con `instancia_dbms` (catálogo y tests en caliente) para referencia del equipo de desarrollo, vinculando los controladores en [`instancia_routes.py`](file:///home/angel/src/titulacion/sgir_backend/app/routes/core_crud/infrastructure/instancia_routes.py) con sus servicios en [`infrastructure_crud.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/infrastructure/infrastructure_crud.py).
+
+### 2. Estructuración de Módulos de la Aplicación
+*   Se definió la arquitectura y alcance de los 4 módulos funcionales actuales: Módulo CRUD (Configuración), Módulo 1 (Observabilidad), Módulo 2 (Auto-Descubrimiento & CMDB) y Módulo 3 (Gestión y Automatización de Respaldos), además del submódulo de Reportes PDF/CSV.
+
+### 3. Análisis de Ahorro y Eficiencia (ROI)
+*   Se diseñó una estimación y tabla comparativa del ahorro de tiempo operativo al automatizar procesos. Se calculó que las tareas rutinarias de 2 horas diarias (25% de la jornada de 8 horas) se reducen a **5 minutos**, logrando un ahorro diario neto de **1h 55m (95.8% de optimización)**.
 
 ---
 
@@ -114,6 +127,23 @@ Comparamos el script de base de datos [`modelo-logico.sql`](file:///home/angel/s
 
 ### 6. Ordenamiento de Plantillas de Prueba (Mockups)
 *   Se creó el directorio [`app/templates/reports/mockups`](file:///home/angel/src/titulacion/sgir_backend/app/templates/reports/mockups) para agrupar las vistas HTML.
+
+---
+
+## 📈 Mapeo de Módulos y Métricas de Eficiencia (Ahorro de Tiempo / ROI)
+
+Asumiendo que realizar manualmente las tareas operativas de monitoreo e inventario sin **SGIR** consume un **25% de la jornada laboral de 8 horas (120 minutos diarios)**, a continuación se detalla la optimización de tiempo por cada módulo del sistema:
+
+| Módulo de SGIR | Tarea Manual (Sin SGIR) | Tiempo Manual Estimado (Diario) | Solución Automatizada (Con SGIR) | Tiempo con SGIR (Diario) | Tiempo Ahorrado | % de Optimización |
+| :--- | :--- | :---: | :--- | :---: | :---: | :---: |
+| **Módulo CRUD & Admin** | Registrar servidores, inventariar credenciales en archivos locales, resetear passwords y actualizar catálogos manualmente. | **15 min** *(0.25h)* | Formularios rápidos, importación masiva de infraestructura vía CSV y credenciales cifradas con AES-256. | **2 min** *(Visualización)* | **13 min** | **86.7%** |
+| **Módulo 1: Observabilidad** | Conectarse por SSH o consola a cada base de datos (MySQL, Mongo, Oracle) para comprobar conectividad, estados de salud y métricas. | **30 min** *(0.50h)* | Endpoints unificados de salud en tiempo real (`GET /health-status`) y alertas centralizadas automáticas. | **1 min** *(Revisión del dashboard)* | **29 min** | **96.7%** |
+| **Módulo 2: Auto-Descubrimiento** | Auditar manualmente qué instancias Oracle están activas en cada servidor, listar bases de datos y revisar tareas `cron` en disco. | **35 min** *(0.58h)* | Escaneo desatendido de procesos `ora_smon`, auto-registro en la CMDB local y lectura automatizada de archivos `crontab` vía SSH. | **1 min** *(Auditoría automática)* | **34 min** | **97.1%** |
+| **Módulo 3: Respaldos** | Ingresar a directorios remotos, listar archivos, verificar tamaños en MB, validar hashes de integridad y borrar respaldos antiguos para liberar espacio. | **40 min** *(0.67h)* | Escaneo automático de archivos físicos remotos, registro dinámico de copias en DB (incluyendo huérfanas) y purga automática por políticas de retención. | **1 min** *(Revisión de logs)* | **39 min** | **97.5%** |
+| **TOTAL** | **Gestión operativa y preventiva diaria de infraestructura de datos.** | **120 min** *(2.00h)* | **Ejecución y monitoreo centralizado.** | **5 min** | **115 min** *(1.92h)* | **95.8%** |
+
+*   **Ahorro Semanal (L-V):** **9.58 horas** libres para tareas estratégicas (equivalente a más de un día completo de trabajo).
+*   **Ahorro Mensual (20 días):** **38.3 horas** (casi una semana laboral recuperada).
 
 ---
 

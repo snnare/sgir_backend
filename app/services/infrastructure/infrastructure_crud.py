@@ -267,6 +267,7 @@ def get_global_inventory(db: Session) -> list[dict]:
         DBMS.nombre_dbms,
         InstanciaDBMS.id_instancia,
         InstanciaDBMS.nombre_instancia,
+        BaseDeDatos.id_base_datos,
         BaseDeDatos.nombre_base,
         BaseDeDatos.tamano_mb,
         UserStatus.nombre_estado.label("estado_bd"),
@@ -290,6 +291,7 @@ def get_global_inventory(db: Session) -> list[dict]:
         
         if key not in inventory_map:
             inventory_map[key] = {
+                "id_instancia": r.id_instancia,
                 "ip": r.direccion_ip,
                 "motor": r.nombre_dbms,
                 "instancia": r.nombre_instancia,
@@ -301,6 +303,7 @@ def get_global_inventory(db: Session) -> list[dict]:
         # Si hay una base de datos vinculada, la añadimos a la lista
         if r.nombre_base:
             inventory_map[key]["bases_de_datos"].append({
+                "id_base_datos": r.id_base_datos,
                 "nombre": r.nombre_base,
                 "tamano_mb": r.tamano_mb,
                 "estado": r.estado_bd if r.estado_bd else "Activo"

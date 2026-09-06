@@ -12,7 +12,32 @@ from .ssh import metrics_provider, discovery_provider
 # Estructura: { servidor_id: {"cpu": 10.5, "ram": 45.2, "disk": 30.0, "last_update": datetime} }
 LIVE_METRICS_CACHE = {}
 
+def get_default_policy_id(db: Session) -> int:
+    """
+    Obtiene el ID de la primera política de respaldo registrada,
+    o crea una por defecto en caso de que no exista ninguna.
+    """
+    from app.models.backup_models import PoliticaRespaldo
+    pol = db.query(PoliticaRespaldo).first()
+    if pol:
+        return pol.id_politica
+        
+    # Crear política genérica por defecto
+    default_pol = PoliticaRespaldo(
+        nombre_politica="Política por Defecto (Sistema)",
+        descripcion="Política autogenerada por el sistema para respaldos sin política asignada.",
+        frecuencia_horas=24,
+        retencion_dias=7,
+        id_tipo_respaldo=1, # Catálogo por defecto
+        id_estado_politica=1 # Activa
+    )
+    db.add(default_pol)
+    db.commit()
+    db.refresh(default_pol)
+    return default_pol.id_politica
+
 def run_ssh_monitoring(db_local: Session, servidor_id: int, credencial_id: int, use_pool: bool = True):
+
     """
     MONITOREO CON LIVE CACHE, POOLING Y UMBRAL (90%):
     Reutiliza conexiones del Pool para evitar sobrecarga de red.
@@ -328,22 +353,28 @@ def run_integrated_file_discovery(db: Session, instancia_id: int, credencial_id:
                     file_name = file_path.split('/')[-1]
                     tamano_mb = round(size_bytes / (1024 * 1024), 2)
                     
-                    if asignacion:
-                        nuevo_respaldo = Respaldo(
-                            id_base_datos=bd.id_base_datos,
-                            id_politica=id_politica,
-                            id_credencial=credencial_id,
-                            id_estado_ejecucion=4,
-                            nombre_archivo=file_name,
-                            tamano_mb=Decimal(str(tamano_mb)),
-                            path_fisico_origen=file_path,
-                            ubicacion_actual="Origen",
-                            ip_almacenado_actual=servidor.direccion_ip,
-                            path_fisico_actual=file_path,
-                            fecha_fin=datetime.now()
-                        )
-                        db.add(nuevo_respaldo)
-                        respaldos_creados += 1
+                    # Comentado para evitar el registro de metadatos del respaldo en DB por requerimiento
+                    # reg_id_politica = id_politica
+                    # if not reg_id_politica:
+                    #     reg_id_politica = get_default_policy_id(db)
+                    # 
+                    # hash_val = discovery_provider.calculate_file_hash(client, file_path, servidor.es_legacy)
+                    # nuevo_respaldo = Respaldo(
+                    #     id_base_datos=bd.id_base_datos,
+                    #     id_politica=reg_id_politica,
+                    #     id_credencial=credencial_id,
+                    #     id_estado_ejecucion=4,
+                    #     nombre_archivo=file_name,
+                    #     tamano_mb=Decimal(str(tamano_mb)),
+                    #     hash_integridad=hash_val,
+                    #     path_fisico_origen=file_path,
+                    #     ubicacion_actual="Origen",
+                    #     ip_almacenado_actual=servidor.direccion_ip,
+                    #     path_fisico_actual=file_path,
+                    #     fecha_fin=datetime.now()
+                    # )
+                    # db.add(nuevo_respaldo)
+                    # respaldos_creados += 1
                     
                     detalles_response.append({
                         "base_datos_id": bd.id_base_datos,
@@ -451,29 +482,35 @@ def run_server_integrated_file_discovery(db: Session, servidor_id: int, credenci
                     file_path = f.get("path") or f"{ruta.path}/{f['name']}"
                     size_mb = round(f["size"] / (1024 * 1024), 2)
                     
-                    if asignacion and id_politica:
-                        # Evitar duplicados
-                        existe = db.query(Respaldo).filter(
-                            Respaldo.id_base_datos == bd.id_base_datos,
-                            Respaldo.nombre_archivo == f["name"],
-                            Respaldo.path_fisico_actual == file_path
-                        ).first()
-                        if not existe:
-                            nuevo_respaldo = Respaldo(
-                                id_base_datos=bd.id_base_datos,
-                                id_politica=id_politica,
-                                id_credencial=credencial_id,
-                                id_estado_ejecucion=4, # 4: Ejecutado/Exitoso
-                                nombre_archivo=f["name"],
-                                tamano_mb=Decimal(str(size_mb)),
-                                path_fisico_origen=file_path,
-                                ubicacion_actual="Origen",
-                                ip_almacenado_actual=servidor.direccion_ip,
-                                path_fisico_actual=file_path,
-                                fecha_fin=datetime.now()
-                            )
-                            db.add(nuevo_respaldo)
-                            respaldos_creados += 1
+                    # Comentado para evitar el registro de metadatos del respaldo en DB por requerimiento
+                    # reg_id_politica = id_politica
+                    # if not reg_id_politica:
+                    #     reg_id_politica = get_default_policy_id(db)
+                    #     
+                    # # Evitar duplicados
+                    # existe = db.query(Respaldo).filter(
+                    #     Respaldo.id_base_datos == bd.id_base_datos,
+                    #     Respaldo.nombre_archivo == f["name"],
+                    #     Respaldo.path_fisico_actual == file_path
+                    # ).first()
+                    # if not existe:
+                    #     hash_val = discovery_provider.calculate_file_hash(client, file_path, servidor.es_legacy)
+                    #     nuevo_respaldo = Respaldo(
+                    #         id_base_datos=bd.id_base_datos,
+                    #         id_politica=reg_id_politica,
+                    #         id_credencial=credencial_id,
+                    #         id_estado_ejecucion=4, # 4: Ejecutado/Exitoso
+                    #         nombre_archivo=f["name"],
+                    #         tamano_mb=Decimal(str(size_mb)),
+                    #         hash_integridad=hash_val,
+                    #         path_fisico_origen=file_path,
+                    #         ubicacion_actual="Origen",
+                    #         ip_almacenado_actual=servidor.direccion_ip,
+                    #         path_fisico_actual=file_path,
+                    #         fecha_fin=datetime.now()
+                    #     )
+                    #     db.add(nuevo_respaldo)
+                    #     respaldos_creados += 1
 
                     results.append({
                         "base_datos_id": bd.id_base_datos,
@@ -794,29 +831,35 @@ def run_custom_server_integrated_file_discovery(db: Session, servidor_id: int, c
                     size_mb = round(f["size"] / (1024 * 1024), 2)
                     file_name = file_path.split('/')[-1]
                     
-                    if asignacion and id_politica:
-                        # Evitar duplicados
-                        existe = db.query(Respaldo).filter(
-                            Respaldo.id_base_datos == bd.id_base_datos,
-                            Respaldo.nombre_archivo == file_name,
-                            Respaldo.path_fisico_actual == file_path
-                        ).first()
-                        if not existe:
-                            nuevo_respaldo = Respaldo(
-                                id_base_datos=bd.id_base_datos,
-                                id_politica=id_politica,
-                                id_credencial=credencial_id,
-                                id_estado_ejecucion=4, # 4: Ejecutado/Exitoso
-                                nombre_archivo=file_name,
-                                tamano_mb=Decimal(str(size_mb)),
-                                path_fisico_origen=file_path,
-                                ubicacion_actual="Origen",
-                                ip_almacenado_actual=servidor.direccion_ip,
-                                path_fisico_actual=file_path,
-                                fecha_fin=datetime.now()
-                            )
-                            db.add(nuevo_respaldo)
-                            respaldos_creados += 1
+                    # Comentado para evitar el registro de metadatos del respaldo en DB por requerimiento
+                    # reg_id_politica = id_politica
+                    # if not reg_id_politica:
+                    #     reg_id_politica = get_default_policy_id(db)
+                    #     
+                    # # Evitar duplicados
+                    # existe = db.query(Respaldo).filter(
+                    #     Respaldo.id_base_datos == bd.id_base_datos,
+                    #     Respaldo.nombre_archivo == file_name,
+                    #     Respaldo.path_fisico_actual == file_path
+                    # ).first()
+                    # if not existe:
+                    #     hash_val = discovery_provider.calculate_file_hash(client, file_path, servidor.es_legacy)
+                    #     nuevo_respaldo = Respaldo(
+                    #         id_base_datos=bd.id_base_datos,
+                    #         id_politica=reg_id_politica,
+                    #         id_credencial=credencial_id,
+                    #         id_estado_ejecucion=4, # 4: Ejecutado/Exitoso
+                    #         nombre_archivo=file_name,
+                    #         tamano_mb=Decimal(str(size_mb)),
+                    #         hash_integridad=hash_val,
+                    #         path_fisico_origen=file_path,
+                    #         ubicacion_actual="Origen",
+                    #         ip_almacenado_actual=servidor.direccion_ip,
+                    #         path_fisico_actual=file_path,
+                    #         fecha_fin=datetime.now()
+                    #     )
+                    #     db.add(nuevo_respaldo)
+                    #     respaldos_creados += 1
 
                     results.append({
                         "base_datos_id": bd.id_base_datos,

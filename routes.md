@@ -1243,6 +1243,39 @@ Contiene las operaciones del catálogo relacional y configuraciones base. El pre
     ]
     ```
 
+#### **`POST`** `/respaldos/{respaldo_id}/replicate`
+*   **Servicio Ejecutor:** [`app/services/backups/replication_service.py`](file:///home/angel/src/titulacion/sgir_backend/app/services/backups/replication_service.py) $\rightarrow$ `download_to_local` / `replicate_to_external` o `download_raw_to_local` / `replicate_raw_to_external` (Invocados en [`app/routes/core_crud/backups/respaldo_routes.py`](file:///home/angel/src/titulacion/sgir_backend/app/routes/core_crud/backups/respaldo_routes.py))
+*   **Path Params:** `respaldo_id` (int). *Nota: Si es `0`, se ejecuta una transferencia directa por ruta física remota.*
+*   **Body Requerido (`ReplicacionRespaldoRequest`):**
+    ```json
+    {
+      "destino_ruta_id": null,
+      "remote_path": "/Backup/Database/dbsnocon_backup.dmp",
+      "servidor_id": 12,
+      "credencial_id": 17
+    }
+    ```
+    *Nota: Si se omite o es nulo el campo `destino_ruta_id`, el archivo se descarga localmente en el backend de forma predeterminada. Los campos `remote_path`, `servidor_id` y `credencial_id` solo son requeridos si `respaldo_id` es `0`.*
+*   **Response Esperada (Status 200 - Descarga Local/Directa):**
+    ```json
+    {
+      "success": true,
+      "message": "Archivo remoto descargado exitosamente por ruta directa",
+      "local_path": "/tmp/storage/backups/dbsnocon_backup.dmp",
+      "hash": "5d41402abc4b2a76b9719d911017c592"
+    }
+    ```
+*   **Response Esperada (Status 200 - Replicación SFTP Puente Directa):**
+    ```json
+    {
+      "success": true,
+      "message": "Archivo remoto replicado exitosamente al servidor externo por ruta directa",
+      "destination_ip": "192.168.1.100",
+      "destination_path": "/remote/backups/dbsnocon_backup.dmp",
+      "hash": "5d41402abc4b2a76b9719d911017c592"
+    }
+    ```
+
 ---
 
 ### 🚨 Catálogos de Monitoreo & Alerting

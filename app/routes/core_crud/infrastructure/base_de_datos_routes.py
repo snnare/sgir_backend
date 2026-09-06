@@ -37,3 +37,17 @@ def search_bases_de_datos_endpoint(query: str, db: Session = Depends(get_pg_db))
 def filter_bases_de_datos_endpoint(nombre: Optional[str] = None, ip: Optional[str] = None, db: Session = Depends(get_pg_db)):
     """Filtra bases de datos por nombre y/o IP del servidor."""
     return infrastructure_crud.filter_bases_de_datos(db, nombre, ip)
+
+@router.delete("/{id_base_datos}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_base_datos(id_base_datos: int, db: Session = Depends(get_pg_db), current_user: User = Depends(get_current_user)):
+    if not infrastructure_crud.delete_base_datos(db, id_base_datos):
+        raise HTTPException(status_code=404, detail="Base de datos no encontrada")
+    audit_crud.log_event(
+        db=db,
+        user_id=current_user.id_usuario,
+        entidad="BaseDeDatos",
+        entidad_id=id_base_datos,
+        descripcion=f"Base de datos eliminada (ID: {id_base_datos})",
+        tipo_evento_id=4 # Eliminación
+    )
+

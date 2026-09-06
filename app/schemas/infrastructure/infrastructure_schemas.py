@@ -192,11 +192,13 @@ class BaseDatosSearchResult(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class DatabaseInfo(BaseModel):
+    id_base_datos: Optional[int] = None
     nombre: Optional[str] = None
     tamano_mb: Optional[Decimal] = None
     estado: str
 
 class GlobalAssetResponse(BaseModel):
+    id_instancia: Optional[int] = None
     ip: str
     motor: str
     instancia: str
